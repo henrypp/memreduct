@@ -1,0 +1,44 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Header">
+      <UniqueIdentifier>{b589ab90-2c01-4bd9-af61-4bc04502a1fa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource">
+      <UniqueIdentifier>{63c40adc-9a88-4112-af9d-cc81f7daa8ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{13405e08-c70e-45c3-bdd8-c118f186bb0e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include=".\src\memreduct.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\ini.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="..\routine.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include=".\src\memreduct.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include=".\src\resource.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ini.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+    <ClInclude Include="..\routine.h">
+      <Filter>Header</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include=".\src\resource.rc">
+      <Filter>Resource</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>
