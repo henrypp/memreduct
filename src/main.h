@@ -1,113 +1,63 @@
-﻿/************************************
-*  	Mem Reduct
-*	Copyright © 2013 Henry++
-*
-*	GNU General Public License v2
-*	http://www.gnu.org/licenses/
-*
-*	http://www.henrypp.org/
-*************************************/
+﻿// Mem Reduct
+// Copyright © 2011-2013, 2015 Henry++
 
-#ifndef __MEMREDUCT_H__
-#define __MEMREDUCT_H__
+#ifndef __MAIN_H__
+#define __MAIN_H__
 
-// Define
-#define APP_NAME			L"Mem Reduct"
-#define APP_NAME_SHORT		L"memreduct"
-#define APP_AUTHOR			L"Henry++"
-#define APP_VERSION			L"2.4"
-#define APP_VERSION_RES		2,4
-#define APP_HOST			L"www.henrypp.org"
-#define APP_WEBSITE			L"http://" APP_HOST
-#define APP_USERAGENT		APP_NAME L"/" APP_VERSION L" (+" APP_WEBSITE L")"
+#include <windows.h>
+#include "resource.h"
+
+#define APP_NAME L"Mem Reduct"
+#define APP_NAME_SHORT L"memreduct"
+#define APP_VERSION L"2.5.0"
+#define APP_VERSION_RES 2,5,0,0
+#define APP_HOST L"www.henrypp.org"
+#define APP_WEBSITE L"http://" APP_HOST
+#define APP_AUTHOR L"Henry++"
+
+#ifdef _WIN64
+#define APP_MACHINE L"64"
+#else
+#define APP_MACHINE L"32"
+#endif
+
+#define APP_SETTINGS_COUNT 4
 
 #define UID					1337
 #define WM_TRAYICON			(WM_APP + UID)
-#define PAGE_COUNT			5
+
+#define COLOR_TRAY_TRANSPARENT_BG		0x00FF00FF
 
 #define COLOR_TRAY_TEXT		0xFFFFFF
-#define COLOR_TRAY_BG		0xEF892D
+#define COLOR_TRAY_BG		0//0xEF892D
 #define COLOR_LISTVIEW_TEXT	0x3D3D3D
-#define COLOR_LEVEL_NORMAL	0x45711E
-#define COLOR_LEVEL_WARNING	0x2C53DA
-#define COLOR_LEVEL_DANGER	0x471DB9
+#define COLOR_LEVEL_NORMAL	RGB(0,255,0) //0x45711E
+#define COLOR_LEVEL_WARNING	RGB(255,127,39)
+#define COLOR_LEVEL_DANGER	RGB(237,28,36) //0x471DB9
 
-// Settings Structure
-struct CONFIG
-{
-	HWND hWnd; // main window handle
-
-	HINSTANCE hLocale; // language module handle
-	HFONT hTitleFont; // font for titles
-
-	CString szCurrentDir; // current dir
-
-	BOOL bAdminPrivilege; // if admin rights
-	BOOL bUnderUAC; // if running under UAC
-	BOOL bSupportedOS; // if running on Vista or above (6.0)
-
-	BOOL bAutoReduct; // use Auto-Reduct
-	UINT uAutoReductPercents; // Auto-Reduct level
-
-	WCHAR szUnit[16]; // mb OR kb
-	UINT uUnitDivider; // divider for unit (kb - 1024, mb - 1048576)
-
-	UINT uWarningLevel; // "warning level" color
-	UINT uDangerLevel; // "danger level" color
-
-	DWORD dwLastBalloon;
-
-	LPARAM lLastResult[3];
-
-	LOGFONT lf;
-
-	DWORD dwLanguageId;
-};
-
-typedef struct _TAB_PAGES
-{
-	INT iTitle[PAGE_COUNT];
-	INT iDialog[PAGE_COUNT];
-
-	HWND hWnd[PAGE_COUNT];
-	HWND hCurrent;
-	
-	RECT rc;
-} TAB_PAGES, *LPTAB_PAGES;
-
-typedef struct _MEMORY_USAGE
+struct _R_MEMORYSTATUS
 {
 	// Physical
-    DWORD dwPercentPhys;
-    DWORDLONG ullTotalPhys;
-    DWORDLONG ullAvailPhys;
-    DWORDLONG ullFreePhys;
-	
+    DWORDLONG percent_phys;
+    DWORDLONG total_phys;
+    DWORDLONG free_phys;
+
 	// Page File
-    DWORD dwPercentPageFile;
-    DWORDLONG ullTotalPageFile;
-    DWORDLONG ullAvailPageFile;
-    DWORDLONG ullFreePageFile;
+    DWORDLONG percent_page;
+    DWORDLONG total_page;
+    DWORDLONG free_page;
 
 	// System Working Set
-    DWORD dwPercentSystemWorkingSet;
-    DWORDLONG ullTotalSystemWorkingSet;
-    DWORDLONG ullAvailSystemWorkingSet;
-    DWORDLONG ullFreeSystemWorkingSet;
-} MEMORY_USAGE, *LPMEMORY_USAGE;
+    DWORDLONG percent_ws;
+    DWORDLONG total_ws;
+    DWORDLONG free_ws;
 
-/***********************************************
-*	NTDLL Definition taken from Process Hacker
-*	http://processhacker.sourceforge.net/
-************************************************/
+};
 
-// NTDLL Definitions
-#ifndef NT_SUCCESS
-#define NT_SUCCESS(Status) (((NTSTATUS)(Status)) >= 0)
-#endif // NT_SUCCESS
-
-// NTDLL Enumerations
-typedef enum _SYSTEM_INFORMATION_CLASS
+// rev
+// private
+// source: http://www.microsoft.com/whdc/system/Sysinternals/MoreThan64proc.mspx
+enum SYSTEM_INFORMATION_CLASS
 {
     SystemBasicInformation, // q: SYSTEM_BASIC_INFORMATION
     SystemProcessorInformation, // q: SYSTEM_PROCESSOR_INFORMATION
@@ -234,10 +184,42 @@ typedef enum _SYSTEM_INFORMATION_CLASS
     SystemAcpiAuditInformation, // q: SYSTEM_ACPI_AUDIT_INFORMATION // HaliQuerySystemInformation -> HalpAuditQueryResults, info class 26
     SystemBasicPerformanceInformation, // q: SYSTEM_BASIC_PERFORMANCE_INFORMATION // name:wow64:whNtQuerySystemInformation_SystemBasicPerformanceInformation
     SystemQueryPerformanceCounterInformation, // q: SYSTEM_QUERY_PERFORMANCE_COUNTER_INFORMATION // since WIN7 SP1
+    SystemSessionBigPoolInformation, // since WIN8
+    SystemBootGraphicsInformation,
+    SystemScrubPhysicalMemoryInformation,
+    SystemBadPageInformation,
+    SystemProcessorProfileControlArea,
+    SystemCombinePhysicalMemoryInformation, // 130
+    SystemEntropyInterruptTimingCallback,
+    SystemConsoleInformation,
+    SystemPlatformBinaryInformation,
+    SystemThrottleNotificationInformation,
+    SystemHypervisorProcessorCountInformation,
+    SystemDeviceDataInformation,
+    SystemDeviceDataEnumerationInformation,
+    SystemMemoryTopologyInformation,
+    SystemMemoryChannelInformation,
+    SystemBootLogoInformation, // 140
+    SystemProcessorPerformanceInformationEx, // since WINBLUE
+    SystemSpare0,
+    SystemSecureBootPolicyInformation,
+    SystemPageFileInformationEx,
+    SystemSecureBootInformation,
+    SystemEntropyInterruptTimingRawInformation,
+    SystemPortableWorkspaceEfiLauncherInformation,
+    SystemFullProcessInformation, // q: SYSTEM_PROCESS_INFORMATION with SYSTEM_PROCESS_INFORMATION_EXTENSION (requires admin)
+    SystemKernelDebuggerInformationEx,
+    SystemBootMetadataInformation, // 150
+    SystemSoftRebootInformation,
+    SystemElamCertificateInformation,
+    SystemOfflineDumpConfigInformation,
+    SystemProcessorFeaturesInformation,
+    SystemRegistryReconciliationInformation,
+    SystemEdidInformation,
     MaxSystemInfoClass
-} SYSTEM_INFORMATION_CLASS;
+};
 
-typedef enum _SYSTEM_MEMORY_LIST_COMMAND
+enum SYSTEM_MEMORY_LIST_COMMAND
 {
     MemoryCaptureAccessedBits,
     MemoryCaptureAndResetAccessedBits,
@@ -246,25 +228,39 @@ typedef enum _SYSTEM_MEMORY_LIST_COMMAND
     MemoryPurgeStandbyList,
     MemoryPurgeLowPriorityStandbyList,
     MemoryCommandMax
-} SYSTEM_MEMORY_LIST_COMMAND;
+};
 
-// NTDLL Structures
-typedef struct _SYSTEM_CACHE_INFORMATION
+struct SYSTEM_CACHE_INFORMATION
 {
-	ULONG    	CurrentSize;
-	ULONG    	PeakSize;
-	ULONG    	PageFaultCount;
-	ULONG    	MinimumWorkingSet;
-	ULONG    	MaximumWorkingSet;
-    ULONG       TransitionSharedPages;
-    ULONG       PeakTransitionSharedPages;
-    ULONG       Unused[2];
-} SYSTEM_CACHE_INFORMATION, *PSYSTEM_CACHE_INFORMATION;
+	ULONG_PTR	CurrentSize;
+	ULONG_PTR	PeakSize;
+	ULONG_PTR	PageFaultCount;
+	ULONG_PTR	MinimumWorkingSet;
+	ULONG_PTR	MaximumWorkingSet;
+	ULONG_PTR	TransitionSharedPages;
+	ULONG_PTR	PeakTransitionSharedPages;
+	DWORD       Unused[2];
+};
 
-// NTDLL Prototypes
 extern "C" {
-	NTSYSCALLAPI NTSTATUS NTAPI NtQuerySystemInformation(__in SYSTEM_INFORMATION_CLASS SystemInformationClass, __out_bcount_opt(SystemInformationLength) PVOID SystemInformation, __in ULONG SystemInformationLength, __out_opt PULONG ReturnLength);
-	NTSYSCALLAPI NTSTATUS NTAPI NtSetSystemInformation(__in SYSTEM_INFORMATION_CLASS SystemInformationClass, __in_bcount_opt(SystemInformationLength) PVOID SystemInformation, __in ULONG SystemInformationLength);
+	NTSYSCALLAPI
+	NTSTATUS
+	NTAPI
+	NtQuerySystemInformation(
+		_In_ SYSTEM_INFORMATION_CLASS SystemInformationClass,
+		_Out_writes_bytes_opt_(SystemInformationLength) PVOID SystemInformation,
+		_In_ ULONG SystemInformationLength,
+		_Out_opt_ PULONG ReturnLength
+		);
+
+	NTSYSCALLAPI
+	NTSTATUS
+	NTAPI
+	NtSetSystemInformation(
+		_In_ SYSTEM_INFORMATION_CLASS SystemInformationClass,
+		_In_reads_bytes_opt_(SystemInformationLength) PVOID SystemInformation,
+		_In_ ULONG SystemInformationLength
+		);
 }
 
-#endif // __MEMREDUCT_H__
+#endif // __MAIN_H__

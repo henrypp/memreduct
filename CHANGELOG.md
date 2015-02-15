@@ -1,3 +1,7 @@
+vx.x (TBA 2015)
+- x64 support
+- dpi support
+
 v2.4 (17 September 2013)
 - Added tray icon customization
 - Improved UAC compatibility

@@ -6,7 +6,3 @@ Mem Reduct is a small application that allows you to monitor and clean your comp
 > The program used undocumented features of system (Native API) to clear the memory that have emerged since Windows Vista, so some cleaning methods are not available in earlier versions Windows.
 
 Download binaries on [product page](http://www.henrypp.org/product/memreduct).
-
-Translation
------------
-Please translate Mem Reduct to your language, send me translated files to email. See "/src/language/" for example.
