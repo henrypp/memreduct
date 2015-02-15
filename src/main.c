@@ -125,7 +125,17 @@ HICON _Reduct_CreateIcon(DWORD percent)
 	return CreateIconIndirect(&ii);
 }
 
-BOOL _Reduct_Start(HWND)
+VOID _Reduct_PrintResult(HWND hwnd, DWORD new_percent, DWORD max_result, _R_MEMORYSTATUS* m)
+{
+	SetDlgItemText(hwnd, IDC_VALUE_1, _r_helper_format(L"%d%%", m ? m->percent_phys : 0));
+	SetDlgItemText(hwnd, IDC_VALUE_2, _r_helper_format(L"%d%%", m ? m->percent_phys - new_percent : 0));
+	SetDlgItemText(hwnd, IDC_VALUE_3, _r_helper_format(L"%d%%", m ? new_percent : 0));
+
+	SetDlgItemText(hwnd, IDC_SAVED_1, _r_helper_format(_r_locale(IDS_SAVED_1), _r_helper_formatsize64(m ? ((m->total_phys / 100) * (m->percent_phys - new_percent)) : 0)));
+	SetDlgItemText(hwnd, IDC_SAVED_2, _r_helper_format(_r_locale(IDS_SAVED_2), max_result, _r_helper_formatsize64(m ? (m->total_phys / 100) * max_result : 0)));
+}
+
+BOOL _Reduct_Start(HWND hwnd)
 {
 	// if user has no rights
 	if(_r_system_uacstate())
@@ -180,9 +190,17 @@ BOOL _Reduct_Start(HWND)
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
-	DWORD current = _Reduct_MemoryStatus(NULL);
+	DWORD new_percent = _Reduct_MemoryStatus(NULL);
 
-	ShowBalloonTip(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), current, _Reduct_MemoryStatus(NULL) - current), FALSE);
+	INT max_result = max(_r_cfg_read(L"MaxResult", 0), m.percent_phys - new_percent);
+	_r_cfg_write(L"MaxResult", max_result);
+
+	if(hwnd)
+	{
+		_Reduct_PrintResult(hwnd, new_percent, max_result, &m);
+	}
+
+	ShowBalloonTip(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), new_percent, m.percent_phys - new_percent), FALSE);
 
 	return TRUE;
 }
@@ -212,7 +230,7 @@ VOID CALLBACK _Reduct_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 		(m.percent_phys >= _r_cfg_read(L"WarningLevel", 60) && _r_cfg_read(L"AutoreductWarning", 0))
 	)
 	{
-		_Reduct_Start(hwnd);
+		_Reduct_Start(NULL);
 	}
 
 	if(IsWindowVisible(hwnd))
@@ -236,6 +254,28 @@ VOID CALLBACK _Reduct_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
 	}
 
+	HWND progress = (HWND)GetProp(_r_hwnd, L"progress");
+
+	if(progress)
+	{
+		if(_r_system_validversion(6, 0))
+		{
+			WPARAM state = PBST_NORMAL;
+
+			if(m.percent_phys >= _r_cfg_read(L"DangerLevel", 90))
+			{
+				state = PBST_ERROR;
+			}
+			else if(m.percent_phys >= _r_cfg_read(L"WarningLevel", 60))
+			{
+				state = PBST_PAUSED;
+			}
+
+			SendMessage(progress, PBM_SETSTATE, state, NULL);
+		}
+
+		SendMessage(progress, PBM_SETPOS, m.percent_phys, NULL);
+	}
 }
 
 VOID _Reduct_Unitialize()
@@ -496,9 +536,36 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 	{
 		case WM_INITDIALOG:
 		{
+			LOGFONT lf ={0};
+
+			lf.lfQuality = ANTIALIASED_QUALITY;
+			lf.lfWeight = FW_SEMIBOLD;
+			lf.lfHeight = -MulDiv(12, GetDeviceCaps(_r_cdc, LOGPIXELSY), 72);
+
+			StringCchCopy(lf.lfFaceName, _countof(lf.lfFaceName), L"Tahoma");
+
+			HFONT font = CreateFontIndirect(&lf);
+
+			SendDlgItemMessage(hwnd, IDC_RESULT + 1, WM_SETFONT, (WPARAM)font, NULL);
+			SendDlgItemMessage(hwnd, IDC_RESULT + 2, WM_SETFONT, (WPARAM)font, NULL);
+			SendDlgItemMessage(hwnd, IDC_RESULT + 3, WM_SETFONT, (WPARAM)font, NULL);
+
+			_Reduct_PrintResult(hwnd, 0, 0, NULL);
+
+			SetFocus(GetDlgItem(hwnd, IDC_OK));
+
+			SetProp(_r_hwnd, L"progress", GetDlgItem(hwnd, IDC_RESULT));
+
 			break;
 		}
 
+		case WM_DESTROY:
+		{
+			SetProp(_r_hwnd, L"progress", NULL);
+
+
+			break;
+		}
 		case WM_PAINT:
 		{
 			PAINTSTRUCT ps = {0};
@@ -796,7 +863,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			if(wparam == UID)
 			{
-				_Reduct_Start(hwnd);
+				_Reduct_Start(NULL);
 			}
 
 			break;
