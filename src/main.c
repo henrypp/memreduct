@@ -54,7 +54,7 @@ DWORD _Reduct_MemoryStatus(_R_MEMORYSTATUS* m)
 		m->free_phys = msex.ullAvailPhys;
 		m->total_phys = msex.ullTotalPhys;
 
-		m->percent_page = (msex.ullTotalPageFile - msex.ullAvailPageFile) / (msex.ullTotalPageFile / 100);
+		m->percent_page = DWORD((msex.ullTotalPageFile - msex.ullAvailPageFile) / (msex.ullTotalPageFile / 100));
 
 		m->free_page = msex.ullAvailPageFile;
 		m->total_page = msex.ullTotalPageFile;
@@ -64,7 +64,7 @@ DWORD _Reduct_MemoryStatus(_R_MEMORYSTATUS* m)
 
 	if(m && NtQuerySystemInformation(SystemFileCacheInformation, &sci, sizeof(sci), NULL) >= 0)
 	{
-		m->percent_ws = sci.CurrentSize / (sci.PeakSize / 100);
+		m->percent_ws = DWORD(sci.CurrentSize / (sci.PeakSize / 100));
 
 		m->free_ws = (sci.PeakSize - sci.CurrentSize);
 		m->total_ws = sci.PeakSize;
@@ -73,7 +73,6 @@ DWORD _Reduct_MemoryStatus(_R_MEMORYSTATUS* m)
 	return msex.dwMemoryLoad;
 }
 
-// type - 1 non-text, otherwise txtural,.
 HICON _Reduct_CreateIcon(DWORD percent)
 {
 	if(!percent)
@@ -126,55 +125,18 @@ HICON _Reduct_CreateIcon(DWORD percent)
 	return CreateIconIndirect(&ii);
 }
 
-VOID CALLBACK _Reduct_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
-{
-	_R_MEMORYSTATUS m = {0};
-
-	_Reduct_MemoryStatus(&m);
-
-	if(_r_nid.hIcon)
-	{
-		DestroyIcon(_r_nid.hIcon);
-	}
-
-	// Refresh tray info
-	_r_nid.uFlags = NIF_ICON | NIF_TIP;
-	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), m.percent_phys, m.percent_page, m.percent_ws);
-	_r_nid.hIcon = _Reduct_CreateIcon(NULL);
-
-	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
-
-	if(IsWindowVisible(hwnd))
-	{
-		// Physical memory
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_phys), 0, 1, -1, -1, m.percent_phys);
-
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_phys), 1, 1, -1, -1, m.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_phys), 2, 1, -1, -1, m.percent_phys);
-		
-		// Pagefile memory
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_page), 3, 1, -1, -1, m.percent_page);
-
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_page), 4, 1, -1, -1, m.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_page), 5, 1, -1, -1, m.percent_page);
-
-		// System working set
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_ws), 6, 1, -1, -1, m.percent_ws);
-
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_ws), 7, 1, -1, -1, m.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
-	}
-
-}
-
 BOOL _Reduct_Start(HWND)
 {
 	// if user has no rights
 	if(_r_system_uacstate())
 	{
-		ShowBalloonTip(NIIF_ERROR, APP_NAME, _r_locale(IDS_UAC_WARNING), FALSE);
+		ShowBalloonTip(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), FALSE);
 		return FALSE;
 	}
+
+	_R_MEMORYSTATUS m = {0};
+
+	_Reduct_MemoryStatus(&m);
 
 	BOOL is_vista = _r_system_validversion(6, 0);
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
@@ -198,25 +160,82 @@ BOOL _Reduct_Start(HWND)
 	}
 						
 	// Modified pagelists
-	if(is_vista && _r_cfg_read(L"ReductModifiedPagelists", 0))
+	if(is_vista && _r_cfg_read(L"ReductModifiedList", 0))
 	{
 		smlc = MemoryFlushModifiedList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
-
+	
 	// Standby pagelists
-	if(is_vista && _r_cfg_read(L"ReductStandbyPagelists", 0))
+	if(is_vista && _r_cfg_read(L"ReductStandbyList", 0))
 	{
-		// Standby pagelists
 		smlc = MemoryPurgeStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
+	}
 
-		// Standby priority-0 pagelists
+	// Standby priority-0 pagelists
+	if(is_vista && _r_cfg_read(L"ReductStandbyPriority0List", 1))
+	{
 		smlc = MemoryPurgeLowPriorityStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
+	DWORD current = _Reduct_MemoryStatus(NULL);
+
+	ShowBalloonTip(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), current, _Reduct_MemoryStatus(NULL) - current), FALSE);
+
 	return TRUE;
+}
+
+VOID CALLBACK _Reduct_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
+{
+	_R_MEMORYSTATUS m = {0};
+
+	_Reduct_MemoryStatus(&m);
+
+	if(_r_nid.hIcon)
+	{
+		DestroyIcon(_r_nid.hIcon);
+	}
+
+	// Refresh tray info
+	_r_nid.uFlags = NIF_ICON | NIF_TIP;
+
+	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), m.percent_phys, m.percent_page, m.percent_ws);
+	_r_nid.hIcon = _Reduct_CreateIcon(NULL);
+
+	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
+
+	// Autoreduct
+	if(
+		(m.percent_phys >= _r_cfg_read(L"DangerLevel", 90) && _r_cfg_read(L"AutoreductDanger", 1)) ||
+		(m.percent_phys >= _r_cfg_read(L"WarningLevel", 60) && _r_cfg_read(L"AutoreductWarning", 0))
+	)
+	{
+		_Reduct_Start(hwnd);
+	}
+
+	if(IsWindowVisible(hwnd))
+	{
+		// Physical memory
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_phys), 0, 1, -1, -1, m.percent_phys);
+
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_phys), 1, 1, -1, -1, m.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_phys), 2, 1, -1, -1, m.percent_phys);
+		
+		// Pagefile memory
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_page), 3, 1, -1, -1, m.percent_page);
+
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_page), 4, 1, -1, -1, m.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_page), 5, 1, -1, -1, m.percent_page);
+
+		// System working set
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_ws), 6, 1, -1, -1, m.percent_ws);
+
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_ws), 7, 1, -1, -1, m.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
+	}
+
 }
 
 VOID _Reduct_Unitialize()
@@ -310,14 +329,16 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 			{
 				CheckDlgButton(hwnd, IDC_SYSTEMWORKINGSET_CHK, _r_cfg_read(L"ReductSystemWorkingSet", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_WORKINGSET_CHK, _r_cfg_read(L"ReductWorkingSet", 1) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_MODIFIEDPAGELISTS_CHK, _r_cfg_read(L"ReductModifiedPagelists", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_STANDBYPAGELISTS_CHK, _r_cfg_read(L"ReductStandbyPagelists", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, _r_cfg_read(L"ReductModifiedList", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, _r_cfg_read(L"ReductStandbyList", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, _r_cfg_read(L"ReductStandbyPriority0List", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				if(!_r_system_validversion(6, 0))
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_WORKINGSET_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDPAGELISTS_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYPAGELISTS_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
 				}
 
 				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETRANGE32, 1, 99);
@@ -330,7 +351,8 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 			}
 			else if((INT)lparam == IDD_SETTINGS_3)
 			{
-
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTWARNING_CHK, _r_cfg_read(L"AutoreductWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTDANGER_CHK, _r_cfg_read(L"AutoreductDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 			}
 			else if((INT)lparam == IDD_SETTINGS_4)
 			{
@@ -368,8 +390,9 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				{
 					_r_cfg_write(L"ReductSystemWorkingSet", INT((IsDlgButtonChecked(hwnd, IDC_SYSTEMWORKINGSET_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ReductWorkingSet", INT((IsDlgButtonChecked(hwnd, IDC_WORKINGSET_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"ReductModifiedPagelists", INT((IsDlgButtonChecked(hwnd, IDC_MODIFIEDPAGELISTS_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"ReductStandbyPagelists", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYPAGELISTS_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductModifiedList", INT((IsDlgButtonChecked(hwnd, IDC_MODIFIEDLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductStandbyList", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductStandbyPriority0List", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLISTPRIORITY0_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"WarningLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_GETPOS32, 0, NULL));
 					_r_cfg_write(L"DangerLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_GETPOS32, 0, NULL));
@@ -378,7 +401,8 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
 				{
-
+					_r_cfg_write(L"AutoreductWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
 				{
@@ -673,15 +697,16 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_listview_addcolumn(hwnd, IDC_LISTVIEW, NULL, 50, 1, LVCFMT_RIGHT);
 			_r_listview_addcolumn(hwnd, IDC_LISTVIEW, NULL, 50, 2, LVCFMT_LEFT);
 
-			_r_listview_addgroup(hwnd, IDC_LISTVIEW, 0, _r_locale(IDS_MEM_PHYSICAL), 0, 0);
-			_r_listview_addgroup(hwnd, IDC_LISTVIEW, 1, _r_locale(IDS_MEM_PAGEFILE), 0, 0);
-			_r_listview_addgroup(hwnd, IDC_LISTVIEW, 2, _r_locale(IDS_MEM_SYSCACHE), 0, 0);
+			for(INT i = 0; i < 3; i++)
+			{
+				_r_listview_addgroup(hwnd, IDC_LISTVIEW, i, _r_locale(IDS_GROUP_1 + i), 0, 0);
+			}
 
 			for(INT i = 0, j = 0; i < 3; i++)
 			{
-				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_MEM_USAGE), j++, 0, -1, i);
-				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_MEM_FREE), j++, 0, -1, i);
-				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_MEM_TOTAL), j++, 0, -1, i);
+				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_ITEM_1), j++, 0, -1, i);
+				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_ITEM_2), j++, 0, -1, i);
+				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_ITEM_3), j++, 0, -1, i);
 			}
 
 			// Tray icon
@@ -806,12 +831,12 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						{
 							if(lpnmlv->nmcd.hdr.idFrom == IDC_LISTVIEW)
 							{
-								if((UINT)lpnmlv->nmcd.lItemlParam >= 50)
+								if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"DangerLevel", 90))
 								{
 									lpnmlv->clrText = COLOR_LEVEL_DANGER;
 									//lpnmlv->clrTextBk = COLOR_LEVEL_DANGER;
 								}
-								else if((UINT)lpnmlv->nmcd.lItemlParam >= 40)
+								else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"WarningLevel", 60))
 								{
 									lpnmlv->clrText = COLOR_LEVEL_WARNING;
 									//lpnmlv->clrTextBk = COLOR_LEVEL_DANGER;

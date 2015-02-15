@@ -38,17 +38,17 @@
 struct _R_MEMORYSTATUS
 {
 	// Physical
-    DWORDLONG percent_phys;
+    DWORD percent_phys;
     DWORDLONG total_phys;
     DWORDLONG free_phys;
 
 	// Page File
-    DWORDLONG percent_page;
+    DWORD percent_page;
     DWORDLONG total_page;
     DWORDLONG free_page;
 
 	// System Working Set
-    DWORDLONG percent_ws;
+    DWORD percent_ws;
     DWORDLONG total_ws;
     DWORDLONG free_ws;
 
