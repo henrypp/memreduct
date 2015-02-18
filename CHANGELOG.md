@@ -1,6 +1,10 @@
 vx.x (TBA 2015)
-- x64 support
-- dpi support
++ windows 10 support
++ x64 support
++ dpi support
+- uac compatibility improved
+- uipi compatibility improved
+- more detailed result at memory cleaner window
 
 v2.4 (17 September 2013)
 - Added tray icon customization

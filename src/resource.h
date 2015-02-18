@@ -27,6 +27,7 @@
 #define IDC_VALUE_1 1001
 #define IDC_VALUE_2 1002
 #define IDC_VALUE_3 1003
+
 #define IDC_SAVED_1 1004
 #define IDC_SAVED_2 1005
 

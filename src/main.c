@@ -13,7 +13,7 @@ NOTIFYICONDATA _r_nid = {0};
 HDC _r_dc = NULL, _r_cdc = NULL;
 HBITMAP _r_bitmap, _r_bitmap_mask = NULL;
 RECT _r_rc = {0};
-HFONT _r_font = NULL;
+HFONT _r_font = NULL, _r_font2 = NULL;
 VOID *_r_bits = NULL;
 
 // Show tray balloon tip
@@ -54,7 +54,7 @@ DWORD _Reduct_MemoryStatus(_R_MEMORYSTATUS* m)
 		m->free_phys = msex.ullAvailPhys;
 		m->total_phys = msex.ullTotalPhys;
 
-		m->percent_page = DWORD((msex.ullTotalPageFile - msex.ullAvailPageFile) / (msex.ullTotalPageFile / 100));
+		m->percent_page = (DWORD)ROUTINE_PERCENT_OF(msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
 
 		m->free_page = msex.ullAvailPageFile;
 		m->total_page = msex.ullTotalPageFile;
@@ -64,7 +64,7 @@ DWORD _Reduct_MemoryStatus(_R_MEMORYSTATUS* m)
 
 	if(m && NtQuerySystemInformation(SystemFileCacheInformation, &sci, sizeof(sci), NULL) >= 0)
 	{
-		m->percent_ws = DWORD(sci.CurrentSize / (sci.PeakSize / 100));
+		m->percent_ws = (DWORD)ROUTINE_PERCENT_OF(sci.CurrentSize, sci.PeakSize);
 
 		m->free_ws = (sci.PeakSize - sci.CurrentSize);
 		m->total_ws = sci.PeakSize;
@@ -82,7 +82,7 @@ HICON _Reduct_CreateIcon(DWORD percent)
 
 	HBITMAP old_bitmap = (HBITMAP)SelectObject(_r_cdc, _r_bitmap);
 
-	COLORREF clrOld = SetBkColor(_r_cdc, COLOR_TRAY_TRANSPARENT_BG);
+	COLORREF clrOld = SetBkColor(_r_cdc, COLOR_TRAY_MASK);
 	ExtTextOut(_r_cdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
 	SetBkColor(_r_cdc, clrOld);
 
@@ -102,14 +102,13 @@ HICON _Reduct_CreateIcon(DWORD percent)
 	{
 		DWORD *lpdwPixel = (DWORD*)_r_bits;
 
-
 		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
 		{
-			*lpdwPixel &= COLOR_TRAY_TRANSPARENT_BG;
+			*lpdwPixel &= COLOR_TRAY_MASK;
 
-			if(*lpdwPixel == COLOR_TRAY_TRANSPARENT_BG)
+			if(*lpdwPixel == COLOR_TRAY_MASK)
 			{
-				*lpdwPixel |= 0x00000000;
+				//*lpdwPixel |= 0xffffffff;
 			}
 			else
 			{
@@ -125,14 +124,18 @@ HICON _Reduct_CreateIcon(DWORD percent)
 	return CreateIconIndirect(&ii);
 }
 
-VOID _Reduct_PrintResult(HWND hwnd, DWORD new_percent, DWORD max_result, _R_MEMORYSTATUS* m)
+VOID _Reduct_PrintResult(HWND hwnd, DWORD new_percent, _R_MEMORYSTATUS* m)
 {
 	SetDlgItemText(hwnd, IDC_VALUE_1, _r_helper_format(L"%d%%", m ? m->percent_phys : 0));
 	SetDlgItemText(hwnd, IDC_VALUE_2, _r_helper_format(L"%d%%", m ? m->percent_phys - new_percent : 0));
 	SetDlgItemText(hwnd, IDC_VALUE_3, _r_helper_format(L"%d%%", m ? new_percent : 0));
 
-	SetDlgItemText(hwnd, IDC_SAVED_1, _r_helper_format(_r_locale(IDS_SAVED_1), _r_helper_formatsize64(m ? ((m->total_phys / 100) * (m->percent_phys - new_percent)) : 0)));
-	SetDlgItemText(hwnd, IDC_SAVED_2, _r_helper_format(_r_locale(IDS_SAVED_2), max_result, _r_helper_formatsize64(m ? (m->total_phys / 100) * max_result : 0)));
+	INT max_result = max(_r_cfg_read(L"MaxResult", 0), (m ? m->percent_phys : _Reduct_MemoryStatus(NULL)) - new_percent);
+
+	SetDlgItemText(hwnd, IDC_SAVED_1, _r_helper_format(_r_locale(IDS_SAVED_1), _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(m->percent_phys - new_percent, m->total_phys) : 0)));
+	SetDlgItemText(hwnd, IDC_SAVED_2, _r_helper_format(_r_locale(IDS_SAVED_2), max_result, _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(max_result, m->total_phys) : 0)));
+
+	_r_cfg_write(L"MaxResult", max_result);
 }
 
 BOOL _Reduct_Start(HWND hwnd)
@@ -192,15 +195,12 @@ BOOL _Reduct_Start(HWND hwnd)
 
 	DWORD new_percent = _Reduct_MemoryStatus(NULL);
 
-	INT max_result = max(_r_cfg_read(L"MaxResult", 0), m.percent_phys - new_percent);
-	_r_cfg_write(L"MaxResult", max_result);
-
 	if(hwnd)
 	{
-		_Reduct_PrintResult(hwnd, new_percent, max_result, &m);
+		_Reduct_PrintResult(hwnd, new_percent, &m);
 	}
 
-	ShowBalloonTip(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), new_percent, m.percent_phys - new_percent), FALSE);
+	ShowBalloonTip(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(m.percent_phys - new_percent, m.total_phys))), FALSE);
 
 	return TRUE;
 }
@@ -293,6 +293,11 @@ VOID _Reduct_Unitialize()
 	DeleteDC(_r_dc);
 	DeleteObject(_r_bitmap);
 	DeleteObject(_r_bitmap_mask);
+
+	if(_r_font2)
+	{
+		RemoveFontMemResourceEx(_r_font2);
+	}
 }
 
 VOID _Reduct_Initialize()
@@ -321,13 +326,31 @@ VOID _Reduct_Initialize()
 
 	ReleaseDC(NULL, _r_dc);
 
-	LOGFONT lf ={0};
+	HRSRC res = FindResource(GetModuleHandle(NULL), MAKEINTRESOURCE(1), RT_FONT);
+
+	if(res)
+	{
+		HGLOBAL mem = LoadResource(GetModuleHandle(NULL), res);
+		LPVOID data = LockResource(mem);
+		DWORD length = SizeofResource(GetModuleHandle(NULL), res);
+
+		DWORD nFonts = 0;
+		_r_font2 = (HFONT)AddFontMemResourceEx(data, length, NULL,	&nFonts);
+	}
+
+//	_r_msg(0, L"0x%08x", _r_font2);
+
+	LOGFONT lf = {0};
 
 	lf.lfQuality = ANTIALIASED_QUALITY;
+	lf.lfCharSet = DEFAULT_CHARSET;
 	//lf.lfWeight = FW_SEMIBOLD;
-	lf.lfHeight = -MulDiv(8, GetDeviceCaps(_r_cdc, LOGPIXELSY), 72);
+	//lf.lfHeight = 8;
+	lf.lfPitchAndFamily = FF_DONTCARE;
+	lf.lfHeight = -MulDiv(6, GetDeviceCaps(_r_cdc, LOGPIXELSY), 72);
 
-	StringCchCopy(lf.lfFaceName, _countof(lf.lfFaceName), L"Tahoma");
+//	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"Tahoma");
+	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"RTFont");
 
 	_r_font = CreateFontIndirect(&lf);
 
@@ -448,8 +471,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				{
 
 				}
-
-				_Reduct_Initialize();
 			}
 
 			break;
@@ -550,7 +571,7 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 			SendDlgItemMessage(hwnd, IDC_RESULT + 2, WM_SETFONT, (WPARAM)font, NULL);
 			SendDlgItemMessage(hwnd, IDC_RESULT + 3, WM_SETFONT, (WPARAM)font, NULL);
 
-			_Reduct_PrintResult(hwnd, 0, 0, NULL);
+			_Reduct_PrintResult(hwnd, 0, NULL);
 
 			SetFocus(GetDlgItem(hwnd, IDC_OK));
 
@@ -562,7 +583,6 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 		case WM_DESTROY:
 		{
 			SetProp(_r_hwnd, L"progress", NULL);
-
 
 			break;
 		}
@@ -632,116 +652,6 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_hwnd = hwnd;
 
 			_Reduct_Initialize();
-/*
- //  ------------------------------------------------------
-    //  Initialize COM.
-    HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-    //  Set general COM security levels.
-    hr = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_PKT_PRIVACY, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, 0, NULL);
-
-    //  ------------------------------------------------------
-    //  Create a name for the task.
-    LPCWSTR wszTaskName = L"task name";
-
-    //  ------------------------------------------------------
-    //  Create an instance of the Task Service. 
-    ITaskService *pService = NULL;
-    hr = CoCreateInstance(CLSID_TaskScheduler, NULL, CLSCTX_INPROC_SERVER, IID_ITaskService, (void**)&pService );
-    if (FAILED(hr))
-
-    //  Connect to the task service.
-    hr = pService->Connect(_variant_t(), _variant_t(), _variant_t(), _variant_t());
-
-    //  ------------------------------------------------------
-    //  Get the pointer to the root task folder.  This folder will hold the new task that is registered.
-    ITaskFolder *pRootFolder = NULL;
-    hr = pService->GetFolder(_bstr_t( L"\\") , &pRootFolder);
-
-    //  If the same task exists, remove it.
-    pRootFolder->DeleteTask(_bstr_t(wszTaskName), 0);
-
-    //  Create the task builder object to create the task.
-    ITaskDefinition *pTask = NULL;
-    hr = pService->NewTask(0, &pTask);
-
-    pService->Release();  // COM clean up.  Pointer is no longer used.
-
-    //  ------------------------------------------------------
-    //  Get the registration info for setting the identification.
-    IRegistrationInfo *pRegInfo= NULL;
-    hr = pTask->get_RegistrationInfo(&pRegInfo);
-
-    hr = pRegInfo->put_Author(L"author");
-    pRegInfo->Release();  
-
-    //  ------------------------------------------------------
-    //  Create the settings for the task
-    ITaskSettings *pSettings = NULL;
-    hr = pTask->get_Settings(&pSettings);
-
-    //  Set setting values for the task. 
-    hr = pSettings->put_StartWhenAvailable(VARIANT_BOOL(true));
-    pSettings->Release();
-
-    //  ------------------------------------------------------
-    //  Get the trigger collection to insert the logon trigger.
-    ITriggerCollection *pTriggerCollection = NULL;
-    hr = pTask->get_Triggers(&pTriggerCollection);
-
-    //  Add the logon trigger to the task.
-    ITrigger *pTrigger = NULL;
-    hr = pTriggerCollection->Create(TASK_TRIGGER_LOGON, &pTrigger);
-    pTriggerCollection->Release();
-
-    ILogonTrigger *pLogonTrigger = NULL;       
-    hr = pTrigger->QueryInterface(IID_ILogonTrigger, (void**)&pLogonTrigger);
-    pTrigger->Release();
-
-    hr = pLogonTrigger->put_Id(_bstr_t(L"Trigger1"));  
-
-    //  Define the user.  The task will execute when the user logs on.
-    //  The specified user must be a user on this computer.  
-    hr = pLogonTrigger->put_UserId( NULL );  
-    pLogonTrigger->Release();
-
-    //  ------------------------------------------------------
-    //  Add an Action to the task. This task will execute notepad.exe.     
-    IActionCollection *pActionCollection = NULL;
-
-    //  Get the task action collection pointer.
-    hr = pTask->get_Actions( &pActionCollection );
-
-    //  Create the action, specifying that it is an executable action.
-    IAction *pAction = NULL;
-    hr = pActionCollection->Create(TASK_ACTION_EXEC, &pAction);
-    pActionCollection->Release();
-
-    IExecAction *pExecAction = NULL;
-    //  QI for the executable task pointer.
-    hr = pAction->QueryInterface(IID_IExecAction, (void**)&pExecAction);
-    pAction->Release();
-
-    //  Set the path of the executable to notepad.exe.
-    hr = pExecAction->put_Path( _bstr_t(L"notepad.exe") );
-    pExecAction->Release();
-
-    //  ------------------------------------------------------
-    //  Save the task in the root folder.
-    IRegisteredTask *pRegisteredTask = NULL;
-
-    hr = pRootFolder->RegisterTaskDefinition(_bstr_t(wszTaskName), pTask, TASK_CREATE_OR_UPDATE, _variant_t(""), 
-        _variant_t(""), TASK_LOGON_NONE, _variant_t(L""), &pRegisteredTask);
-
-
-    // Clean up
-    pRootFolder->Release();
-    pTask->Release();
-    pRegisteredTask->Release();
-
-    CoUninitialize();
-
-	*/
 
 			if(_r_system_adminstate())
 			{
@@ -775,7 +685,21 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_ITEM_2), j++, 0, -1, i);
 				_r_listview_additem(hwnd, IDC_LISTVIEW, _r_locale(IDS_ITEM_3), j++, 0, -1, i);
 			}
+/*
+			// Privilege indicator (Windows Vista and above)
+			if(_r_system_uacstate())
+			{
+				RECT rc = {0};
 
+				 // Set UAC shield to button
+				SendDlgItemMessage(hwnd, IDC_REDUCT, BCM_SETSHIELD, 0, TRUE);
+
+				// Set text margins
+				SendDlgItemMessage(hwnd, IDC_REDUCT, BCM_GETTEXTMARGIN, 0, (LPARAM)&rc);
+				rc.left += GetSystemMetrics(SM_CYSMICON) / 2;
+				SendDlgItemMessage(hwnd, IDC_REDUCT, BCM_SETTEXTMARGIN, 0, (LPARAM)&rc);
+			}
+*/
 			// Tray icon
 			_r_nid.cbSize = _r_system_validversion(6, 0) ? sizeof(_r_nid) : NOTIFYICONDATA_V3_SIZE;
 			_r_nid.hWnd = hwnd;
@@ -785,6 +709,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_nid.hIcon = _Reduct_CreateIcon(NULL);
 
 			Shell_NotifyIcon(NIM_ADD, &_r_nid);
+
 
 /*
 			for(int i = 0; i <= 100; i++)
@@ -808,8 +733,10 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			//Beep( 750, 300 );
 			//MessageBeep(MB_ICONINFORMATION);
 			//PlaySound(L"SystemHand", NULL, SND_ALIAS | SND_ASYNC);
+			_r_listview_getcolumnwidth(hwnd, IDC_LISTVIEW, 0);
+			
 
-			return TRUE;;
+			break;
 		}
 
 		case WM_DESTROY:
@@ -835,7 +762,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			break;
 		}
-			
+
 		case WM_PAINT:
 		{
 			PAINTSTRUCT ps = {0};
@@ -1006,6 +933,8 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					{
 						_r_uninitialize(TRUE);
 					}
+
+					_Reduct_Initialize();
 
 					break;
 				}

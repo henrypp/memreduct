@@ -9,8 +9,8 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"2.5.0"
-#define APP_VERSION_RES 2,5,0,0
+#define APP_VERSION L"3.0.0"
+#define APP_VERSION_RES 3,0,0,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
 #define APP_AUTHOR L"Henry++"
@@ -26,7 +26,7 @@
 #define UID					1337
 #define WM_TRAYICON			(WM_APP + UID)
 
-#define COLOR_TRAY_TRANSPARENT_BG		0x00FF00FF
+#define COLOR_TRAY_MASK		0x00FF00FF
 
 #define COLOR_TRAY_TEXT		0xFFFFFF
 #define COLOR_TRAY_BG		0//0xEF892D
