@@ -4,66 +4,52 @@ vx.x (TBA 2015)
 + dpi support
 - uac compatibility improved
 - uipi compatibility improved
-- more detailed result at memory cleaner window
++ added "standby list without priority" cleaning 
+- more detailed result at memory clean window
++ run without uac prompt (in settings)
+- fixed tray icon disappear sometimes
 
 v2.4 (17 September 2013)
-- Added tray icon customization
-- Improved UAC compatibility
-- Improved admin right checking
-- Improved tray icon painting
-- Improved updates checking
-- Improved 64-bits OS compatibility
-- Changed application icon
-- Some cosmetics fixes
-- Fixed minor bugs
-- Optimized code
++ added tray icon customization
+- uac compatibility improved
+- x64 compatibility improved
+- changed application icon
+- fixed ui & bugs
 
 v2.3 (14 July 2012)
-- Improved compatibility with Windows 8 Release Preview
-- Added "Bulgarian" translation (by nahalnik)
-- Added "Chinese (simplified)" translation (by hsxz)
-- Added "Chinese (traditional)" translation (by hsxz)
-- Added "Apply" button to settings window
-- Added option to disable tooltips
-- Added option "Always on Top"
-- Added memory usage color indication for ListView
-- Fixed reading settings
-- Fixed admin right checking
-- Fixed checking already running copy
-- Fixed working under UAC
-- Removed admin rights requirement (shown only if necessary)
-- Updated installer
-- Some cosmetics fixes
-- Fixed minor bugs
-- Optimized code
++ windows 8 support
++ added "bulgarian" localization (by nahalnik)
++ added "chinese (simplified)" localization (by hsxz)
++ added "chinese (traditional)" translation (by hsxz)
++ listview color indication
+- removed admin rights requirement (shown only if necessary)
+- fixed ui & bugs
 
 v2.2 (24 May 2012)
-- Added new on double-click option "Start memory reduction (silently)"
-- Fixed Auto-Reduct percents
++ added on double-click option "start memory reduction (silently)"
+- fixed auto cleaning configuration
 
 v2.1 (23 May 2012)
-- Added "Portugues" translation (by Lucas Macedo)
-- Added Auto-Reduct configuring
-- Added systray configuring
-- Added balloon tip on event
-- Added displaying "System working set" usage
-- Fixed write/delete from autorun
-- Fixed calculating of percents
-- Fixed re-opening windows from systray menu
-- Changed "About" dialog
-- Changed update-engine
-- Small interface fixes
-- Fixed memory leak(s)
-- Updated all localizations
-- Fixed minor bugs
-- Optimized code
++ added "portuguese" localization (by lucas macedo)
++ added auto cleaning configuration
++ added balloon tips
++ added "system working set" usage
+- fixed percentage calculation
+- fixed memory leak
+- fixed ui & bugs
 
 v2.0 (2 April 2012)
-- Added partial support of Windows XP
-- Added support for localizations
-- Added displaying information in sytray
-- Added new settings
-- Now program worked in the background
-- Improved user interface
-- Fixed minor bugs
-- Optimized code
++ program worked in the background now
++ windows xp partial support
++ localization support
++ more new settings
+- fixed ui & bugs
+
+v1.1 (10 November 2011)
++ memory clening region configuration
++ added "working set" cleaning
++ added "page list" information
+- fixed ui & bugs
+
+v1.0 (27 October 2011)
+- first public version

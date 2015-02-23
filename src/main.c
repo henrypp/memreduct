@@ -13,11 +13,13 @@ NOTIFYICONDATA _r_nid = {0};
 HDC _r_dc = NULL;
 HBITMAP _r_bitmap_opaque = NULL, _r_bitmap_transparent = NULL, _r_bitmap_mask = NULL;
 RECT _r_rc = {0};
-HFONT _r_font = NULL, _r_font2 = NULL;
+HFONT _r_font = NULL;
 RGBQUAD *_r_rgb = NULL;
 BOOL _r_supported_os = FALSE;
 
 DWORD dwLastBalloon = 0;
+
+CONST UINT WM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
 
 BOOL _Reduct_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text, BOOL important)
 {
@@ -44,6 +46,7 @@ BOOL _Reduct_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text, BOOL impo
 DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
 {
 	MEMORYSTATUSEX msex = {0};
+	SYSTEM_CACHE_INFORMATION sci = {0};
 
 	msex.dwLength = sizeof(msex);
 
@@ -60,8 +63,6 @@ DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
 		m->total_page = msex.ullTotalPageFile;
 	}
 
-	SYSTEM_CACHE_INFORMATION sci = {0};
-
 	if(m && NtQuerySystemInformation(SystemFileCacheInformation, &sci, sizeof(sci), NULL) >= 0)
 	{
 		m->percent_ws = (DWORD)ROUTINE_PERCENT_OF(sci.CurrentSize, sci.PeakSize);
@@ -75,14 +76,14 @@ DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
 
 VOID _Application_PrintResult(HWND hwnd, DWORD new_percent, _R_MEMORYSTATUS* m)
 {
-	SetDlgItemText(hwnd, IDC_VALUE_1, _r_helper_format(L"%d%%", m ? m->percent_phys : 0));
-	SetDlgItemText(hwnd, IDC_VALUE_2, _r_helper_format(L"%d%%", m ? m->percent_phys - new_percent : 0));
-	SetDlgItemText(hwnd, IDC_VALUE_3, _r_helper_format(L"%d%%", m ? new_percent : 0));
+	SetDlgItemText(hwnd, IDC_RESULT_1, L"~" + _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(m->percent_phys - new_percent, m->total_phys) : 0));
 
-	INT max_result = max(_r_cfg_read(L"MaxResult", 0), (m ? m->percent_phys : _Application_GetMemoryStatus(NULL)) - new_percent);
+	INT max_result = max(_r_cfg_read(L"MaxResult", 0), m ? (m->percent_phys - new_percent) : 0);
 
-	SetDlgItemText(hwnd, IDC_SAVED_1, _r_helper_format(_r_locale(IDS_SAVED_1), _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(m->percent_phys - new_percent, m->total_phys) : 0)));
-	SetDlgItemText(hwnd, IDC_SAVED_2, _r_helper_format(_r_locale(IDS_SAVED_2), max_result, _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(max_result, m->total_phys) : 0)));
+	_R_MEMORYSTATUS ms = {0};
+	_Application_GetMemoryStatus(&ms);
+
+	SetDlgItemText(hwnd, IDC_RESULT_2, L"~" + _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(max_result, ms.total_phys)));
 
 	_r_cfg_write(L"MaxResult", max_result);
 }
@@ -156,7 +157,7 @@ BOOL _Application_Reduct(HWND hwnd)
 HICON _Application_GenerateIcon(DWORD percent)
 {
 	bool is_trans = _r_cfg_read(L"UseTransparentBg", 1);
-	bool is_text_chg = _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0);
+//	bool is_text_chg = _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0);
 
 	COLORREF bg_color = is_trans ? COLOR_TRAY_MASK : COLOR_TRAY_BG;
 	COLORREF text_color = is_trans ? 0 : COLOR_TRAY_TEXT;
@@ -181,12 +182,10 @@ HICON _Application_GenerateIcon(DWORD percent)
 
 	if(!is_trans)
 	{
-		COLORREF clrOld = SetBkColor(dc, bg_color);
+		COLORREF clr_prev = SetBkColor(dc, bg_color);
 		ExtTextOut(dc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
-		SetBkColor(dc, clrOld);
+		SetBkColor(dc, clr_prev);
 	}
-
-//	BitBlt(_r_dc, 0, 0, _r_rc.right, _r_rc.bottom, _r_cdc, 0, 0, SRCCOPY);
 
 	SelectObject(dc, _r_font);
 
@@ -198,13 +197,25 @@ HICON _Application_GenerateIcon(DWORD percent)
 
 	DrawTextEx(dc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
-	//TransparentBlt(_r_dc, 0, 0, _r_rc.right, _r_rc.bottom, dc, 0, 0, _r_rc.right, _r_rc.bottom, COLOR_TRAY_MASK);
-
 	SelectObject(_r_dc, old_bitmap);
 	
 	DeleteObject(dc);
 
-//	KillTimer(_r_hwnd, UID);
+	if(1)
+	{
+		DWORD *lpdwPixel = (DWORD*)_r_rgb;
+
+		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
+		{
+           // Clear the alpha bits
+           *lpdwPixel &= 0x00FFFFFF;
+
+           // Set the alpha bits to 0x9F (semi-transparent)
+           *lpdwPixel |= 0x01000000;
+
+			lpdwPixel++;
+		}
+	}
 
 	ICONINFO ii = {TRUE, 0, 0, _r_bitmap_mask, is_trans ? _r_bitmap_transparent : _r_bitmap_opaque};
 
@@ -217,12 +228,12 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	_Application_GetMemoryStatus(&m);
 
+	// Refresh tray info
 	if(_r_nid.hIcon)
 	{
 		DestroyIcon(_r_nid.hIcon);
 	}
 
-	// Refresh tray info
 	_r_nid.uFlags = NIF_ICON | NIF_TIP;
 
 	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), m.percent_phys, m.percent_page, m.percent_ws);
@@ -230,8 +241,8 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
 	
-	bool has_danger = (m.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
-	bool has_warning = (m.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
+	BOOL has_danger = (m.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
+	BOOL has_warning = (m.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
 
 	// Autoreduct
 	if((has_danger && _r_cfg_read(L"AutoreductWhenDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWhenWarning", 0)))
@@ -262,36 +273,18 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_ws), 7, 1, -1, -1, m.percent_ws);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
 	}
-
-	HWND progress = (HWND)GetProp(_r_hwnd, L"progress");
-
-	if(progress)
-	{
-		if(_r_supported_os)
-		{
-			WPARAM state = PBST_NORMAL;
-
-			if(m.percent_phys >= _r_cfg_read(L"DangerLevel", 90))
-			{
-				state = PBST_ERROR;
-			}
-			else if(m.percent_phys >= _r_cfg_read(L"WarningLevel", 60))
-			{
-				state = PBST_PAUSED;
-			}
-
-			SendMessage(progress, PBM_SETSTATE, state, NULL);
-		}
-
-		SendMessage(progress, PBM_SETPOS, m.percent_phys, NULL);
-	}
 }
 
-VOID _Application_Unitialize()
+VOID _Application_Unitialize(BOOL deletetrayicon)
 {
 	if(_r_nid.hIcon)
 	{
 		DestroyIcon(_r_nid.hIcon);
+	}
+
+	if(deletetrayicon)
+	{
+		Shell_NotifyIcon(NIM_DELETE, &_r_nid);
 	}
 
 	UnregisterHotKey(_r_hwnd, UID);
@@ -302,16 +295,11 @@ VOID _Application_Unitialize()
 	DeleteObject(_r_bitmap_opaque);
 	DeleteObject(_r_bitmap_transparent);
 	DeleteObject(_r_bitmap_mask);
-
-	if(_r_font2)
-	{
-		RemoveFontMemResourceEx(_r_font2);
-	}
 }
 
-VOID _Application_Initialize()
+VOID _Application_Initialize(BOOL createtrayicon)
 {
-	_Application_Unitialize();
+	_Application_Unitialize(createtrayicon);
 
 	_r_rc.right = GetSystemMetrics(SM_CXSMICON);
 	_r_rc.bottom = GetSystemMetrics(SM_CYSMICON);
@@ -344,42 +332,11 @@ VOID _Application_Initialize()
 	_r_dc = GetDC(NULL);
 
 	_r_bitmap_opaque = CreateCompatibleBitmap(_r_dc, _r_rc.right, _r_rc.bottom);
-	_r_bitmap_transparent = CreateDIBSection(_r_dc, &bmi, DIB_RGB_COLORS, (void**)&_r_rgb, NULL, 0);
+	_r_bitmap_transparent = CreateDIBSection(_r_dc, &bmi, DIB_RGB_COLORS, (VOID**)&_r_rgb, NULL, 0);
 
 	_r_bitmap_mask = CreateBitmap(_r_rc.right, _r_rc.bottom, 1, 1, NULL);;
 
 	ReleaseDC(NULL, _r_dc);
-
-	if(1)
-	{
-		HDC buffdc = CreateCompatibleDC(NULL);
-
-		HBITMAP old_bitmap = (HBITMAP)SelectObject(buffdc, _r_bitmap_transparent);
-
-
-		COLORREF clrOld = SetBkColor(buffdc, COLOR_TRAY_MASK);
-		ExtTextOut(buffdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
-		SetBkColor(buffdc, clrOld);
-
-		SelectObject(buffdc, old_bitmap);
-
-		DeleteDC(buffdc);
-/*
-		DWORD *lpdwPixel = (DWORD*)_r_rgb;
-
-		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
-		{
-           // Clear the alpha bits
-           *lpdwPixel &= 0x00FFFFFF;
-
-           // Set the alpha bits to 0x9F (semi-transparent)
-           *lpdwPixel |= 0x01000000;
-
-			lpdwPixel++;
-		}
-*/
-
-	}
 
 	LOGFONT lf = {0};
 
@@ -387,7 +344,6 @@ VOID _Application_Initialize()
 	lf.lfCharSet = DEFAULT_CHARSET;
 	lf.lfPitchAndFamily = FF_DONTCARE;
 	lf.lfHeight = -MulDiv(8, GetDeviceCaps(_r_dc, LOGPIXELSY), 72);
-	//lf.lfWeight = FW_LIGHT;
 
 	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"Tahoma");
 //	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"RTFont");
@@ -403,6 +359,21 @@ VOID _Application_Initialize()
 
 	_r_windowtotop(_r_hwnd, _r_cfg_read(L"AlwaysOnTop", 0));
 
+	// Tray icon
+	if(createtrayicon)
+	{
+		_r_nid.cbSize = _r_supported_os ? sizeof(_r_nid) : NOTIFYICONDATA_V3_SIZE;
+		_r_nid.uVersion = _r_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
+		_r_nid.hWnd = _r_hwnd;
+		_r_nid.uID = UID;
+		_r_nid.uFlags = NIF_MESSAGE | NIF_ICON;
+		_r_nid.uCallbackMessage = WM_TRAYICON;
+		_r_nid.hIcon = _Application_GenerateIcon(NULL);
+
+		Shell_NotifyIcon(NIM_ADD, &_r_nid);
+	}
+
+	// Timer
 	SetTimer(_r_hwnd, UID, 500, _Application_MonitorCallback);
 }
 
@@ -448,26 +419,31 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
 				}
 
+				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", 0), NULL);
+			}
+			else if((INT)lparam == IDD_SETTINGS_3)
+			{
+				CheckDlgButton(hwnd, IDC_USECOLORINDICATIONLISTVIEW, _r_cfg_read(L"IDC_USECOLORINDICATIONLISTVIEW", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_USECOLORINDICATIONTRAY, _r_cfg_read(L"IDC_USECOLORINDICATIONTRAY", 1) ? BST_CHECKED : BST_UNCHECKED);
+
 				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETRANGE32, 1, 99);
 				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETPOS32, 0, _r_cfg_read(L"WarningLevel", 60));
 
 				SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_SETRANGE32, 1, 99);
 				SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_SETPOS32, 0, _r_cfg_read(L"DangerLevel", 90));
-
-				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", 0), NULL);
 			}
-			else if((INT)lparam == IDD_SETTINGS_3)
+			else if((INT)lparam == IDD_SETTINGS_4)
 			{
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTWHENWARNING_CHK, _r_cfg_read(L"AutoreductWhenWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTWHENDANGER_CHK, _r_cfg_read(L"AutoreductWhenDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 			}
-			else if((INT)lparam == IDD_SETTINGS_4)
+			else if((INT)lparam == IDD_SETTINGS_5)
 			{
 				CheckDlgButton(hwnd, IDC_BALLOONWHENWARNING_CHK, _r_cfg_read(L"BalloonWhenWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_BALLOONWHENDANGER_CHK, _r_cfg_read(L"BalloonWhenDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				CheckDlgButton(hwnd, IDC_USETRANSPARENTBG_CHK, _r_cfg_read(L"UseTransparentBg", 1) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_CHANGETEXTCOLOR_CHK, _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0) ? BST_CHECKED : BST_UNCHECKED);
+//				CheckDlgButton(hwnd, IDC_CHANGETEXTCOLOR_CHK, _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0) ? BST_CHECKED : BST_UNCHECKED);
 			}
 
 			break;
@@ -479,8 +455,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 			{
 				if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_1)
 				{
-					INT as_admin = _r_cfg_read(L"RunAsAdmin", 1);
-
 					// general
 					_r_cfg_write(L"AlwaysOnTop", INT((IsDlgButtonChecked(hwnd, IDC_ALWAYSONTOP_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"StartMinimized", INT((IsDlgButtonChecked(hwnd, IDC_STARTMINIMIZED_CHK) == BST_CHECKED) ? TRUE : FALSE));
@@ -516,23 +490,28 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 					_r_cfg_write(L"ReductStandbyList", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ReductStandbyPriority0List", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLISTPRIORITY0_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
-					_r_cfg_write(L"WarningLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_GETPOS32, 0, NULL));
-					_r_cfg_write(L"DangerLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_GETPOS32, 0, NULL));
-
 					_r_cfg_write(L"Hotkey", (DWORD)SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_GETHOTKEY, 0, NULL));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
 				{
+					_r_cfg_write(L"IDC_USECOLORINDICATIONLISTVIEW", INT((IsDlgButtonChecked(hwnd, IDC_USECOLORINDICATIONLISTVIEW) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"IDC_USECOLORINDICATIONTRAY", INT((IsDlgButtonChecked(hwnd, IDC_USECOLORINDICATIONTRAY) == BST_CHECKED) ? TRUE : FALSE));
+
+					_r_cfg_write(L"WarningLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_GETPOS32, 0, NULL));
+					_r_cfg_write(L"DangerLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_GETPOS32, 0, NULL));
+				}
+				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
+				{
 					_r_cfg_write(L"AutoreductWhenWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWHENWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"AutoreductWhenDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWHENDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}
-				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
+				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_5)
 				{
 					_r_cfg_write(L"BalloonWhenWarning", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWHENWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"BalloonWhenDanger", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWHENDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"UseTransparentBg", INT((IsDlgButtonChecked(hwnd, IDC_USETRANSPARENTBG_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"IDC_CHANGETEXTCOLOR_CHK", INT((IsDlgButtonChecked(hwnd, IDC_CHANGETEXTCOLOR_CHK) == BST_CHECKED) ? TRUE : FALSE));
+//					_r_cfg_write(L"IDC_CHANGETEXTCOLOR_CHK", INT((IsDlgButtonChecked(hwnd, IDC_CHANGETEXTCOLOR_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}
 			}
 
@@ -549,6 +528,8 @@ INT_PTR CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 	{
 		case WM_INITDIALOG:
 		{
+			_r_windowcenter(hwnd);
+
 			_r_treeview_setstyle(hwnd, IDC_NAV, TVS_EX_DOUBLEBUFFER, GetSystemMetrics(SM_CYSMICON));
 
 			for(INT i = 0; i < APP_SETTINGS_COUNT; i++)
@@ -620,32 +601,31 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 	{
 		case WM_INITDIALOG:
 		{
+			_r_windowcenter(hwnd);
+
 			LOGFONT lf ={0};
 
 			lf.lfQuality = ANTIALIASED_QUALITY;
-			lf.lfWeight = FW_SEMIBOLD;
-			lf.lfHeight = -MulDiv(12, GetDeviceCaps(_r_dc, LOGPIXELSY), 72);
+			//lf.lfWeight = FW_LIGHT;
+			lf.lfHeight = -MulDiv(24, GetDeviceCaps(_r_dc, LOGPIXELSY), 72);
 
 			StringCchCopy(lf.lfFaceName, _countof(lf.lfFaceName), L"Tahoma");
 
 			HFONT font = CreateFontIndirect(&lf);
 
-			SendDlgItemMessage(hwnd, IDC_RESULT + 1, WM_SETFONT, (WPARAM)font, NULL);
-			SendDlgItemMessage(hwnd, IDC_RESULT + 2, WM_SETFONT, (WPARAM)font, NULL);
-			SendDlgItemMessage(hwnd, IDC_RESULT + 3, WM_SETFONT, (WPARAM)font, NULL);
+			SendDlgItemMessage(hwnd, IDC_RESULT_1, WM_SETFONT, (WPARAM)font, NULL);
+			SendDlgItemMessage(hwnd, IDC_RESULT_2, WM_SETFONT, (WPARAM)font, NULL);
 
 			_Application_PrintResult(hwnd, 0, NULL);
 
-			SetFocus(GetDlgItem(hwnd, IDC_OK));
-
-			SetProp(_r_hwnd, L"progress", GetDlgItem(hwnd, IDC_RESULT));
+			//SetProp(_r_hwnd, L"progress", GetDlgItem(hwnd, IDC_RESULT));
 
 			break;
 		}
 
 		case WM_DESTROY:
 		{
-			SetProp(_r_hwnd, L"progress", NULL);
+			//SetProp(_r_hwnd, L"progress", NULL);
 
 			break;
 		}
@@ -658,9 +638,9 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 			GetClientRect(hwnd, &rc);
 			rc.top = rc.bottom - GetSystemMetrics(SM_CYSIZE) * 2;
 
-			COLORREF clrOld = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
+			COLORREF clr_prev = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
 			ExtTextOut(dc, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
-			SetBkColor(dc, clrOld);
+			SetBkColor(dc, clr_prev);
 
 			for(INT i = 0; i < rc.right; i++)
 			{
@@ -698,59 +678,31 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 
 			break;
 		}
-
-	
-
-}
+	}
 
 	return FALSE;
 }
 
 LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
+	if(msg == WM_TASKBARCREATED)
+	{
+		_Application_Initialize(TRUE);
+		return 0;
+	}
+
 	switch(msg)
 	{
 		case WM_INITDIALOG:
 		{
+			_r_windowcenter(hwnd);
+
 			// static initializer
 			_r_hwnd = hwnd;
 			_r_supported_os = _r_system_validversion(6, 0);
 
 			// dynamic initializer
-			_Application_Initialize();
-
-			if(_r_system_uacstate())
-			{
-				if(_r_skipuac_run())
-				{
-					DestroyWindow(hwnd);
-					return FALSE;
-				}
-				else
-				{
-					WCHAR buffer[MAX_PATH] = {0};
-
-					SHELLEXECUTEINFO shex = {0};
-
-					shex.cbSize = sizeof(shex);
-					shex.fMask = SEE_MASK_UNICODE | SEE_MASK_FLAG_NO_UI;
-					shex.lpVerb = L"runas";
-					shex.nShow = SW_NORMAL;
-		
-					GetModuleFileName(NULL, buffer, MAX_PATH);
-					shex.lpFile = buffer;
-
-					CloseHandle(_r_hmutex);
-
-					if(ShellExecuteEx(&shex))
-					{
-						DestroyWindow(hwnd);
-						return FALSE;
-					}
-
-					_r_hmutex = CreateMutex(NULL, FALSE, APP_NAME_SHORT);
-				}
-			}
+			_Application_Initialize(TRUE);
 
 			if(_r_system_adminstate())
 			{
@@ -783,20 +735,9 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}
 			}
 
-			// Tray icon
-			_r_nid.cbSize = _r_supported_os ? sizeof(_r_nid) : NOTIFYICONDATA_V3_SIZE;
-			_r_nid.uVersion = _r_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
-			_r_nid.hWnd = hwnd;
-			_r_nid.uID = UID;
-			_r_nid.uFlags = NIF_MESSAGE | NIF_ICON;
-			_r_nid.uCallbackMessage = WM_TRAYICON;
-			_r_nid.hIcon = _Application_GenerateIcon(NULL);
-
-			Shell_NotifyIcon(NIM_ADD, &_r_nid);
-
 			if(!_r_cfg_read(L"StartMinimized", 0))
 			{
-				ShowWindow(hwnd, SW_SHOW);
+				_r_windowtoggle(hwnd, TRUE);
 			}
 
 			break;
@@ -804,12 +745,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_DESTROY:
 		{
-			_Application_Unitialize();
-
-			if(_r_nid.uID)
-			{
-				Shell_NotifyIcon(NIM_DELETE, &_r_nid);
-			}
+			_Application_Unitialize(TRUE);
 
 			PostQuitMessage(0);
 
@@ -835,9 +771,9 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			GetClientRect(hwnd, &rc);
 			rc.top = rc.bottom - GetSystemMetrics(SM_CYSIZE) * 2;
 
-			COLORREF clrOld = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
+			COLORREF clr_prev = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
 			ExtTextOut(dc, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
-			SetBkColor(dc, clrOld);
+			SetBkColor(dc, clr_prev);
 
 			for(INT i = 0; i < rc.right; i++)
 			{
@@ -1006,7 +942,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						_r_uninitialize(TRUE);
 					}
 
-					_Application_Initialize();
+					_Application_Initialize(FALSE);
 
 					break;
 				}
@@ -1025,7 +961,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					break;
 				}
 
-				case IDC_REDUCT:
+				case IDC_OK:
 				case IDM_TRAY_REDUCT:
 				{
 					DialogBox(NULL, MAKEINTRESOURCE(IDD_REDUCT), hwnd, ReductDlgProc);

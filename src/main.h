@@ -21,10 +21,12 @@
 #define APP_MACHINE L"32"
 #endif
 
-#define APP_SETTINGS_COUNT 4
+#define APP_SETTINGS_COUNT 5
+
+#define ROUTINE_ADMIN_RIGHTS 1
 
 #define UID					1337
-#define WM_TRAYICON			(WM_APP + UID)
+#define WM_TRAYICON			WM_APP + 1
 
 #define COLOR_TRAY_MASK		0x00FF00FF
 
