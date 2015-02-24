@@ -9,6 +9,7 @@
 #include "routine.h"
 
 NOTIFYICONDATA _r_nid = {0};
+_R_MEMORYSTATUS _r_memory = {0};
 
 HDC _r_dc = NULL, _r_cdc = NULL;
 HBITMAP _r_bitmap = NULL, _r_bitmap_mask = NULL;
@@ -80,10 +81,7 @@ VOID _Application_PrintResult(HWND hwnd, DWORD new_percent, _R_MEMORYSTATUS* m)
 
 	INT max_result = max(_r_cfg_read(L"MaxResult", 0), m ? (m->percent_phys - new_percent) : 0);
 
-	_R_MEMORYSTATUS ms = {0};
-	_Application_GetMemoryStatus(&ms);
-
-	SetDlgItemText(hwnd, IDC_RESULT_2, L"~" + _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(max_result, ms.total_phys)));
+	SetDlgItemText(hwnd, IDC_RESULT_2, L"~" + _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(max_result, _r_memory.total_phys)));
 
 	_r_cfg_write(L"MaxResult", max_result);
 }
@@ -98,7 +96,6 @@ BOOL _Application_Reduct(HWND hwnd)
 	}
 
 	_R_MEMORYSTATUS m = {0};
-
 	_Application_GetMemoryStatus(&m);
 
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
@@ -154,27 +151,23 @@ BOOL _Application_Reduct(HWND hwnd)
 	return TRUE;
 }
 
-HICON _Application_GenerateIcon(DWORD percent)
+HICON _Application_GenerateIcon()
 {
 	COLORREF clrText = 0, clrTextBk= 0;
 
 	BOOL is_transparent = _r_cfg_read(L"UseTransparentBg", 1);
 
-	if(!percent)
-	{
-		percent = _Application_GetMemoryStatus(NULL);
-	}
 
 	if(_r_cfg_read(L"ColorIndicationTray", 1))
 	{
-		if(percent >= _r_cfg_read(L"DangerLevel", 90))
+		if(_r_memory.percent_phys >= _r_cfg_read(L"DangerLevel", 90))
 		{
 			is_transparent = FALSE;
 
 			clrText = COLOR_TRAY_TEXT;
 			clrTextBk = COLOR_LEVEL_DANGER;
 		}
-		else if(percent >= _r_cfg_read(L"WarningLevel", 60))
+		else if(_r_memory.percent_phys >= _r_cfg_read(L"WarningLevel", 60))
 		{
 			is_transparent = FALSE;
 
@@ -197,7 +190,7 @@ HICON _Application_GenerateIcon(DWORD percent)
 	SetTextColor(_r_cdc, clrText);
 	SetBkMode(_r_cdc, TRANSPARENT);
 
-	CString buffer = _r_helper_format(L"%d\0", percent);
+	CString buffer = _r_helper_format(L"%d\0", _r_memory.percent_phys);
 	DrawTextEx(_r_cdc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
 	SelectObject(_r_dc, old_bitmap);
@@ -223,9 +216,7 @@ HICON _Application_GenerateIcon(DWORD percent)
 
 VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 {
-	_R_MEMORYSTATUS m = {0};
-
-	_Application_GetMemoryStatus(&m);
+	_Application_GetMemoryStatus(&_r_memory);
 
 	if(_r_nid.hIcon)
 	{
@@ -234,44 +225,44 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	_r_nid.uFlags = NIF_ICON | NIF_TIP;
 
-	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), m.percent_phys, m.percent_page, m.percent_ws);
-	_r_nid.hIcon = _Application_GenerateIcon(m.percent_phys);
+	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), _r_memory.percent_phys, _r_memory.percent_page, _r_memory.percent_ws);
+	_r_nid.hIcon = _Application_GenerateIcon();
 
 	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
 	
-	BOOL has_danger = (m.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
-	BOOL has_warning = (m.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
+	BOOL has_danger = (_r_memory.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
+	BOOL has_warning = (_r_memory.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
 
-	// autoclean
-	if((has_danger && _r_cfg_read(L"AutoreductWhenDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWhenWarning", 0)))
+	// Autoreduct
+	if((has_danger && _r_cfg_read(L"AutoreductDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWarning", 0)))
 	{
 		_Application_Reduct(NULL);
 	}
 
-	// balloon
-	if((has_danger && _r_cfg_read(L"BalloonWhenDanger", 1)) || (has_warning &&_r_cfg_read(L"BalloonWhenWarning", 0)))
+	// Balloon
+	if((has_danger && _r_cfg_read(L"BalloonDanger", 1)) || (has_warning &&_r_cfg_read(L"BalloonWarning", 0)))
 	{
 		_Reduct_ShowNotification(has_danger ? NIIF_ERROR : NIIF_WARNING, APP_NAME, _r_locale(has_danger ? IDS_BALLOON_DANGER_LEVEL : IDS_BALLOON_WARNING_LEVEL), FALSE);
 	}
 
 	if(IsWindowVisible(hwnd))
 	{
-		// physical
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_phys), 0, 1, -1, -1, m.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_phys), 1, 1, -1, -1, m.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_phys), 2, 1, -1, -1, m.percent_phys);
+		// Physical
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_phys), 0, 1, -1, -1, _r_memory.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_phys), 1, 1, -1, -1, _r_memory.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_phys), 2, 1, -1, -1, _r_memory.percent_phys);
 		
-		// pagefile
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_page), 3, 1, -1, -1, m.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_page), 4, 1, -1, -1, m.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_page), 5, 1, -1, -1, m.percent_page);
+		// Page file
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_page), 3, 1, -1, -1, _r_memory.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_page), 4, 1, -1, -1, _r_memory.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_page), 5, 1, -1, -1, _r_memory.percent_page);
 
-		// system working set
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_ws), 6, 1, -1, -1, m.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_ws), 7, 1, -1, -1, m.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
+		// System working set
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_ws), 6, 1, -1, -1, _r_memory.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_ws), 7, 1, -1, -1, _r_memory.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_ws), 8, 1, -1, -1, _r_memory.percent_ws);
 
-		// redraw listview
+		// Redraw listview
 		SendDlgItemMessage(hwnd, IDC_LISTVIEW, LVM_REDRAWITEMS, 0, 8);
 	}
 }
@@ -358,7 +349,7 @@ VOID _Application_Initialize(BOOL createtrayicon)
 		_r_nid.uID = UID;
 		_r_nid.uFlags = NIF_MESSAGE | NIF_ICON;
 		_r_nid.uCallbackMessage = WM_TRAYICON;
-		_r_nid.hIcon = _Application_GenerateIcon(NULL);
+		_r_nid.hIcon = _Application_GenerateIcon();
 
 		Shell_NotifyIcon(NIM_ADD, &_r_nid);
 	}
@@ -424,13 +415,13 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 			}
 			else if((INT)lparam == IDD_SETTINGS_4)
 			{
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTWHENWARNING_CHK, _r_cfg_read(L"AutoreductWhenWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTWHENDANGER_CHK, _r_cfg_read(L"AutoreductWhenDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTWARNING_CHK, _r_cfg_read(L"AutoreductWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTDANGER_CHK, _r_cfg_read(L"AutoreductDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 			}
 			else if((INT)lparam == IDD_SETTINGS_5)
 			{
-				CheckDlgButton(hwnd, IDC_BALLOONWHENWARNING_CHK, _r_cfg_read(L"BalloonWhenWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_BALLOONWHENDANGER_CHK, _r_cfg_read(L"BalloonWhenDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_BALLOONWARNING_CHK, _r_cfg_read(L"BalloonWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_BALLOONDANGER_CHK, _r_cfg_read(L"BalloonDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				CheckDlgButton(hwnd, IDC_USETRANSPARENTBG_CHK, _r_cfg_read(L"UseTransparentBg", 1) ? BST_CHECKED : BST_UNCHECKED);
 			}
@@ -491,13 +482,13 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
 				{
-					_r_cfg_write(L"AutoreductWhenWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWHENWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"AutoreductWhenDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWHENDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_5)
 				{
-					_r_cfg_write(L"BalloonWhenWarning", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWHENWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"BalloonWhenDanger", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWHENDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"BalloonWarning", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"BalloonDanger", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"UseTransparentBg", INT((IsDlgButtonChecked(hwnd, IDC_USETRANSPARENTBG_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}

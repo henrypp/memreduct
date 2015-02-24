@@ -8,8 +8,8 @@ v3.0 (xx March 2015)
 + added "standby list without priority" cleaning 
 - more detailed result at memory clean window
 + run without uac prompt (in settings)
--  fixed tray icon disappear when explorer restart
--  fixed listview color indication doesn't redraw sometimes 
+- fixed tray icon disappear when explorer restart
+- fixed listview color indication doesn't redraw sometimes 
 
 v2.4 (17 September 2013)
 + added tray icon customization
