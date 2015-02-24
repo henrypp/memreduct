@@ -103,6 +103,13 @@ BOOL _Application_Reduct(HWND hwnd)
 
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
 
+	// Working set
+	if(_r_supported_os && _r_cfg_read(L"ReductWorkingSet", 1))
+	{
+		smlc = MemoryEmptyWorkingSets;
+		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
+	}
+
 	// System working set
 	if(_r_cfg_read(L"ReductSystemWorkingSet", 1))
 	{
@@ -114,20 +121,13 @@ BOOL _Application_Reduct(HWND hwnd)
 		NtSetSystemInformation(SystemFileCacheInformation, &cache, sizeof(cache));
 	}
 
-	// Working set
-	if(_r_supported_os && _r_cfg_read(L"ReductWorkingSet", 1))
+	// Standby priority-0 list
+	if(_r_supported_os && _r_cfg_read(L"ReductStandbyPriority0List", 1))
 	{
-		smlc = MemoryEmptyWorkingSets;
+		smlc = MemoryPurgeLowPriorityStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
-						
-	// Modified list
-	if(_r_supported_os && _r_cfg_read(L"ReductModifiedList", 0))
-	{
-		smlc = MemoryFlushModifiedList;
-		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
-	}
-	
+
 	// Standby list
 	if(_r_supported_os && _r_cfg_read(L"ReductStandbyList", 0))
 	{
@@ -135,10 +135,10 @@ BOOL _Application_Reduct(HWND hwnd)
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
-	// Standby priority-0 list
-	if(_r_supported_os && _r_cfg_read(L"ReductStandbyPriority0List", 1))
+	// Modified list
+	if(_r_supported_os && _r_cfg_read(L"ReductModifiedList", 0))
 	{
-		smlc = MemoryPurgeLowPriorityStandbyList;
+		smlc = MemoryFlushModifiedList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
@@ -156,63 +156,63 @@ BOOL _Application_Reduct(HWND hwnd)
 
 HICON _Application_GenerateIcon(DWORD percent)
 {
-	BOOL is_trans = _r_cfg_read(L"UseTransparentBg", 1);
+	COLORREF clrText = 0, clrTextBk= 0;
 
-	COLORREF bg_color = is_trans ? COLOR_TRAY_MASK : COLOR_TRAY_BG;
+	BOOL is_transparent = _r_cfg_read(L"UseTransparentBg", 1);
 
 	if(!percent)
 	{
 		percent = _Application_GetMemoryStatus(NULL);
 	}
 
-	if(percent >= _r_cfg_read(L"DangerLevel", 90))
+	if(_r_cfg_read(L"ColorIndicationTray", 1))
 	{
-		bg_color = COLOR_LEVEL_DANGER;
+		if(percent >= _r_cfg_read(L"DangerLevel", 90))
+		{
+			is_transparent = FALSE;
+
+			clrText = COLOR_TRAY_TEXT;
+			clrTextBk = COLOR_LEVEL_DANGER;
+		}
+		else if(percent >= _r_cfg_read(L"WarningLevel", 60))
+		{
+			is_transparent = FALSE;
+
+			clrText = COLOR_TRAY_TEXT;
+			clrTextBk = COLOR_LEVEL_WARNING;
+		}
 	}
-	else if(percent >= _r_cfg_read(L"WarningLevel", 60))
-	{
-		bg_color = COLOR_LEVEL_WARNING;
-	}
+
+	if(!clrText) clrText = is_transparent ? 0 : COLOR_TRAY_TEXT;
+	if(!clrTextBk) clrTextBk = is_transparent ? COLOR_TRAY_MASK : COLOR_TRAY_BG;
 
 	HBITMAP old_bitmap = (HBITMAP)SelectObject(_r_cdc, _r_bitmap);
 
-	//if(!is_trans)
-	{
-		COLORREF clr_prev = SetBkColor(_r_cdc, is_trans ? COLOR_TRAY_MASK : bg_color);
-		ExtTextOut(_r_cdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
-		SetBkColor(_r_cdc, clr_prev);
-	}
+	// draw background
+	COLORREF clr_prev = SetBkColor(_r_cdc, clrTextBk);
+	ExtTextOut(_r_cdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
+	SetBkColor(_r_cdc, clr_prev);
 
-	// Draw
-	SetTextColor(_r_cdc, is_trans ? 0 : COLOR_TRAY_TEXT);
+	// draw text
+	SetTextColor(_r_cdc, clrText);
 	SetBkMode(_r_cdc, TRANSPARENT);
 
 	CString buffer = _r_helper_format(L"%d\0", percent);
-
 	DrawTextEx(_r_cdc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
 	SelectObject(_r_dc, old_bitmap);
 
-	#define ARGB(a,r,g,b) ((b) + (g << 8) + (r << 16) + (a << 24))
-
-	if(is_trans)
+	// convert bits to transparency
+	if(is_transparent)
 	{
-		DWORD *lpdwPixel = (DWORD*)_r_rgb;
+		DWORD *pixel = (DWORD*)_r_rgb;
 
 		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
 		{
-			*lpdwPixel &= COLOR_TRAY_MASK;
+			*pixel &= COLOR_TRAY_MASK;
+			*pixel |= ((*pixel == COLOR_TRAY_MASK) ? 0x00000000 : 0xffffffff);
 
-			if(*lpdwPixel == COLOR_TRAY_MASK)
-			{
-				*lpdwPixel |= 0x00000000;
-			}
-			else
-			{
-				*lpdwPixel |= ARGB(255, 255, 255, 255);
-			}
-
-			lpdwPixel++;
+			pixel++;
 		}
 	}
 
@@ -227,7 +227,6 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	_Application_GetMemoryStatus(&m);
 
-	// Refresh tray info
 	if(_r_nid.hIcon)
 	{
 		DestroyIcon(_r_nid.hIcon);
@@ -243,13 +242,13 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	BOOL has_danger = (m.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
 	BOOL has_warning = (m.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
 
-	// Autoreduct
+	// autoclean
 	if((has_danger && _r_cfg_read(L"AutoreductWhenDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWhenWarning", 0)))
 	{
 		_Application_Reduct(NULL);
 	}
 
-	// Balloon
+	// balloon
 	if((has_danger && _r_cfg_read(L"BalloonWhenDanger", 1)) || (has_warning &&_r_cfg_read(L"BalloonWhenWarning", 0)))
 	{
 		_Reduct_ShowNotification(has_danger ? NIIF_ERROR : NIIF_WARNING, APP_NAME, _r_locale(has_danger ? IDS_BALLOON_DANGER_LEVEL : IDS_BALLOON_WARNING_LEVEL), FALSE);
@@ -257,20 +256,23 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	if(IsWindowVisible(hwnd))
 	{
-		// Physical
+		// physical
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_phys), 0, 1, -1, -1, m.percent_phys);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_phys), 1, 1, -1, -1, m.percent_phys);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_phys), 2, 1, -1, -1, m.percent_phys);
 		
-		// Pagefile
+		// pagefile
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_page), 3, 1, -1, -1, m.percent_page);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_page), 4, 1, -1, -1, m.percent_page);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_page), 5, 1, -1, -1, m.percent_page);
 
-		// System working set
+		// system working set
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", m.percent_ws), 6, 1, -1, -1, m.percent_ws);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.free_ws), 7, 1, -1, -1, m.percent_ws);
 		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(m.total_ws), 8, 1, -1, -1, m.percent_ws);
+
+		// redraw listview
+		SendDlgItemMessage(hwnd, IDC_LISTVIEW, LVM_REDRAWITEMS, 0, 8);
 	}
 }
 
@@ -393,26 +395,26 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 			}
 			else if((INT)lparam == IDD_SETTINGS_2)
 			{
-				CheckDlgButton(hwnd, IDC_SYSTEMWORKINGSET_CHK, _r_cfg_read(L"ReductSystemWorkingSet", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_WORKINGSET_CHK, _r_cfg_read(L"ReductWorkingSet", 1) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, _r_cfg_read(L"ReductModifiedList", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, _r_cfg_read(L"ReductStandbyList", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_SYSTEMWORKINGSET_CHK, _r_cfg_read(L"ReductSystemWorkingSet", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, _r_cfg_read(L"ReductStandbyPriority0List", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, _r_cfg_read(L"ReductStandbyList", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, _r_cfg_read(L"ReductModifiedList", 0) ? BST_CHECKED : BST_UNCHECKED);
 
 				if(!_r_supported_os)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_WORKINGSET_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
 				}
 
 				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", 0), NULL);
 			}
 			else if((INT)lparam == IDD_SETTINGS_3)
 			{
-				CheckDlgButton(hwnd, IDC_USECOLORINDICATIONLISTVIEW, _r_cfg_read(L"IDC_USECOLORINDICATIONLISTVIEW", 1) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_USECOLORINDICATIONTRAY, _r_cfg_read(L"IDC_USECOLORINDICATIONTRAY", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_COLORINDICATIONLISTVIEW, _r_cfg_read(L"ColorIndicationListview", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_COLORINDICATIONTRAY, _r_cfg_read(L"ColorIndicationTray", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETRANGE32, 1, 99);
 				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETPOS32, 0, _r_cfg_read(L"WarningLevel", 60));
@@ -471,18 +473,18 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_2)
 				{
-					_r_cfg_write(L"ReductSystemWorkingSet", INT((IsDlgButtonChecked(hwnd, IDC_SYSTEMWORKINGSET_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ReductWorkingSet", INT((IsDlgButtonChecked(hwnd, IDC_WORKINGSET_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"ReductModifiedList", INT((IsDlgButtonChecked(hwnd, IDC_MODIFIEDLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"ReductStandbyList", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductSystemWorkingSet", INT((IsDlgButtonChecked(hwnd, IDC_SYSTEMWORKINGSET_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ReductStandbyPriority0List", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLISTPRIORITY0_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductStandbyList", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ReductModifiedList", INT((IsDlgButtonChecked(hwnd, IDC_MODIFIEDLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"Hotkey", (DWORD)SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_GETHOTKEY, 0, NULL));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
 				{
-					_r_cfg_write(L"IDC_USECOLORINDICATIONLISTVIEW", INT((IsDlgButtonChecked(hwnd, IDC_USECOLORINDICATIONLISTVIEW) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"IDC_USECOLORINDICATIONTRAY", INT((IsDlgButtonChecked(hwnd, IDC_USECOLORINDICATIONTRAY) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ColorIndicationListview", INT((IsDlgButtonChecked(hwnd, IDC_COLORINDICATIONLISTVIEW) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"ColorIndicationTray", INT((IsDlgButtonChecked(hwnd, IDC_COLORINDICATIONTRAY) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"WarningLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_GETPOS32, 0, NULL));
 					_r_cfg_write(L"DangerLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_GETPOS32, 0, NULL));
@@ -819,44 +821,47 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			LPNMHDR nmlp = (LPNMHDR)lparam;
 
-			switch(nmlp->code)
+			if(_r_cfg_read(L"ColorIndicationListview", 1))
 			{
-				case NM_CUSTOMDRAW:
+				switch(nmlp->code)
 				{
-					LONG result = CDRF_DODEFAULT;
-					LPNMLVCUSTOMDRAW lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
-
-					switch(lpnmlv->nmcd.dwDrawStage)
+					case NM_CUSTOMDRAW:
 					{
-						case CDDS_PREPAINT:
-						{
-							result = (CDRF_NOTIFYPOSTPAINT | CDRF_NOTIFYITEMDRAW);
-							break;
-						}
+						LONG result = CDRF_DODEFAULT;
+						LPNMLVCUSTOMDRAW lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 
-						case CDDS_ITEMPREPAINT:
+						switch(lpnmlv->nmcd.dwDrawStage)
 						{
-							if(lpnmlv->nmcd.hdr.idFrom == IDC_LISTVIEW)
+							case CDDS_PREPAINT:
 							{
-								if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"DangerLevel", 90))
-								{
-									lpnmlv->clrText = COLOR_LEVEL_DANGER;
-								}
-								else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"WarningLevel", 60))
-								{
-									lpnmlv->clrText = COLOR_LEVEL_WARNING;
-								}
-
-								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
-								
+								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NOTIFYITEMDRAW);
+								break;
 							}
 
-							break;
-						}
-					}
+							case CDDS_ITEMPREPAINT:
+							{
+								if(lpnmlv->nmcd.hdr.idFrom == IDC_LISTVIEW)
+								{
+									if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"DangerLevel", 90))
+									{
+										lpnmlv->clrText = COLOR_LEVEL_DANGER;
+									}
+									else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"WarningLevel", 60))
+									{
+										lpnmlv->clrText = COLOR_LEVEL_WARNING;
+									}
 
-					SetWindowLongPtr(hwnd, DWLP_MSGRESULT, result);
-					return TRUE;
+									result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
+								
+								}
+
+								break;
+							}
+						}
+
+						SetWindowLongPtr(hwnd, DWLP_MSGRESULT, result);
+						return TRUE;
+					}
 				}
 			}
 

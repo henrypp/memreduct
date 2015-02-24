@@ -1,13 +1,15 @@
-vx.x (TBA 2015)
+v3.0 (xx March 2015)
 + windows 10 support
 + x64 support
 + dpi support
 - uac compatibility improved
 - uipi compatibility improved
++ icon transparency
 + added "standby list without priority" cleaning 
 - more detailed result at memory clean window
 + run without uac prompt (in settings)
-- fixed tray icon disappear sometimes
+-  fixed tray icon disappear when explorer restart
+-  fixed listview color indication doesn't redraw sometimes 
 
 v2.4 (17 September 2013)
 + added tray icon customization
