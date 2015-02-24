@@ -244,6 +244,9 @@ struct SYSTEM_CACHE_INFORMATION
 	DWORD       Unused[2];
 };
 
+typedef BOOL (WINAPI *CWMF) (UINT, DWORD); // ChangeWindowMessageFilter
+typedef BOOL (WINAPI *CWMFEX) (HWND, UINT, DWORD, PCHANGEFILTERSTRUCT); // ChangeWindowMessageFilterEx
+
 extern "C" {
 	NTSYSCALLAPI
 	NTSTATUS

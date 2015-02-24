@@ -10,11 +10,11 @@
 
 NOTIFYICONDATA _r_nid = {0};
 
-HDC _r_dc = NULL;
-HBITMAP _r_bitmap_opaque = NULL, _r_bitmap_transparent = NULL, _r_bitmap_mask = NULL;
+HDC _r_dc = NULL, _r_cdc = NULL;
+HBITMAP _r_bitmap = NULL, _r_bitmap_mask = NULL;
 RECT _r_rc = {0};
 HFONT _r_font = NULL;
-RGBQUAD *_r_rgb = NULL;
+LPVOID _r_rgb = NULL;
 BOOL _r_supported_os = FALSE;
 
 DWORD dwLastBalloon = 0;
@@ -23,7 +23,7 @@ CONST UINT WM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
 
 BOOL _Reduct_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text, BOOL important)
 {
-	if(!important && dwLastBalloon && (GetTickCount() - dwLastBalloon) < 7000)
+	if(!important && dwLastBalloon && (GetTickCount() - dwLastBalloon) < 5000)
 	{
 		return FALSE;
 	}
@@ -93,7 +93,7 @@ BOOL _Application_Reduct(HWND hwnd)
 	// if user has no rights
 	if(!_r_system_adminstate())
 	{
-		_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), TRUE);
+		_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), FALSE);
 		return FALSE;
 	}
 
@@ -121,21 +121,21 @@ BOOL _Application_Reduct(HWND hwnd)
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 						
-	// Modified pagelists
+	// Modified list
 	if(_r_supported_os && _r_cfg_read(L"ReductModifiedList", 0))
 	{
 		smlc = MemoryFlushModifiedList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 	
-	// Standby pagelists
+	// Standby list
 	if(_r_supported_os && _r_cfg_read(L"ReductStandbyList", 0))
 	{
 		smlc = MemoryPurgeStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
-	// Standby priority-0 pagelists
+	// Standby priority-0 list
 	if(_r_supported_os && _r_cfg_read(L"ReductStandbyPriority0List", 1))
 	{
 		smlc = MemoryPurgeLowPriorityStandbyList;
@@ -156,11 +156,9 @@ BOOL _Application_Reduct(HWND hwnd)
 
 HICON _Application_GenerateIcon(DWORD percent)
 {
-	bool is_trans = _r_cfg_read(L"UseTransparentBg", 1);
-//	bool is_text_chg = _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0);
+	BOOL is_trans = _r_cfg_read(L"UseTransparentBg", 1);
 
 	COLORREF bg_color = is_trans ? COLOR_TRAY_MASK : COLOR_TRAY_BG;
-	COLORREF text_color = is_trans ? 0 : COLOR_TRAY_TEXT;
 
 	if(!percent)
 	{
@@ -176,48 +174,49 @@ HICON _Application_GenerateIcon(DWORD percent)
 		bg_color = COLOR_LEVEL_WARNING;
 	}
 
-	HDC dc = CreateCompatibleDC(_r_dc);
+	HBITMAP old_bitmap = (HBITMAP)SelectObject(_r_cdc, _r_bitmap);
 
-	HBITMAP old_bitmap = (HBITMAP)SelectObject(dc, is_trans ? _r_bitmap_transparent : _r_bitmap_opaque);
-
-	if(!is_trans)
+	//if(!is_trans)
 	{
-		COLORREF clr_prev = SetBkColor(dc, bg_color);
-		ExtTextOut(dc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
-		SetBkColor(dc, clr_prev);
+		COLORREF clr_prev = SetBkColor(_r_cdc, is_trans ? COLOR_TRAY_MASK : bg_color);
+		ExtTextOut(_r_cdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
+		SetBkColor(_r_cdc, clr_prev);
 	}
 
-	SelectObject(dc, _r_font);
-
 	// Draw
-	SetTextColor(dc, text_color);
-	SetBkMode(dc, TRANSPARENT);
+	SetTextColor(_r_cdc, is_trans ? 0 : COLOR_TRAY_TEXT);
+	SetBkMode(_r_cdc, TRANSPARENT);
 
 	CString buffer = _r_helper_format(L"%d\0", percent);
 
-	DrawTextEx(dc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
+	DrawTextEx(_r_cdc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
 	SelectObject(_r_dc, old_bitmap);
-	
-	DeleteObject(dc);
 
-	if(1)
+	#define ARGB(a,r,g,b) ((b) + (g << 8) + (r << 16) + (a << 24))
+
+	if(is_trans)
 	{
 		DWORD *lpdwPixel = (DWORD*)_r_rgb;
 
 		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
 		{
-           // Clear the alpha bits
-           *lpdwPixel &= 0x00FFFFFF;
+			*lpdwPixel &= COLOR_TRAY_MASK;
 
-           // Set the alpha bits to 0x9F (semi-transparent)
-           *lpdwPixel |= 0x01000000;
+			if(*lpdwPixel == COLOR_TRAY_MASK)
+			{
+				*lpdwPixel |= 0x00000000;
+			}
+			else
+			{
+				*lpdwPixel |= ARGB(255, 255, 255, 255);
+			}
 
 			lpdwPixel++;
 		}
 	}
 
-	ICONINFO ii = {TRUE, 0, 0, _r_bitmap_mask, is_trans ? _r_bitmap_transparent : _r_bitmap_opaque};
+	ICONINFO ii = {TRUE, 0, 0, _r_bitmap_mask, _r_bitmap};
 
 	return CreateIconIndirect(&ii);
 }
@@ -237,7 +236,7 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	_r_nid.uFlags = NIF_ICON | NIF_TIP;
 
 	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), m.percent_phys, m.percent_page, m.percent_ws);
-	_r_nid.hIcon = _Application_GenerateIcon(m.percent_page);
+	_r_nid.hIcon = _Application_GenerateIcon(m.percent_phys);
 
 	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
 	
@@ -291,9 +290,9 @@ VOID _Application_Unitialize(BOOL deletetrayicon)
 	KillTimer(_r_hwnd, UID);
 
 	DeleteObject(_r_font);
+	DeleteDC(_r_cdc);
 	DeleteDC(_r_dc);
-	DeleteObject(_r_bitmap_opaque);
-	DeleteObject(_r_bitmap_transparent);
+	DeleteObject(_r_bitmap);
 	DeleteObject(_r_bitmap_mask);
 }
 
@@ -303,22 +302,7 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	_r_rc.right = GetSystemMetrics(SM_CXSMICON);
 	_r_rc.bottom = GetSystemMetrics(SM_CYSMICON);
-/*
-	BITMAPV5HEADER bi = {0};
 
-	bi.bV5Size           = sizeof(bi);
-    bi.bV5Width           = _r_rc.right;
-    bi.bV5Height          = _r_rc.bottom;
-    bi.bV5Planes = 1;
-    bi.bV5BitCount = 32;
-    bi.bV5Compression = BI_BITFIELDS;
-    // The following mask specification specifies a supported 32 BPP
-    // alpha format for Windows XP.
-    bi.bV5RedMask   =  0x00FF0000;
-    bi.bV5GreenMask =  0x0000FF00;
-    bi.bV5BlueMask  =  0x000000FF;
-    bi.bV5AlphaMask =  0xFF000000; 
-*/
 	BITMAPINFO bmi = {0};
 
     bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
@@ -331,25 +315,28 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	_r_dc = GetDC(NULL);
 
-	_r_bitmap_opaque = CreateCompatibleBitmap(_r_dc, _r_rc.right, _r_rc.bottom);
-	_r_bitmap_transparent = CreateDIBSection(_r_dc, &bmi, DIB_RGB_COLORS, (VOID**)&_r_rgb, NULL, 0);
-
+	_r_bitmap = CreateDIBSection(_r_dc, &bmi, DIB_RGB_COLORS, (LPVOID*)&_r_rgb, NULL, 0);
 	_r_bitmap_mask = CreateBitmap(_r_rc.right, _r_rc.bottom, 1, 1, NULL);;
+
+	_r_cdc = CreateCompatibleDC(_r_dc);
 
 	ReleaseDC(NULL, _r_dc);
 
+	// Font
 	LOGFONT lf = {0};
 
 	lf.lfQuality = ANTIALIASED_QUALITY;
 	lf.lfCharSet = DEFAULT_CHARSET;
 	lf.lfPitchAndFamily = FF_DONTCARE;
-	lf.lfHeight = -MulDiv(8, GetDeviceCaps(_r_dc, LOGPIXELSY), 72);
+	lf.lfHeight = -MulDiv(8, GetDeviceCaps(_r_cdc, LOGPIXELSY), 72);
 
 	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"Tahoma");
-//	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"RTFont");
 
 	_r_font = CreateFontIndirect(&lf);
 
+	SelectObject(_r_cdc, _r_font);
+
+	// Hotkey
 	UINT hk = _r_cfg_read(L"Hotkey", 0);
 
 	if(hk)
@@ -357,6 +344,7 @@ VOID _Application_Initialize(BOOL createtrayicon)
 		RegisterHotKey(_r_hwnd, UID, (HIBYTE(hk) & 2) | ((HIBYTE(hk) & 4) >> 2) | ((HIBYTE(hk) & 1) << 2), LOBYTE(hk));
 	}
 
+	// Always on top
 	_r_windowtotop(_r_hwnd, _r_cfg_read(L"AlwaysOnTop", 0));
 
 	// Tray icon
@@ -443,7 +431,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_BALLOONWHENDANGER_CHK, _r_cfg_read(L"BalloonWhenDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				CheckDlgButton(hwnd, IDC_USETRANSPARENTBG_CHK, _r_cfg_read(L"UseTransparentBg", 1) ? BST_CHECKED : BST_UNCHECKED);
-//				CheckDlgButton(hwnd, IDC_CHANGETEXTCOLOR_CHK, _r_cfg_read(L"IDC_CHANGETEXTCOLOR_CHK", 0) ? BST_CHECKED : BST_UNCHECKED);
 			}
 
 			break;
@@ -511,7 +498,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 					_r_cfg_write(L"BalloonWhenDanger", INT((IsDlgButtonChecked(hwnd, IDC_BALLOONWHENDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
 					_r_cfg_write(L"UseTransparentBg", INT((IsDlgButtonChecked(hwnd, IDC_USETRANSPARENTBG_CHK) == BST_CHECKED) ? TRUE : FALSE));
-//					_r_cfg_write(L"IDC_CHANGETEXTCOLOR_CHK", INT((IsDlgButtonChecked(hwnd, IDC_CHANGETEXTCOLOR_CHK) == BST_CHECKED) ? TRUE : FALSE));
 				}
 			}
 
@@ -633,10 +619,14 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 		{
 			PAINTSTRUCT ps = {0};
 			HDC dc = BeginPaint(hwnd, &ps);
-			RECT rc = {0};
 
+			RECT rc = {0};
 			GetClientRect(hwnd, &rc);
-			rc.top = rc.bottom - GetSystemMetrics(SM_CYSIZE) * 2;
+
+			static INT height = GetSystemMetrics(SM_CYSIZE) * 2;
+
+			rc.top = rc.bottom - height;
+			rc.bottom = rc.top + height;
 
 			COLORREF clr_prev = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
 			ExtTextOut(dc, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
@@ -704,6 +694,10 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// dynamic initializer
 			_Application_Initialize(TRUE);
 
+			// set priority
+			SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+
+			// set privileges
 			if(_r_system_adminstate())
 			{
 				HANDLE token = NULL;
@@ -720,6 +714,27 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}
 			}
 
+			// enable taskbarcreated message bypass uipi
+			if(_r_supported_os)
+			{
+				CWMFEX _cwmfex = (CWMFEX)GetProcAddress(GetModuleHandle(L"user32.dll"), "ChangeWindowMessageFilterEx");
+
+				if(_cwmfex)
+				{
+					_cwmfex(hwnd, WM_TASKBARCREATED, MSGFLT_ALLOW, NULL); // windows 7
+				}
+				else
+				{
+					CWMF _cwmf = (CWMF)GetProcAddress(GetModuleHandle(L"user32.dll"), "ChangeWindowMessageFilter");
+
+					if(_cwmf)
+					{
+						_cwmf(WM_TASKBARCREATED, MSGFLT_ALLOW); // windows vista
+					}
+				}
+			}
+
+			// listview
 			_r_listview_setstyle(hwnd, IDC_LISTVIEW, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP);
 
 			_r_listview_addcolumn(hwnd, IDC_LISTVIEW, NULL, 50, 1, LVCFMT_RIGHT);
@@ -735,7 +750,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}
 			}
 
-			if(!_r_cfg_read(L"StartMinimized", 0))
+			if(!wcsstr(GetCommandLine(), L"/minimized") && !_r_cfg_read(L"StartMinimized", 0))
 			{
 				_r_windowtoggle(hwnd, TRUE);
 			}
@@ -754,22 +769,21 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_QUERYENDSESSION:
 		{
-			if(lparam == ENDSESSION_CLOSEAPP)
-			{
-				return TRUE;
-			}
-
-			break;
+			return TRUE;
 		}
 
 		case WM_PAINT:
 		{
 			PAINTSTRUCT ps = {0};
 			HDC dc = BeginPaint(hwnd, &ps);
-			RECT rc = {0};
 
+			RECT rc = {0};
 			GetClientRect(hwnd, &rc);
-			rc.top = rc.bottom - GetSystemMetrics(SM_CYSIZE) * 2;
+
+			static INT height = GetSystemMetrics(SM_CYSIZE) * 2;
+
+			rc.top = rc.bottom - height;
+			rc.bottom = rc.top + height;
 
 			COLORREF clr_prev = SetBkColor(dc, GetSysColor(COLOR_BTNFACE));
 			ExtTextOut(dc, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
@@ -827,12 +841,10 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 								if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"DangerLevel", 90))
 								{
 									lpnmlv->clrText = COLOR_LEVEL_DANGER;
-									//lpnmlv->clrTextBk = COLOR_LEVEL_DANGER;
 								}
 								else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"WarningLevel", 60))
 								{
 									lpnmlv->clrText = COLOR_LEVEL_WARNING;
-									//lpnmlv->clrTextBk = COLOR_LEVEL_DANGER;
 								}
 
 								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
@@ -843,7 +855,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						}
 					}
 
-					SetWindowLongPtr(hwnd, 0 /*DWL_MSGRESULT*/, result);
+					SetWindowLongPtr(hwnd, DWLP_MSGRESULT, result);
 					return TRUE;
 				}
 			}
