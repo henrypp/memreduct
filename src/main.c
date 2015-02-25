@@ -16,7 +16,7 @@ HBITMAP _r_bitmap = NULL, _r_bitmap_mask = NULL;
 RECT _r_rc = {0};
 HFONT _r_font = NULL;
 LPVOID _r_rgb = NULL;
-BOOL _r_supported_os = FALSE;
+BOOL _r_is_admin = FALSE, _r_supported_os = FALSE;
 
 DWORD dwLastBalloon = 0;
 
@@ -77,11 +77,11 @@ DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
 
 VOID _Application_PrintResult(HWND hwnd, DWORD new_percent, _R_MEMORYSTATUS* m)
 {
-	SetDlgItemText(hwnd, IDC_RESULT_1, L"~" + _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(m->percent_phys - new_percent, m->total_phys) : 0));
+	SetDlgItemText(hwnd, IDC_RESULT_1, _r_helper_formatsize64(m ? (DWORDLONG)ROUTINE_PERCENT_VAL(m->percent_phys - new_percent, m->total_phys) : 0));
 
 	INT max_result = max(_r_cfg_read(L"MaxResult", 0), m ? (m->percent_phys - new_percent) : 0);
 
-	SetDlgItemText(hwnd, IDC_RESULT_2, L"~" + _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(max_result, _r_memory.total_phys)));
+	SetDlgItemText(hwnd, IDC_RESULT_2, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(max_result, _r_memory.total_phys)));
 
 	_r_cfg_write(L"MaxResult", max_result);
 }
@@ -89,9 +89,8 @@ VOID _Application_PrintResult(HWND hwnd, DWORD new_percent, _R_MEMORYSTATUS* m)
 BOOL _Application_Reduct(HWND hwnd)
 {
 	// if user has no rights
-	if(!_r_system_adminstate())
+	if(!_r_is_admin)
 	{
-		_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), FALSE);
 		return FALSE;
 	}
 
@@ -148,6 +147,8 @@ BOOL _Application_Reduct(HWND hwnd)
 
 	_Reduct_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(m.percent_phys - new_percent, m.total_phys))), TRUE);
 
+	_r_cfg_write(L"LastReduct", (DWORD)_r_helper_unixtime64());
+
 	return TRUE;
 }
 
@@ -157,17 +158,16 @@ HICON _Application_GenerateIcon()
 
 	BOOL is_transparent = _r_cfg_read(L"UseTransparentBg", 1);
 
-
 	if(_r_cfg_read(L"ColorIndicationTray", 1))
 	{
-		if(_r_memory.percent_phys >= _r_cfg_read(L"DangerLevel", 90))
+		if(_r_memory.percent_phys >= _r_cfg_read(L"LevelDanger", 90))
 		{
 			is_transparent = FALSE;
 
 			clrText = COLOR_TRAY_TEXT;
 			clrTextBk = COLOR_LEVEL_DANGER;
 		}
-		else if(_r_memory.percent_phys >= _r_cfg_read(L"WarningLevel", 60))
+		else if(_r_memory.percent_phys >= _r_cfg_read(L"LevelWarning", 60))
 		{
 			is_transparent = FALSE;
 
@@ -230,13 +230,20 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
 	
-	BOOL has_danger = (_r_memory.percent_phys >= _r_cfg_read(L"DangerLevel", 90));
-	BOOL has_warning = (_r_memory.percent_phys >= _r_cfg_read(L"WarningLevel", 60));
+	BOOL has_danger = (_r_memory.percent_phys >= _r_cfg_read(L"LevelDanger", 90));
+	BOOL has_warning = (_r_memory.percent_phys >= _r_cfg_read(L"LevelWarning", 60));
 
 	// Autoreduct
-	if((has_danger && _r_cfg_read(L"AutoreductDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWarning", 0)))
+	if(_r_is_admin)
 	{
-		_Application_Reduct(NULL);
+		DWORD auto_every = _r_cfg_read(L"AutoreductTimeout", 0);
+
+		__time64_t last = _r_cfg_read(L"LastReduct", 0);
+
+		if((has_danger && _r_cfg_read(L"AutoreductDanger", 1)) || (has_warning && _r_cfg_read(L"AutoreductWarning", 0)) || (auto_every && ((_r_helper_unixtime64() - last) >= auto_every * 60)))
+		{
+			_Application_Reduct(NULL);
+		}
 	}
 
 	// Balloon
@@ -332,7 +339,7 @@ VOID _Application_Initialize(BOOL createtrayicon)
 	// Hotkey
 	UINT hk = _r_cfg_read(L"Hotkey", 0);
 
-	if(hk)
+	if(_r_is_admin && hk)
 	{
 		RegisterHotKey(_r_hwnd, UID, (HIBYTE(hk) & 2) | ((HIBYTE(hk) & 4) >> 2) | ((HIBYTE(hk) & 1) << 2), LOBYTE(hk));
 	}
@@ -355,7 +362,44 @@ VOID _Application_Initialize(BOOL createtrayicon)
 	}
 
 	// Timer
+	_Application_MonitorCallback(_r_hwnd, 0, NULL, 0);
 	SetTimer(_r_hwnd, UID, 500, _Application_MonitorCallback);
+}
+
+HICON generateButtonIcon(COLORREF color, INT height)
+{
+	RECT rc = {0};
+
+	rc.right = height;
+	rc.bottom = height;
+
+	HDC dc = GetDC(NULL);
+
+	HBITMAP bitmap = CreateCompatibleBitmap(dc, rc.right, rc.bottom);
+	HBITMAP bitmap_mask = CreateBitmap(rc.right, rc.bottom, 1, 1, NULL);;
+
+	HDC dc_buffer = CreateCompatibleDC(dc);
+
+	ReleaseDC(NULL, dc);
+
+	HBITMAP old_bitmap = (HBITMAP)SelectObject(dc_buffer, bitmap);
+
+	COLORREF clr_prev = SetBkColor(dc_buffer, color);
+	ExtTextOut(dc_buffer, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
+	SetBkColor(dc_buffer, clr_prev);
+
+	SelectObject(dc, old_bitmap);
+
+	ICONINFO ii = {TRUE, 0, 0, bitmap_mask, bitmap};
+
+	HICON ico = CreateIconIndirect(&ii);
+
+	DeleteDC(dc);
+	DeleteDC(dc_buffer);
+	DeleteObject(bitmap);
+	DeleteObject(bitmap_mask);
+
+	return ico;
 }
 
 INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
@@ -374,7 +418,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_SKIPUACWARNING_CHK, _r_skipuac_is_present() ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_CHECKUPDATES_CHK, _r_cfg_read(L"CheckUpdates", 1) ? BST_CHECKED : BST_UNCHECKED);
 
-				if(!_r_supported_os || !_r_system_adminstate())
+				if(!_r_supported_os || !_r_is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_SKIPUACWARNING_CHK), FALSE);
 				}
@@ -392,12 +436,18 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, _r_cfg_read(L"ReductStandbyList", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, _r_cfg_read(L"ReductModifiedList", 0) ? BST_CHECKED : BST_UNCHECKED);
 
-				if(!_r_supported_os)
+				if(!_r_supported_os || !_r_is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_WORKINGSET_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
+
+					if(!_r_is_admin)
+					{
+						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
+						EnableWindow(GetDlgItem(hwnd, IDC_HOTKEY), FALSE);
+					}
 				}
 
 				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", 0), NULL);
@@ -407,16 +457,41 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_COLORINDICATIONLISTVIEW, _r_cfg_read(L"ColorIndicationListview", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_COLORINDICATIONTRAY, _r_cfg_read(L"ColorIndicationTray", 1) ? BST_CHECKED : BST_UNCHECKED);
 
-				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETRANGE32, 1, 99);
-				SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_SETPOS32, 0, _r_cfg_read(L"WarningLevel", 60));
+				SendDlgItemMessage(hwnd, IDC_LEVELWARNING, UDM_SETRANGE32, 1, 99);
+				SendDlgItemMessage(hwnd, IDC_LEVELWARNING, UDM_SETPOS32, 0, _r_cfg_read(L"LevelWarning", 60));
 
-				SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_SETRANGE32, 1, 99);
-				SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_SETPOS32, 0, _r_cfg_read(L"DangerLevel", 90));
+				SendDlgItemMessage(hwnd, IDC_LEVELDANGER, UDM_SETRANGE32, 1, 99);
+				SendDlgItemMessage(hwnd, IDC_LEVELDANGER, UDM_SETPOS32, 0, _r_cfg_read(L"LevelDanger", 90));
+
+
+				SendDlgItemMessage(hwnd, IDC_COLOR_1, BM_SETIMAGE, IMAGE_ICON, (LPARAM)generateButtonIcon(COLOR_LEVEL_DANGER, 14));
+
+				for(INT i = IDC_COLOR_1; i < IDC_COLOR_4; i++)
+				{
+					RECT rc = {0};
+
+					SendDlgItemMessage(hwnd, i, BCM_GETTEXTMARGIN, 0, (LPARAM)&rc);
+					rc.left += GetSystemMetrics(SM_CXSMICON);
+					SendDlgItemMessage(hwnd, i, BCM_SETTEXTMARGIN, 0, (LPARAM)&rc);
+				}
+
 			}
 			else if((INT)lparam == IDD_SETTINGS_4)
 			{
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTWARNING_CHK, _r_cfg_read(L"AutoreductWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTDANGER_CHK, _r_cfg_read(L"AutoreductDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
+
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_SETRANGE32, 5, 1440 * 7); // 7 days
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductTimeout", 0));
+
+				if(!_r_is_admin)
+				{
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTWARNING_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTDANGER_CHK), FALSE);
+
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT), FALSE);
+					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_GETBUDDY, 0, NULL), FALSE);
+				}
 			}
 			else if((INT)lparam == IDD_SETTINGS_5)
 			{
@@ -477,13 +552,15 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 					_r_cfg_write(L"ColorIndicationListview", INT((IsDlgButtonChecked(hwnd, IDC_COLORINDICATIONLISTVIEW) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ColorIndicationTray", INT((IsDlgButtonChecked(hwnd, IDC_COLORINDICATIONTRAY) == BST_CHECKED) ? TRUE : FALSE));
 
-					_r_cfg_write(L"WarningLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_WARNING_LEVEL, UDM_GETPOS32, 0, NULL));
-					_r_cfg_write(L"DangerLevel", (DWORD)SendDlgItemMessage(hwnd, IDC_DANGER_LEVEL, UDM_GETPOS32, 0, NULL));
+					_r_cfg_write(L"LevelWarning", (DWORD)SendDlgItemMessage(hwnd, IDC_LEVELWARNING, UDM_GETPOS32, 0, NULL));
+					_r_cfg_write(L"LevelDanger", (DWORD)SendDlgItemMessage(hwnd, IDC_LEVELDANGER, UDM_GETPOS32, 0, NULL));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
 				{
 					_r_cfg_write(L"AutoreductWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"AutoreductDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
+
+					_r_cfg_write(L"AutoreductTimeout", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_GETPOS32, 0, NULL));
 				}
 				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_5)
 				{
@@ -496,6 +573,70 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM, LPARAM lparam)
 
 			break;
 		}
+/*
+		case WM_NOTIFY:
+		{
+			LPNMHDR nmlp = (LPNMHDR)lparam;
+
+			switch(nmlp->code)
+			{
+				case NM_CUSTOMDRAW:
+				{
+					LONG result = CDRF_DODEFAULT;
+					LPNMCUSTOMDRAW lpnmcd = (LPNMCUSTOMDRAW)lparam;
+
+					if(nmlp->idFrom >= IDC_COLOR_1)
+					{
+						switch(lpnmcd->uItemState)
+						{
+							case CDIS_SELECTED:
+							{
+								COLORREF clr_prev = SetBkColor(lpnmcd->hdc, COLOR_LEVEL_WARNING);
+								ExtTextOut(lpnmcd->hdc, 0, 0, ETO_OPAQUE, &lpnmcd->rc, NULL, 0, NULL);
+								SetBkColor(lpnmcd->hdc, clr_prev);
+
+								SetTextColor(lpnmcd->hdc, COLOR_TRAY_TEXT);
+								SetBkMode(lpnmcd->hdc, TRANSPARENT);
+
+								break;
+							}
+
+							case CDIS_HOT:
+							{
+								COLORREF clr_prev = SetBkColor(lpnmcd->hdc, COLOR_LEVEL_WARNING);
+								ExtTextOut(lpnmcd->hdc, 0, 0, ETO_OPAQUE, &lpnmcd->rc, NULL, 0, NULL);
+								SetBkColor(lpnmcd->hdc, clr_prev);
+
+								SetTextColor(lpnmcd->hdc, COLOR_TRAY_TEXT);
+								SetBkMode(lpnmcd->hdc, TRANSPARENT);
+
+								break;
+							}
+
+							default:
+							{
+								COLORREF clr_prev = SetBkColor(lpnmcd->hdc, COLOR_LEVEL_WARNING);
+								ExtTextOut(lpnmcd->hdc, 0, 0, ETO_OPAQUE, &lpnmcd->rc, NULL, 0, NULL);
+								SetBkColor(lpnmcd->hdc, clr_prev);
+
+								SetTextColor(lpnmcd->hdc, COLOR_TRAY_TEXT);
+								SetBkMode(lpnmcd->hdc, TRANSPARENT);
+
+								break;
+							}
+						}
+
+						SetWindowLongPtr(hwnd, DWLP_MSGRESULT, result);
+						return TRUE;
+					}
+
+					break;
+				}
+			}
+
+			break;
+		}
+*/
 	}
 
 	return FALSE;
@@ -645,16 +786,16 @@ INT_PTR CALLBACK ReductDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM)
 		{
 			switch(LOWORD(wparam))
 			{
-				case IDC_OK:
+				case IDCANCEL: // process Esc key
 				{
-					_Application_Reduct(hwnd);
+					EndDialog(hwnd, 0);
 					break;
 				}
 
-				case IDCANCEL: // process Esc key
-				case IDC_CANCEL:
+				case IDOK: // process Enter key
+				case IDC_OK:
 				{
-					EndDialog(hwnd, 0);
+					_Application_Reduct(hwnd);
 					break;
 				}
 			}
@@ -682,6 +823,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			// static initializer
 			_r_hwnd = hwnd;
+			_r_is_admin = _r_system_adminstate();
 			_r_supported_os = _r_system_validversion(6, 0);
 
 			// dynamic initializer
@@ -691,7 +833,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
 
 			// set privileges
-			if(_r_system_adminstate())
+			if(_r_is_admin)
 			{
 				HANDLE token = NULL;
 
@@ -746,6 +888,12 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if(!wcsstr(GetCommandLine(), L"/minimized") && !_r_cfg_read(L"StartMinimized", 0))
 			{
 				_r_windowtoggle(hwnd, TRUE);
+			}
+
+			if(!_r_is_admin)
+			{
+				_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), TRUE);
+				return FALSE;
 			}
 
 			break;
@@ -833,11 +981,11 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							{
 								if(lpnmlv->nmcd.hdr.idFrom == IDC_LISTVIEW)
 								{
-									if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"DangerLevel", 90))
+									if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"LevelDanger", 90))
 									{
 										lpnmlv->clrText = COLOR_LEVEL_DANGER;
 									}
-									else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"WarningLevel", 60))
+									else if((UINT)lpnmlv->nmcd.lItemlParam >= _r_cfg_read(L"LevelWarning", 60))
 									{
 										lpnmlv->clrText = COLOR_LEVEL_WARNING;
 									}
