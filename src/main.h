@@ -21,7 +21,7 @@
 #define APP_MACHINE L"32"
 #endif
 
-#define APP_SETTINGS_COUNT 5
+#define APP_SETTINGS_COUNT 4
 
 #define ROUTINE_ADMIN_RIGHTS 1
 
