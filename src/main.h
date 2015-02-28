@@ -9,7 +9,7 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0.0"
+#define APP_VERSION L"3.0 beta 13"
 #define APP_VERSION_RES 3,0,0,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
@@ -29,15 +29,10 @@
 #define WM_TRAYICON			WM_APP + 1
 
 #define COLOR_TRAY_MASK		0x00FF00FF
+#define COLOR_LEVEL_WARNING	RGB(201, 91, 11)
+#define COLOR_LEVEL_DANGER	RGB(237, 28, 36)
 
-#define COLOR_TRAY_TEXT		0xFFFFFF
-#define COLOR_TRAY_BG		0//0xEF892D
-//#define COLOR_LISTVIEW_TEXT	0x3D3D3D
-#define COLOR_LEVEL_NORMAL	RGB(0,255,0) //0x45711E
-#define COLOR_LEVEL_WARNING	RGB(201,91,11)
-#define COLOR_LEVEL_DANGER	RGB(237,28,36) //0x471DB9
-
-struct _R_MEMORYSTATUS
+struct MEMORYINFO
 {
 	// Physical
     DWORD percent_phys;
@@ -53,7 +48,49 @@ struct _R_MEMORYSTATUS
     DWORD percent_ws;
     DWORDLONG total_ws;
     DWORDLONG free_ws;
+};
 
+struct STATIC_DATA
+{
+	MEMORYINFO ms;
+
+	DWORD reduct_before;
+	DWORD reduct_after;
+
+	HDC dc;
+	HDC cdc;
+
+	HBITMAP bitmap;
+	HBITMAP bitmap_mask;
+	
+	LPVOID rgb; // bitmap 
+
+	HFONT font; // tray font
+
+	RECT rc; // tray icon rectangle
+
+	BOOL is_admin;
+	BOOL is_supported_os;
+
+	__time64_t statistic_last_reduct;
+	DWORD statistic_last_baloon;
+
+	BOOL color_indication_listview;
+	BOOL color_indication_tray;
+	
+	UINT level_warning;
+	UINT level_danger;
+
+	COLORREF color_warning;
+	COLORREF color_danger;
+
+	BOOL autoreduct_warning;
+	BOOL autoreduct_danger;
+	BOOL autoreduct_interval;
+	UINT autoreduct_timeout;
+
+	BOOL balloon_warning;
+	BOOL balloon_danger;
 };
 
 // rev

@@ -2,66 +2,40 @@
 // Copyright © 2011-2013, 2015 Henry++
 
 #include <windows.h>
-#include <vsstyle.h>
 
 #include "main.h"
 
 #include "resource.h"
 #include "routine.h"
 
-NOTIFYICONDATA _r_nid = {0};
-_R_MEMORYSTATUS _r_memory = {0};
-
-HDC _r_dc = NULL, _r_cdc = NULL;
-HBITMAP _r_bitmap = NULL, _r_bitmap_mask = NULL;
-RECT _r_rc = {0};
-HFONT _r_font = NULL;
-LPVOID _r_rgb = NULL;
-BOOL _r_is_admin = FALSE, _r_supported_os = FALSE;
-
-__time64_t last_reduct = 0;
-
-BOOL color_indication_listview = FALSE;
-BOOL color_indication_tray = FALSE;
-
-UINT level_warning = 0;
-UINT level_danger = 0;
-
-BOOL autoreduct_warning = FALSE;
-BOOL autoreduct_danger = FALSE;
-BOOL autoreduct_interval = FALSE;
-UINT autoreduct_timeout = 0;
-
-BOOL balloon_warning = FALSE;
-BOOL balloon_danger = FALSE;
-
-DWORD dwLastBalloon = 0;
+NOTIFYICONDATA nid = {0};
+STATIC_DATA sd = {0};
 
 CONST UINT WM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
 
 BOOL _Reduct_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text, BOOL important)
 {
-	if(!important && dwLastBalloon && (GetTickCount() - dwLastBalloon) <= 7500)
+	if(!important && sd.statistic_last_baloon && (GetTickCount() - sd.statistic_last_baloon) <= 7500)
 	{
 		return FALSE;
 	}
 
-	_r_nid.uFlags = NIF_INFO;
-	_r_nid.dwInfoFlags = NIIF_RESPECT_QUIET_TIME | icon;
+	nid.uFlags = NIF_INFO;
+	nid.dwInfoFlags = NIIF_RESPECT_QUIET_TIME | icon;
 
-	StringCchCopy(_r_nid.szInfoTitle, _countof(_r_nid.szInfoTitle), title);
-	StringCchCopy(_r_nid.szInfo, _countof(_r_nid.szInfo), text);
+	StringCchCopy(nid.szInfoTitle, _countof(nid.szInfoTitle), title);
+	StringCchCopy(nid.szInfo, _countof(nid.szInfo), text);
 
-	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
+	Shell_NotifyIcon(NIM_MODIFY, &nid);
 
-	_r_nid.szInfo[0] = _r_nid.szInfoTitle[0] = L'\0'; // clean
+	nid.szInfo[0] = nid.szInfoTitle[0] = NULL; // clean
 
-	dwLastBalloon = GetTickCount();
+	sd.statistic_last_baloon = GetTickCount();
 
 	return TRUE;
 }
 
-DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
+DWORD _Application_GetMemoryStatus(MEMORYINFO* m)
 {
 	MEMORYSTATUSEX msex = {0};
 	SYSTEM_CACHE_INFORMATION sci = {0};
@@ -94,18 +68,17 @@ DWORD _Application_GetMemoryStatus(_R_MEMORYSTATUS* m)
 
 BOOL _Application_Reduct(HWND hwnd)
 {
-	if(!_r_is_admin || (hwnd && _r_msg(MB_YESNO | MB_ICONQUESTION, L"Memory reduction", L"Do you want to start memory reduction?") == IDNO))
+	if(!sd.is_admin || (hwnd && _r_msg(MB_YESNO | MB_ICONQUESTION, L"Memory reduction", L"Do you want to start memory reduction?") == IDNO))
 	{
 		return FALSE;
 	}
 
-	_R_MEMORYSTATUS before = {0};
-	_Application_GetMemoryStatus(&before);
+	sd.reduct_before = _Application_GetMemoryStatus(NULL);
 
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
 
 	// Working set
-	if(_r_supported_os && _r_cfg_read(L"ReductWorkingSet", 1))
+	if(sd.is_supported_os && _r_cfg_read(L"ReductWorkingSet", 1))
 	{
 		smlc = MemoryEmptyWorkingSets;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
@@ -123,135 +96,134 @@ BOOL _Application_Reduct(HWND hwnd)
 	}
 
 	// Standby priority-0 list
-	if(_r_supported_os && _r_cfg_read(L"ReductStandbyPriority0List", 1))
+	if(sd.is_supported_os && _r_cfg_read(L"ReductStandbyPriority0List", 1))
 	{
 		smlc = MemoryPurgeLowPriorityStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
 	// Standby list
-	if(_r_supported_os && _r_cfg_read(L"ReductStandbyList", 0))
+	if(sd.is_supported_os && _r_cfg_read(L"ReductStandbyList", 0))
 	{
 		smlc = MemoryPurgeStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
 	// Modified list
-	if(_r_supported_os && _r_cfg_read(L"ReductModifiedList", 0))
+	if(sd.is_supported_os && _r_cfg_read(L"ReductModifiedList", 0))
 	{
 		smlc = MemoryFlushModifiedList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
-	DWORD new_percent = _Application_GetMemoryStatus(NULL);
+	sd.reduct_after = _Application_GetMemoryStatus(NULL);
 
 	// Statistic
-	_r_cfg_write(L"StatisticLastResult", before.percent_phys - new_percent); // last result
-	_r_cfg_write(L"StatisticMaxResult", max(_r_cfg_read(L"StatisticMaxResult", 0), before.percent_phys - new_percent)); // maximum result
+	_r_cfg_write(L"StatisticLastResult", sd.reduct_before - sd.reduct_after); // last result
+	_r_cfg_write(L"StatisticMaxResult", max(_r_cfg_read(L"StatisticMaxResult", 0), sd.reduct_before - sd.reduct_after)); // maximum result
 
-	last_reduct = _r_helper_unixtime64();
-	_r_cfg_write(L"StatisticLastReduct", (DWORD)last_reduct); // time of last cleaning
+	sd.statistic_last_reduct = _r_helper_unixtime64();
+	_r_cfg_write(L"StatisticLastReduct", (DWORD)sd.statistic_last_reduct); // time of last cleaning
 
 	_r_cfg_write(L"StatisticTotalReduct", _r_cfg_read(L"StatisticTotalReduct", 0) + 1); // total count
 
 	// Show result
-	_Reduct_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(before.percent_phys - new_percent, _r_memory.total_phys))), TRUE);
+	_Reduct_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(sd.reduct_before - sd.reduct_after, sd.ms.total_phys))), TRUE);
 
 	return TRUE;
 }
 
 HICON _Application_GenerateIcon()
 {
-	COLORREF clrText = 0, clrTextBk= 0;
+	COLORREF clrText = 0, clrTextBk= COLOR_TRAY_MASK;
 
 	BOOL is_transparent = TRUE;
 
-	if(color_indication_tray)
+	if(sd.color_indication_tray)
 	{
-		if(_r_memory.percent_phys >= level_danger)
+		if(sd.ms.percent_phys >= sd.level_danger)
 		{
 			is_transparent = FALSE;
 
-			clrText = COLOR_TRAY_TEXT;
-			clrTextBk = COLOR_LEVEL_DANGER;
+			clrText = 0xFFFFFF;
+			clrTextBk = sd.color_danger;
 		}
-		else if(_r_memory.percent_phys >= level_warning)
+		else if(sd.ms.percent_phys >= sd.level_warning)
 		{
 			is_transparent = FALSE;
 
-			clrText = COLOR_TRAY_TEXT;
-			clrTextBk = COLOR_LEVEL_WARNING;
+			clrText = 0xFFFFFF;
+			clrTextBk = sd.color_warning;
 		}
 	}
 
-	if(!clrText) clrText = is_transparent ? 0 : COLOR_TRAY_TEXT;
-	if(!clrTextBk) clrTextBk = is_transparent ? COLOR_TRAY_MASK : COLOR_TRAY_BG;
+	if(!clrText) clrText = is_transparent ? 0 : 0xFFFFFF;
 
-	HBITMAP old_bitmap = (HBITMAP)SelectObject(_r_cdc, _r_bitmap);
+	HBITMAP old_bitmap = (HBITMAP)SelectObject(sd.cdc, sd.bitmap);
 
-	// draw background
-	COLORREF clr_prev = SetBkColor(_r_cdc, clrTextBk);
-	ExtTextOut(_r_cdc, 0, 0, ETO_OPAQUE, &_r_rc, NULL, 0, NULL);
-	SetBkColor(_r_cdc, clr_prev);
+	// Draw background
+	COLORREF clr_prev = SetBkColor(sd.cdc, clrTextBk);
+	ExtTextOut(sd.cdc, 0, 0, ETO_OPAQUE, &sd.rc, NULL, 0, NULL);
+	SetBkColor(sd.cdc, clr_prev);
 
-	// draw text
-	SetTextColor(_r_cdc, clrText);
-	SetBkMode(_r_cdc, TRANSPARENT);
+	// Draw text
+	SetTextColor(sd.cdc, clrText);
+	SetBkMode(sd.cdc, TRANSPARENT);
 
-	CString buffer = _r_helper_format(L"%d\0", _r_memory.percent_phys);
-	DrawTextEx(_r_cdc, buffer.GetBuffer(), buffer.GetLength(), &_r_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
+	CString buffer = _r_helper_format(L"%d\0", sd.ms.percent_phys);
+	DrawTextEx(sd.cdc, buffer.GetBuffer(), buffer.GetLength(), &sd.rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
-	SelectObject(_r_dc, old_bitmap);
+	SelectObject(sd.dc, old_bitmap);
 
-	// convert bits to transparency
+	// Transparency
 	if(is_transparent)
 	{
-		DWORD *pixel = (DWORD*)_r_rgb;
+		DWORD* pixel = (DWORD*)sd.rgb;
 
-		for(INT i = ((_r_rc.right * _r_rc.right) - 1); i >= 0; i--)
+		for(INT i = ((sd.rc.right * sd.rc.right) - 1); i >= 0; i--)
 		{
 			*pixel &= COLOR_TRAY_MASK;
-			*pixel |= ((*pixel == COLOR_TRAY_MASK) ? 0x00000000 : 0xffffffff);
+			*pixel |= ((*pixel == COLOR_TRAY_MASK) ? 0 : 0xffffffff);
 
 			pixel++;
 		}
 	}
 
-	ICONINFO ii = {TRUE, 0, 0, _r_bitmap_mask, _r_bitmap};
+	ICONINFO ii = {TRUE, 0, 0, sd.bitmap_mask, sd.bitmap};
 
 	return CreateIconIndirect(&ii);
 }
 
 VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 {
-	_Application_GetMemoryStatus(&_r_memory);
+	_Application_GetMemoryStatus(&sd.ms);
 
-	if(_r_nid.hIcon)
+	if(nid.hIcon)
 	{
-		DestroyIcon(_r_nid.hIcon);
+		DestroyIcon(nid.hIcon);
 	}
 
-	_r_nid.uFlags = NIF_ICON | NIF_TIP;
+	nid.uFlags = NIF_ICON | NIF_TIP;
 
-	StringCchPrintf(_r_nid.szTip, _countof(_r_nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), _r_memory.percent_phys, _r_memory.percent_page, _r_memory.percent_ws);
-	_r_nid.hIcon = _Application_GenerateIcon();
+	StringCchPrintf(nid.szTip, _countof(nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), sd.ms.percent_phys, sd.ms.percent_page, sd.ms.percent_ws);
+	nid.hIcon = _Application_GenerateIcon();
 
-	Shell_NotifyIcon(NIM_MODIFY, &_r_nid);
+	Shell_NotifyIcon(NIM_MODIFY, &nid);
 
-	BOOL has_danger = (_r_memory.percent_phys >= level_danger);
-	BOOL has_warning = (_r_memory.percent_phys >= level_warning);
+	BOOL has_danger = (sd.ms.percent_phys >= sd.level_danger);
+	BOOL has_warning = (sd.ms.percent_phys >= sd.level_warning);
 
 	// Autoreduct
-	if(_r_is_admin)
+	if(sd.is_admin)
 	{
-		if((has_danger && autoreduct_danger) || (has_warning && autoreduct_warning) || (autoreduct_interval && ((_r_helper_unixtime64() - last_reduct) >= autoreduct_timeout * 60)))
+		if((has_danger && sd.autoreduct_danger) || (has_warning && sd.autoreduct_warning) || (sd.autoreduct_interval && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_timeout * 60)))
 		{
 			_Application_Reduct(NULL);
 		}
 	}
 
 	// Balloon
-	if((has_danger && balloon_danger) || (has_warning && balloon_warning))
+	if((has_danger && sd.balloon_danger) || (has_warning && sd.balloon_warning))
 	{
 		_Reduct_ShowNotification(has_danger ? NIIF_ERROR : NIIF_WARNING, APP_NAME, _r_locale(has_danger ? IDS_BALLOON_DANGER_LEVEL : IDS_BALLOON_WARNING_LEVEL), FALSE);
 	}
@@ -259,19 +231,19 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	if(IsWindowVisible(hwnd))
 	{
 		// Physical
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_phys), 0, 1, -1, -1, _r_memory.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_phys), 1, 1, -1, -1, _r_memory.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_phys), 2, 1, -1, -1, _r_memory.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_phys), 0, 1, -1, -1, sd.ms.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_phys), 1, 1, -1, -1, sd.ms.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_phys), 2, 1, -1, -1, sd.ms.percent_phys);
 		
 		// Page file
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_page), 3, 1, -1, -1, _r_memory.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_page), 4, 1, -1, -1, _r_memory.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_page), 5, 1, -1, -1, _r_memory.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_page), 3, 1, -1, -1, sd.ms.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_page), 4, 1, -1, -1, sd.ms.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_page), 5, 1, -1, -1, sd.ms.percent_page);
 
 		// System working set
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", _r_memory.percent_ws), 6, 1, -1, -1, _r_memory.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.free_ws), 7, 1, -1, -1, _r_memory.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(_r_memory.total_ws), 8, 1, -1, -1, _r_memory.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_ws), 6, 1, -1, -1, sd.ms.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_ws), 7, 1, -1, -1, sd.ms.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_ws), 8, 1, -1, -1, sd.ms.percent_ws);
 
 		// Redraw listview
 		SendDlgItemMessage(hwnd, IDC_LISTVIEW, LVM_REDRAWITEMS, 0, 8);
@@ -280,67 +252,70 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 VOID _Application_Unitialize(BOOL deletetrayicon)
 {
-	if(_r_nid.hIcon)
+	if(nid.hIcon)
 	{
-		DestroyIcon(_r_nid.hIcon);
+		DestroyIcon(nid.hIcon);
 	}
 
 	if(deletetrayicon)
 	{
-		Shell_NotifyIcon(NIM_DELETE, &_r_nid);
+		Shell_NotifyIcon(NIM_DELETE, &nid);
 	}
 
 	UnregisterHotKey(_r_hwnd, UID);
 	KillTimer(_r_hwnd, UID);
 
-	DeleteObject(_r_font);
-	DeleteDC(_r_cdc);
-	DeleteDC(_r_dc);
-	DeleteObject(_r_bitmap);
-	DeleteObject(_r_bitmap_mask);
+	DeleteObject(sd.font);
+	DeleteDC(sd.cdc);
+	DeleteDC(sd.dc);
+	DeleteObject(sd.bitmap);
+	DeleteObject(sd.bitmap_mask);
 }
 
 VOID _Application_Initialize(BOOL createtrayicon)
 {
 	_Application_Unitialize(createtrayicon);
 
-	last_reduct = _r_cfg_read(L"StatisticLastReduct", 0);
+	sd.statistic_last_reduct = _r_cfg_read(L"StatisticLastReduct", 0);
 
-	color_indication_listview = _r_cfg_read(L"ColorIndicationListview", 1);
-	color_indication_tray = _r_cfg_read(L"ColorIndicationTray", 1);
+	sd.color_indication_listview = _r_cfg_read(L"ColorIndicationListview", 1);
+	sd.color_indication_tray = _r_cfg_read(L"ColorIndicationTray", 1);
 
-	level_warning = _r_cfg_read(L"LevelWarning", 60);
-	level_danger = _r_cfg_read(L"LevelDanger", 90);
+	sd.level_warning = _r_cfg_read(L"LevelWarning", 60);
+	sd.level_danger = _r_cfg_read(L"LevelDanger", 90);
 
-	autoreduct_warning = _r_cfg_read(L"AutoreductWarning", 0);
-	autoreduct_danger = _r_cfg_read(L"AutoreductDanger", 1);
-	autoreduct_interval = _r_cfg_read(L"AutoreductInterval", 0);
-	autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 30);
+	sd.color_warning = _r_cfg_read(L"ColorWarning", COLOR_LEVEL_WARNING);
+	sd.color_danger = _r_cfg_read(L"ColorDanger", COLOR_LEVEL_DANGER);
 
-	balloon_warning = _r_cfg_read(L"BalloonWarning", 0);
-	balloon_danger = _r_cfg_read(L"BalloonDanger", 1);
+	sd.autoreduct_warning = _r_cfg_read(L"AutoreductWarning", 0);
+	sd.autoreduct_danger = _r_cfg_read(L"AutoreductDanger", 1);
+	sd.autoreduct_interval = _r_cfg_read(L"AutoreductInterval", 0);
+	sd.autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 30);
 
-	_r_rc.right = GetSystemMetrics(SM_CXSMICON);
-	_r_rc.bottom = GetSystemMetrics(SM_CYSMICON);
+	sd.balloon_warning = _r_cfg_read(L"BalloonWarning", 0);
+	sd.balloon_danger = _r_cfg_read(L"BalloonDanger", 1);
+
+	sd.rc.right = GetSystemMetrics(SM_CXSMICON);
+	sd.rc.bottom = GetSystemMetrics(SM_CYSMICON);
 
 	BITMAPINFO bmi = {0};
 
     bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
-    bmi.bmiHeader.biWidth = _r_rc.right;
-    bmi.bmiHeader.biHeight = _r_rc.bottom;
+    bmi.bmiHeader.biWidth = sd.rc.right;
+    bmi.bmiHeader.biHeight = sd.rc.bottom;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB;
     bmi.bmiHeader.biSizeImage = 0;
 
-	_r_dc = GetDC(NULL);
+	sd.dc = GetDC(NULL);
 
-	_r_bitmap = CreateDIBSection(_r_dc, &bmi, DIB_RGB_COLORS, (LPVOID*)&_r_rgb, NULL, 0);
-	_r_bitmap_mask = CreateBitmap(_r_rc.right, _r_rc.bottom, 1, 1, NULL);;
+	sd.bitmap = CreateDIBSection(sd.dc, &bmi, DIB_RGB_COLORS, (LPVOID*)&sd.rgb, NULL, 0);
+	sd.bitmap_mask = CreateBitmap(sd.rc.right, sd.rc.bottom, 1, 1, NULL);;
 
-	_r_cdc = CreateCompatibleDC(_r_dc);
+	sd.cdc = CreateCompatibleDC(sd.dc);
 
-	ReleaseDC(NULL, _r_dc);
+	ReleaseDC(NULL, sd.dc);
 
 	// Font
 	LOGFONT lf = {0};
@@ -348,18 +323,18 @@ VOID _Application_Initialize(BOOL createtrayicon)
 	lf.lfQuality = ANTIALIASED_QUALITY;
 	lf.lfCharSet = DEFAULT_CHARSET;
 	lf.lfPitchAndFamily = FF_DONTCARE;
-	lf.lfHeight = -MulDiv(8, GetDeviceCaps(_r_cdc, LOGPIXELSY), 72);
+	lf.lfHeight = -MulDiv(8, GetDeviceCaps(sd.cdc, LOGPIXELSY), 72);
 
 	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"Tahoma");
 
-	_r_font = CreateFontIndirect(&lf);
+	sd.font = CreateFontIndirect(&lf);
 
-	SelectObject(_r_cdc, _r_font);
+	SelectObject(sd.cdc, sd.font);
 
 	// Hotkey
 	UINT hk = _r_cfg_read(L"Hotkey", 0);
 
-	if(_r_is_admin && hk && _r_cfg_read(L"HotkeyEnable", 0))
+	if(sd.is_admin && hk && _r_cfg_read(L"HotkeyEnable", 0))
 	{
 		RegisterHotKey(_r_hwnd, UID, (HIBYTE(hk) & 2) | ((HIBYTE(hk) & 4) >> 2) | ((HIBYTE(hk) & 1) << 2), LOBYTE(hk));
 	}
@@ -370,56 +345,20 @@ VOID _Application_Initialize(BOOL createtrayicon)
 	// Tray icon
 	if(createtrayicon)
 	{
-		_r_nid.cbSize = _r_supported_os ? sizeof(_r_nid) : NOTIFYICONDATA_V3_SIZE;
-		_r_nid.uVersion = _r_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
-		_r_nid.hWnd = _r_hwnd;
-		_r_nid.uID = UID;
-		_r_nid.uFlags = NIF_MESSAGE | NIF_ICON;
-		_r_nid.uCallbackMessage = WM_TRAYICON;
-		_r_nid.hIcon = _Application_GenerateIcon();
+		nid.cbSize = sd.is_supported_os ? sizeof(nid) : NOTIFYICONDATA_V3_SIZE;
+		nid.uVersion = sd.is_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
+		nid.hWnd = _r_hwnd;
+		nid.uID = UID;
+		nid.uFlags = NIF_MESSAGE | NIF_ICON;
+		nid.uCallbackMessage = WM_TRAYICON;
+		nid.hIcon = _Application_GenerateIcon();
 
-		Shell_NotifyIcon(NIM_ADD, &_r_nid);
+		Shell_NotifyIcon(NIM_ADD, &nid);
 	}
 
 	// Timer
 	_Application_MonitorCallback(_r_hwnd, 0, NULL, 0);
 	SetTimer(_r_hwnd, UID, 750, _Application_MonitorCallback);
-}
-
-HICON generateButtonIcon(COLORREF color, INT height)
-{
-	RECT rc = {0};
-
-	rc.right = height;
-	rc.bottom = height;
-
-	HDC dc = GetDC(NULL);
-
-	HBITMAP bitmap = CreateCompatibleBitmap(dc, rc.right, rc.bottom);
-	HBITMAP bitmap_mask = CreateBitmap(rc.right, rc.bottom, 1, 1, NULL);;
-
-	HDC dc_buffer = CreateCompatibleDC(dc);
-
-	ReleaseDC(NULL, dc);
-
-	HBITMAP old_bitmap = (HBITMAP)SelectObject(dc_buffer, bitmap);
-
-	COLORREF clr_prev = SetBkColor(dc_buffer, color);
-	ExtTextOut(dc_buffer, 0, 0, ETO_OPAQUE, &rc, NULL, 0, NULL);
-	SetBkColor(dc_buffer, clr_prev);
-
-	SelectObject(dc, old_bitmap);
-
-	ICONINFO ii = {TRUE, 0, 0, bitmap_mask, bitmap};
-
-	HICON ico = CreateIconIndirect(&ii);
-
-	DeleteDC(dc);
-	DeleteDC(dc_buffer);
-	DeleteObject(bitmap);
-	DeleteObject(bitmap_mask);
-
-	return ico;
 }
 
 INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -432,7 +371,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			if((INT)lparam == IDD_SETTINGS_1)
 			{
-				if(!_r_supported_os || !_r_is_admin)
+				if(!sd.is_supported_os || !sd.is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_SKIPUACWARNING_CHK), FALSE);
 				}
@@ -450,14 +389,14 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			}
 			else if((INT)lparam == IDD_SETTINGS_2)
 			{
-				if(!_r_supported_os || !_r_is_admin)
+				if(!sd.is_supported_os || !sd.is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_WORKINGSET_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
 
-					if(!_r_is_admin)
+					if(!sd.is_admin)
 					{
 						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
 
@@ -502,7 +441,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				SendDlgItemMessage(hwnd, IDC_LEVELDANGER, UDM_SETRANGE32, 1, 99);
 				SendDlgItemMessage(hwnd, IDC_LEVELDANGER, UDM_SETPOS32, 0, _r_cfg_read(L"LevelDanger", 90));
 
-				SetProp(GetDlgItem(hwnd, IDC_COLORDANGER), L"color", (HANDLE)_r_cfg_read(L"ColorWarning", COLOR_LEVEL_DANGER));
+				SetProp(GetDlgItem(hwnd, IDC_COLORDANGER), L"color", (HANDLE)_r_cfg_read(L"ColorDanger", COLOR_LEVEL_DANGER));
 			}
 			else if((INT)lparam == IDD_SETTINGS_4)
 			{
@@ -624,9 +563,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						ExtTextOut(lpnmcd->hdc, 0, 0, ETO_OPAQUE, &lpnmcd->rc, NULL, 0, NULL);
 						SetBkColor(lpnmcd->hdc, clr_prev);
 
-						SetWindowLongPtr(hwnd, DWLP_MSGRESULT, CDRF_DODEFAULT);
-
-						return TRUE;
+						return CDRF_DODEFAULT | CDRF_DOERASE;
 					}
 				}
 			}
@@ -647,12 +584,32 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					break;
 				}
-
+					
 				case IDC_HOTKEYENABLE_CHK:
 				{
 					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK)) && (IsDlgButtonChecked(hwnd, IDC_HOTKEYENABLE_CHK) == BST_CHECKED);
 
 					EnableWindow(GetDlgItem(hwnd, IDC_HOTKEY), is_enabled);
+
+					break;
+				}
+
+				case IDC_COLORWARNING:
+				case IDC_COLORDANGER:
+				{
+					CHOOSECOLOR cc = {0};
+					COLORREF cust[16] = {COLOR_LEVEL_WARNING, COLOR_LEVEL_DANGER};
+
+					cc.lStructSize = sizeof(cc);
+					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
+					cc.hwndOwner = hwnd;
+					cc.lpCustColors = cust;
+					cc.rgbResult = (COLORREF)GetProp(GetDlgItem(hwnd, LOWORD(wparam)), L"color");
+
+					if(ChooseColor(&cc))
+					{
+						SetProp(GetDlgItem(hwnd, LOWORD(wparam)), L"color", (HANDLE)cc.rgbResult);
+					}
 
 					break;
 				}
@@ -755,11 +712,11 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// static initializer
 			_r_hwnd = hwnd;
 
-			_r_is_admin = _r_system_adminstate();
-			_r_supported_os = _r_system_validversion(6, 0);
+			sd.is_admin = _r_system_adminstate();
+			sd.is_supported_os = _r_system_validversion(6, 0);
 
 			// set privileges
-			if(_r_is_admin)
+			if(sd.is_admin)
 			{
 				_r_system_setprivilege(SE_INCREASE_QUOTA_NAME, TRUE);
 				_r_system_setprivilege(SE_PROF_SINGLE_PROCESS_NAME, TRUE);
@@ -772,7 +729,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_Application_Initialize(TRUE);
 
 			// enable taskbarcreated message bypass uipi
-			if(_r_supported_os)
+			if(sd.is_supported_os)
 			{
 				CWMFEX _cwmfex = (CWMFEX)GetProcAddress(GetModuleHandle(L"user32.dll"), "ChangeWindowMessageFilterEx");
 
@@ -796,7 +753,6 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				RECT rc = {0};
 
-				 // Set UAC shield to button
 				SendDlgItemMessage(hwnd, IDC_OK, BCM_SETSHIELD, 0, TRUE);
 
 				SendDlgItemMessage(hwnd, IDC_OK, BCM_GETTEXTMARGIN, 0, (LPARAM)&rc);
@@ -825,7 +781,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				_r_windowtoggle(hwnd, TRUE);
 			}
 
-			if(!_r_is_admin)
+			if(!sd.is_admin)
 			{
 				_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), TRUE);
 			}
@@ -894,7 +850,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			LPNMHDR nmlp = (LPNMHDR)lparam;
 
-			if(nmlp->idFrom == IDC_LISTVIEW && color_indication_listview)
+			if(nmlp->idFrom == IDC_LISTVIEW && sd.color_indication_listview)
 			{
 				switch(nmlp->code)
 				{
@@ -913,13 +869,13 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 							case CDDS_ITEMPREPAINT:
 							{
-								if((UINT)lpnmlv->nmcd.lItemlParam >= level_danger)
+								if((UINT)lpnmlv->nmcd.lItemlParam >= sd.level_danger)
 								{
-									lpnmlv->clrText = COLOR_LEVEL_DANGER;
+									lpnmlv->clrText = sd.color_danger;
 								}
-								else if((UINT)lpnmlv->nmcd.lItemlParam >= level_warning)
+								else if((UINT)lpnmlv->nmcd.lItemlParam >= sd.level_warning)
 								{
-									lpnmlv->clrText = COLOR_LEVEL_WARNING;
+									lpnmlv->clrText = sd.color_warning;
 								}
 
 								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
@@ -964,7 +920,27 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				case WM_LBUTTONDBLCLK:
 				{
-					SendMessage(hwnd, WM_COMMAND, MAKELPARAM(IDM_TRAY_SHOW, 0), NULL);
+					switch(_r_cfg_read(L"TrayDoubleClickAction", 0))
+					{
+						case 1:
+						{
+							ShellExecute(hwnd, NULL, L"taskmgr.exe", NULL, NULL, 0);
+							break;
+						}
+							
+						case 2:
+						{
+							_Application_Reduct(NULL);
+							break;
+						}
+
+						default:
+						{
+							SendMessage(hwnd, WM_COMMAND, MAKELPARAM(IDM_TRAY_SHOW, 0), NULL);
+							break;
+						}
+					}
+
 					break;
 				}
 
@@ -1092,7 +1068,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					_r_helper_unixtime2systemtime((__time64_t)_r_cfg_read(L"StatisticLastReduct", 0), &st);
 
-					_r_msg(MB_ICONINFORMATION, L"Memory reduction statistic", L"Total reductions count: %d\r\nLast reduction: %ls\r\n\r\nLast result: %d%% (%ls)\r\nMaximum result: %d%% (%ls)", _r_cfg_read(L"StatisticTotalReduct", 0), _r_helper_formatdate(&st), last, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(last, _r_memory.total_phys)), maximum, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(maximum, _r_memory.total_phys)));
+					_r_msg(MB_ICONINFORMATION, L"Memory reduction statistic", L"Total reductions count: %d\r\nLast reduction: %ls\r\n\r\nLast result: %d%% (%ls)\r\nMaximum result: %d%% (%ls)", _r_cfg_read(L"StatisticTotalReduct", 0), _r_helper_formatdate(&st), last, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(last, sd.ms.total_phys)), maximum, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(maximum, sd.ms.total_phys)));
 
 					break;
 				}
