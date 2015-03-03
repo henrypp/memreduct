@@ -9,7 +9,7 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0 beta 13"
+#define APP_VERSION L"3.0 beta 16"
 #define APP_VERSION_RES 3,0,0,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
@@ -39,12 +39,12 @@ struct MEMORYINFO
     DWORDLONG total_phys;
     DWORDLONG free_phys;
 
-	// Page File
+	// Page file
     DWORD percent_page;
     DWORDLONG total_page;
     DWORDLONG free_page;
 
-	// System Working Set
+	// System working set
     DWORD percent_ws;
     DWORDLONG total_ws;
     DWORDLONG free_ws;
@@ -63,11 +63,11 @@ struct STATIC_DATA
 	HBITMAP bitmap;
 	HBITMAP bitmap_mask;
 	
-	LPVOID rgb; // bitmap 
+	LPVOID rgb; 
 
-	HFONT font; // tray font
+	HFONT font;
 
-	RECT rc; // tray icon rectangle
+	RECT rc;
 
 	BOOL is_admin;
 	BOOL is_supported_os;
@@ -84,10 +84,11 @@ struct STATIC_DATA
 	COLORREF color_warning;
 	COLORREF color_danger;
 
-	BOOL autoreduct_warning;
-	BOOL autoreduct_danger;
-	BOOL autoreduct_interval;
-	UINT autoreduct_timeout;
+	BOOL autoreduct_percent_mode;
+	UINT autoreduct_percent_value;
+
+	BOOL autoreduct_interval_mode;
+	UINT autoreduct_interval_value;
 
 	BOOL balloon_warning;
 	BOOL balloon_danger;

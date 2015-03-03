@@ -12,8 +12,10 @@ v3.0 (xx March 2015)
 + changed priority to HIGH_PRIORITY_CLASS
 - fixed listview color indication doesn't redraw sometimes
 + auto clean memory every config
+- removed reduct dialog
 - i/o operations optimization
 + reduction statistic
++ new logo
 
 v2.4 (17 September 2013)
 + added tray icon customization

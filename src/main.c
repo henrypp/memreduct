@@ -216,7 +216,10 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	// Autoreduct
 	if(sd.is_admin)
 	{
-		if((has_danger && sd.autoreduct_danger) || (has_warning && sd.autoreduct_warning) || (sd.autoreduct_interval && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_timeout * 60)))
+		if(
+			(sd.autoreduct_percent_mode && (sd.ms.percent_phys >= sd.autoreduct_percent_value)) ||
+			(sd.autoreduct_interval_mode && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_interval_value * 60))
+		)
 		{
 			_Application_Reduct(NULL);
 		}
@@ -286,11 +289,12 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	sd.color_warning = _r_cfg_read(L"ColorWarning", COLOR_LEVEL_WARNING);
 	sd.color_danger = _r_cfg_read(L"ColorDanger", COLOR_LEVEL_DANGER);
+	
+	sd.autoreduct_percent_mode = _r_cfg_read(L"AutoreductPercentMode", 0);
+	sd.autoreduct_percent_value = _r_cfg_read(L"AutoreductPercentValue", 90);
 
-	sd.autoreduct_warning = _r_cfg_read(L"AutoreductWarning", 0);
-	sd.autoreduct_danger = _r_cfg_read(L"AutoreductDanger", 1);
-	sd.autoreduct_interval = _r_cfg_read(L"AutoreductInterval", 0);
-	sd.autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 30);
+	sd.autoreduct_interval_mode = _r_cfg_read(L"AutoreductIntervalMode", 0);
+	sd.autoreduct_interval_value = _r_cfg_read(L"AutoreductIntervalValue", 30);
 
 	sd.balloon_warning = _r_cfg_read(L"BalloonWarning", 0);
 	sd.balloon_danger = _r_cfg_read(L"BalloonDanger", 1);
@@ -400,9 +404,8 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					{
 						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
 
-						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTWARNING_CHK), FALSE);
-						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTDANGER_CHK), FALSE);
-						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVAL_CHK), FALSE);
+						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK), FALSE);
+						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK), FALSE);
 
 						EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
 						EnableWindow(GetDlgItem(hwnd, IDC_HOTKEY), FALSE);
@@ -414,18 +417,22 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, _r_cfg_read(L"ReductStandbyPriority0List", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, _r_cfg_read(L"ReductStandbyList", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, _r_cfg_read(L"ReductModifiedList", 0) ? BST_CHECKED : BST_UNCHECKED);
+				
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK, _r_cfg_read(L"AutoreductPercentMode", 0) ? BST_CHECKED : BST_UNCHECKED);
 
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTWARNING_CHK, _r_cfg_read(L"AutoreductWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTDANGER_CHK, _r_cfg_read(L"AutoreductDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTINTERVAL_CHK, _r_cfg_read(L"AutoreductInterval", 0) ? BST_CHECKED : BST_UNCHECKED);
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_SETRANGE32, 5, 99);
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductPercentValue", 90));
 
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_SETRANGE32, 5, 1440); // 5 minutes and 1 day
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductTimeout", 30));
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK, _r_cfg_read(L"AutoreductIntervalMode", 0) ? BST_CHECKED : BST_UNCHECKED);
+
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 5, 1440); // 5 minutes and 1 day
+				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductIntervalValue", 30));
 
 				CheckDlgButton(hwnd, IDC_HOTKEYENABLE_CHK, _r_cfg_read(L"HotkeyEnable", 0) ? BST_CHECKED : BST_UNCHECKED);
 				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", 0), NULL);
 
-				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTINTERVAL_CHK, 0), NULL);
+				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTPERCENTMODE_CHK, 0), NULL);
+				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTINTERVALMODE_CHK, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_HOTKEYENABLE_CHK, 0), NULL);
 			}
 			else if((INT)lparam == IDD_SETTINGS_3)
@@ -448,7 +455,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_BALLOONWARNING_CHK, _r_cfg_read(L"BalloonWarning", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_BALLOONDANGER_CHK, _r_cfg_read(L"BalloonDanger", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_BALLOONREDUCT_CHK, _r_cfg_read(L"BalloonReduct", 1) ? BST_CHECKED : BST_UNCHECKED);
-				
+
 				for(INT i = 0; i < 3; i++)
 				{
 					SendDlgItemMessage(hwnd, IDC_TRAYDOUBLECICKACTION, CB_INSERTSTRING, i, (LPARAM)_r_locale(IDS_DOUBLECICKACTION_1 + i).GetBuffer());
@@ -508,11 +515,11 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					_r_cfg_write(L"ReductStandbyList", INT((IsDlgButtonChecked(hwnd, IDC_STANDBYLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"ReductModifiedList", INT((IsDlgButtonChecked(hwnd, IDC_MODIFIEDLIST_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
-					_r_cfg_write(L"AutoreductWarning", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTWARNING_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"AutoreductDanger", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTDANGER_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					_r_cfg_write(L"AutoreductInterval", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVAL_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductPercentMode", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductPercentValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_GETPOS32, 0, NULL));
 
-					_r_cfg_write(L"AutoreductTimeout", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_GETPOS32, 0, NULL));
+					_r_cfg_write(L"AutoreductIntervalMode", INT((IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					_r_cfg_write(L"AutoreductIntervalValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, NULL));
 
 					_r_cfg_write(L"HotkeyEnable", INT((IsDlgButtonChecked(hwnd, IDC_HOTKEYENABLE_CHK) == BST_CHECKED) ? TRUE : FALSE));
 					_r_cfg_write(L"Hotkey", (DWORD)SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_GETHOTKEY, 0, NULL));
@@ -575,12 +582,22 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			switch(LOWORD(wparam))
 			{
-				case IDC_AUTOREDUCTINTERVAL_CHK:
+				case IDC_AUTOREDUCTINTERVALMODE_CHK:
 				{
-					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVAL_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVAL_CHK) == BST_CHECKED);
+					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK) == BST_CHECKED);
 
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT), is_enabled);
-					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT, UDM_GETBUDDY, 0, NULL), is_enabled);
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALVALUE), is_enabled);
+					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
+
+					break;
+				}
+
+				case IDC_AUTOREDUCTPERCENTMODE_CHK:
+				{
+					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK) == BST_CHECKED);
+
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTVALUE), is_enabled);
+					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
 
 					break;
 				}
@@ -783,7 +800,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			if(!sd.is_admin)
 			{
-				_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_WARNING), TRUE);
+				_Reduct_ShowNotification(NIIF_ERROR, APP_NAME, _r_locale(IDS_BALLOON_NOPRIVILEGES), TRUE);
 			}
 
 			break;
@@ -1066,9 +1083,9 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					UINT last = _r_cfg_read(L"StatisticLastResult", 0);
 					UINT maximum = _r_cfg_read(L"StatisticMaxResult", 0);
 
-					_r_helper_unixtime2systemtime((__time64_t)_r_cfg_read(L"StatisticLastReduct", 0), &st);
+					_r_helper_unixtime2systemtime(sd.statistic_last_reduct, &st);
 
-					_r_msg(MB_ICONINFORMATION, L"Memory reduction statistic", L"Total reductions count: %d\r\nLast reduction: %ls\r\n\r\nLast result: %d%% (%ls)\r\nMaximum result: %d%% (%ls)", _r_cfg_read(L"StatisticTotalReduct", 0), _r_helper_formatdate(&st), last, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(last, sd.ms.total_phys)), maximum, _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(maximum, sd.ms.total_phys)));
+					_r_msg(MB_ICONINFORMATION, _r_locale(IDS_STATISTIC_1), _r_locale(IDS_STATISTIC_2), sd.statistic_last_reduct ? _r_helper_formatdate(&st) : _r_locale(IDS_STATISTIC_3), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(last, sd.ms.total_phys)), _r_cfg_read(L"StatisticTotalReduct", 0), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(maximum, sd.ms.total_phys)));
 
 					break;
 				}
