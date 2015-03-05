@@ -16,6 +16,7 @@ v3.0 (xx March 2015)
 - i/o operations optimization
 + reduction statistic
 + new logo
+- removed "warning" level (only danger stay down)
 
 v2.4 (17 September 2013)
 + added tray icon customization

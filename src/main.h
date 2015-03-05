@@ -9,8 +9,8 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0 beta 16"
-#define APP_VERSION_RES 3,0,0,0
+#define APP_VERSION L"3.0.17"
+#define APP_VERSION_RES 3,0,17,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
 #define APP_AUTHOR L"Henry++"
@@ -21,16 +21,23 @@
 #define APP_MACHINE L"32"
 #endif
 
-#define APP_SETTINGS_COUNT 4
+#define APP_SETTINGS_COUNT 2
 
 #define ROUTINE_ADMIN_RIGHTS 1
 
-#define UID					1337
-#define WM_TRAYICON			WM_APP + 1
+#define UID						1337
+#define WM_TRAYICON				WM_APP + 1
 
-#define COLOR_TRAY_MASK		0x00FF00FF
-#define COLOR_LEVEL_WARNING	RGB(201, 91, 11)
-#define COLOR_LEVEL_DANGER	RGB(237, 28, 36)
+// Colors
+#define COLOR_TRAY_MASK			0x00FF00FF
+#define COLOR_LEVEL_DANGER		RGB(237, 28, 36)
+
+// Reduct (settings mask)
+#define REDUCT_WORKING_SET				0x01
+#define REDUCT_SYSTEM_WORKING_SET		0x02
+#define REDUCT_STANDBY_PRIORITY0_LIST	0x04
+#define REDUCT_STANDBY_LIST				0x08
+#define REDUCT_MODIFIED_LIST			0x10
 
 struct MEMORYINFO
 {
@@ -75,23 +82,13 @@ struct STATIC_DATA
 	__time64_t statistic_last_reduct;
 	DWORD statistic_last_baloon;
 
-	BOOL color_indication_listview;
-	BOOL color_indication_tray;
-	
-	UINT level_warning;
-	UINT level_danger;
-
-	COLORREF color_warning;
-	COLORREF color_danger;
-
 	BOOL autoreduct_percent_mode;
 	UINT autoreduct_percent_value;
 
 	BOOL autoreduct_interval_mode;
 	UINT autoreduct_interval_value;
 
-	BOOL balloon_warning;
-	BOOL balloon_danger;
+	DWORD reduct_mask;
 };
 
 // rev
