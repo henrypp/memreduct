@@ -139,7 +139,7 @@ HICON _Application_GenerateIcon()
 
 	BOOL is_transparent = TRUE;
 
-	if(sd.ms.percent_phys >= sd.autoreduct_percent_value)
+	if(sd.ms.percent_phys >= sd.level_danger_value)
 	{
 		is_transparent = FALSE;
 
@@ -203,14 +203,14 @@ VOID CALLBACK _Application_MonitorCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	// Autoreduct
 	if(sd.is_admin)
 	{
-		if((sd.autoreduct_percent_mode && (sd.ms.percent_phys >= sd.autoreduct_percent_value)) || (sd.autoreduct_interval_mode && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_interval_value * 60)))
+		if((sd.level_danger_autoreduct && (sd.ms.percent_phys >= sd.level_danger_value)) || (sd.autoreduct_interval_mode && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_interval_value * 60)))
 		{
 			_Application_Reduct(NULL, 0);
 		}
 	}
 
 	// Balloon
-	if(sd.ms.percent_phys >= sd.autoreduct_percent_value)
+	if(sd.level_danger_showpopup && sd.ms.percent_phys >= sd.level_danger_value)
 	{
 		_Application_ShowNotification(NIIF_ERROR, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_LEVEL), _r_helper_formatsize64(sd.ms.free_phys)), FALSE);
 	}
@@ -265,8 +265,9 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	sd.statistic_last_reduct = _r_cfg_read(L"StatisticLastReduct", 0);
 
-	sd.autoreduct_percent_mode = _r_cfg_read(L"AutoreductPercentMode", 0);
-	sd.autoreduct_percent_value = _r_cfg_read(L"AutoreductPercentValue", 90);
+	sd.level_danger_value = _r_cfg_read(L"LevelDangerValue", 90);
+	sd.level_danger_showpopup = _r_cfg_read(L"LevelDangerShowPopup", 1);
+	sd.level_danger_autoreduct = _r_cfg_read(L"LevelDangerAutoreduct", 0);
 
 	sd.autoreduct_interval_mode = _r_cfg_read(L"AutoreductIntervalMode", 0);
 	sd.autoreduct_interval_value = _r_cfg_read(L"AutoreductIntervalValue", 30);
@@ -278,13 +279,13 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	BITMAPINFO bmi = {0};
 
-    bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
-    bmi.bmiHeader.biWidth = sd.rc.right;
-    bmi.bmiHeader.biHeight = sd.rc.bottom;
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-    bmi.bmiHeader.biSizeImage = 0;
+	bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+	bmi.bmiHeader.biWidth = sd.rc.right;
+	bmi.bmiHeader.biHeight = sd.rc.bottom;
+	bmi.bmiHeader.biPlanes = 1;
+	bmi.bmiHeader.biBitCount = 32;
+	bmi.bmiHeader.biCompression = BI_RGB;
+	bmi.bmiHeader.biSizeImage = 0;
 
 	sd.dc = GetDC(NULL);
 
@@ -377,12 +378,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					if(!sd.is_admin)
 					{
 						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
-
-						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK), FALSE);
-						EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK), FALSE);
-
-						EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
-						EnableWindow(GetDlgItem(hwnd, IDC_HOTKEY), FALSE);
 					}
 				}
 
@@ -391,11 +386,21 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, ((sd.reduct_mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, ((sd.reduct_mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, ((sd.reduct_mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
+			}
+			else if((INT)lparam == IDD_SETTINGS_3)
+			{
+				if(!sd.is_admin)
+				{
+					EnableWindow(GetDlgItem(hwnd, IDC_LEVELDANGERAUTOREDUCT), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
+				}
 
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK, _r_cfg_read(L"AutoreductPercentMode", 0) ? BST_CHECKED : BST_UNCHECKED);
+				SendDlgItemMessage(hwnd, IDC_LEVELDANGERVALUE, UDM_SETRANGE32, 30, 95);
+				SendDlgItemMessage(hwnd, IDC_LEVELDANGERVALUE, UDM_SETPOS32, 0, _r_cfg_read(L"LevelDangerValue", 90));
 
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_SETRANGE32, 30, 95);
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductPercentValue", 90));
+				CheckDlgButton(hwnd, IDC_LEVELDANGERSHOWPOPUP, _r_cfg_read(L"LevelDangerShowPopup", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_LEVELDANGERAUTOREDUCT, _r_cfg_read(L"LevelDangerAutoreduct", 0) ? BST_CHECKED : BST_UNCHECKED);
 
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK, _r_cfg_read(L"AutoreductIntervalMode", 0) ? BST_CHECKED : BST_UNCHECKED);
 
@@ -405,7 +410,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_HOTKEYENABLE_CHK, _r_cfg_read(L"HotkeyEnable", 0) ? BST_CHECKED : BST_UNCHECKED);
 				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", MAKEWORD(VK_F1, HOTKEYF_SHIFT)), NULL);
 
-				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTPERCENTMODE_CHK, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTINTERVALMODE_CHK, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_HOTKEYENABLE_CHK, 0), NULL);
 			}
@@ -474,9 +478,12 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					}
 
 					_r_cfg_write(L"ReductMask", mask);
-
-					_r_cfg_write(L"AutoreductPercentMode", (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK) == BST_CHECKED) ? TRUE : FALSE);
-					_r_cfg_write(L"AutoreductPercentValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_GETPOS32, 0, NULL));
+				}
+				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
+				{
+					_r_cfg_write(L"LevelDangerValue", (DWORD)SendDlgItemMessage(hwnd, IDC_LEVELDANGERVALUE, UDM_GETPOS32, 0, NULL));
+					_r_cfg_write(L"LevelDangerShowPopup", (IsDlgButtonChecked(hwnd, IDC_LEVELDANGERSHOWPOPUP) == BST_CHECKED) ? TRUE : FALSE);
+					_r_cfg_write(L"LevelDangerAutoreduct", (IsDlgButtonChecked(hwnd, IDC_LEVELDANGERAUTOREDUCT) == BST_CHECKED) ? TRUE : FALSE);
 
 					_r_cfg_write(L"AutoreductIntervalMode", (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK) == BST_CHECKED) ? TRUE : FALSE);
 					_r_cfg_write(L"AutoreductIntervalValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, NULL));
@@ -493,16 +500,6 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			switch(LOWORD(wparam))
 			{
-				case IDC_AUTOREDUCTPERCENTMODE_CHK:
-				{
-					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTPERCENTMODE_CHK) == BST_CHECKED);
-
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTPERCENTVALUE), is_enabled);
-					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTPERCENTVALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
-
-					break;
-				}
-
 				case IDC_AUTOREDUCTINTERVALMODE_CHK:
 				{
 					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTINTERVALMODE_CHK) == BST_CHECKED);
@@ -536,10 +533,8 @@ INT_PTR CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 	{
 		case WM_INITDIALOG:
 		{
-			// center window
 			_r_windowcenter(hwnd);
 
-			// configure treeview
 			_r_treeview_setstyle(hwnd, IDC_NAV, TVS_EX_DOUBLEBUFFER, GetSystemMetrics(SM_CYSMICON));
 
 			for(INT i = 0; i < APP_SETTINGS_COUNT; i++)
@@ -593,7 +588,7 @@ INT_PTR CALLBACK SettingsDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lpar
 				case IDCANCEL: // process Esc key
 				case IDC_CANCEL:
 				{
-					EndDialog(hwnd, 0);
+					EndDialog(hwnd, NULL);
 					break;
 				}
 			}
@@ -772,7 +767,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 							case CDDS_ITEMPREPAINT:
 							{
-								if((UINT)lpnmlv->nmcd.lItemlParam >= sd.autoreduct_percent_value)
+								if((UINT)lpnmlv->nmcd.lItemlParam >= sd.level_danger_value)
 								{
 									lpnmlv->clrText = COLOR_LEVEL_DANGER;
 									result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
