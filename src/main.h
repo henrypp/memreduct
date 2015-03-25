@@ -9,8 +9,8 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0.17"
-#define APP_VERSION_RES 3,0,17,0
+#define APP_VERSION L"3.0.21"
+#define APP_VERSION_RES 3,0,21,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
 #define APP_AUTHOR L"Henry++"
@@ -80,14 +80,14 @@ struct STATIC_DATA
 	BOOL is_supported_os;
 
 	__time64_t statistic_last_reduct;
-	DWORD statistic_last_baloon;
 
-	BOOL level_danger_autoreduct;
-	BOOL level_danger_showpopup;
-	UINT level_danger_value;
+	BOOL autoreduct_threshold;
+	UINT autoreduct_threshold_value;
 
-	BOOL autoreduct_interval_mode;
-	UINT autoreduct_interval_value;
+	BOOL autoreduct_timeout;
+	UINT autoreduct_timeout_value;
+
+	UINT autoreduct_timeout_threshold_value;
 
 	DWORD reduct_mask;
 };
