@@ -9,8 +9,8 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0.21"
-#define APP_VERSION_RES 3,0,21,0
+#define APP_VERSION L"3.0.52"
+#define APP_VERSION_RES 3,0,52,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
 #define APP_AUTHOR L"Henry++"
@@ -28,8 +28,11 @@
 #define UID 1337
 #define WM_TRAYICON WM_APP + 1
 
+#define FONT_SIZE 8
+#define FONT_SIZE_SMALL 6
+
 // Colors
-#define COLOR_TRAY_MASK 0x00FF00FF // with alpha bits
+#define COLOR_TRAY_MASK 0xFF00FF
 #define COLOR_LEVEL_DANGER 0x241CED
 
 // Memory reduction area (mask)
@@ -69,10 +72,9 @@ struct STATIC_DATA
 
 	HBITMAP bitmap;
 	HBITMAP bitmap_mask;
-	
-	LPVOID rgb; 
 
 	HFONT font;
+	HFONT font_TEST;
 
 	RECT rc;
 
