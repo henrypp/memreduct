@@ -8,7 +8,7 @@ The lightweight application is less than half a megabyte, and it is compatible w
 
 To activate portable mode, create "memreduct.ini" in application folder, or move it from "%APPDATA%\Henry++\Mem Reduct".
 
-Webiste: http://www.henrypp.org/product/errorlookup<br />
+Webiste: http://www.henrypp.org/product/memreduct<br />
 Support: support@henrypp.org
-
+```
 © 2011-2013, 2015 Henry++
