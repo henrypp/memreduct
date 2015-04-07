@@ -11,4 +11,4 @@ To activate portable mode, create "memreduct.ini" in application folder, or move
 Webiste: http://www.henrypp.org/product/memreduct<br />
 Support: support@henrypp.org
 ```
-Â© 2011-2013, 2015 Henry++
+© 2011-2015 Henry++

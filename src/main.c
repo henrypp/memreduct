@@ -1,5 +1,5 @@
 ﻿// Mem Reduct
-// Copyright © 2011-2013, 2015 Henry++
+// Copyright © 2011-2015 Henry++
 
 #include <windows.h>
 
@@ -9,9 +9,62 @@
 #include "routine.h"
 
 NOTIFYICONDATA nid = {0};
-STATIC_DATA sd = {0};
+STATIC_DATA data = {0};
 
 CONST UINT WM_TASKBARCREATED = RegisterWindowMessage(L"TaskbarCreated");
+
+VOID BresenhamCircle(HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
+{
+	LONG cx = 0, cy = radius, d = 2 - 2 * radius;
+
+	// let's start drawing the circle:
+	SetPixel(dc, cx + pt->x, cy + pt->y, clr);		// point (0, R);
+	SetPixel(dc, cx + pt->x, -cy + pt->y, clr);		// point (0, -R);
+	SetPixel(dc, cy + pt->x, cx + pt->y, clr);		// point (R, 0);
+	SetPixel(dc, -cy + pt->x, cx + pt->y, clr);		// point (-R, 0);
+
+	while(1)
+	{
+		if(d > -cy)
+		{
+			--cy;
+			d += 1 - 2 * cy;
+		}
+
+		if(d <= cx)
+		{
+			++cx;
+			d += 1 + 2 * cx;
+		}
+
+		if(!cy) break; // cy is 0, but these points are already drawn;
+
+		// the actual drawing:
+		SetPixel(dc, cx + pt->x, cy + pt->y, clr);		// 0-90		degrees
+		SetPixel(dc, -cx + pt->x, cy + pt->y, clr);		// 90-180	degrees
+		SetPixel(dc, -cx + pt->x, -cy + pt->y, clr);	// 180-270	degrees
+		SetPixel(dc, cx + pt->x, -cy + pt->y, clr);		// 270-360	degrees
+	}
+}
+
+VOID BresenhamLine(HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
+{
+	INT dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+	INT dy = abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+	INT err = (dx > dy ? dx : -dy) / 2, e2;
+
+	while(1)
+	{
+		SetPixel(dc, x0, y0, clr);
+
+		if (x0 == x1 && y0 == y1) break;
+
+		e2 = err;
+
+		if(e2 >-dx) { err -= dy; x0 += sx;}
+		if(e2 < dy) { err += dx; y0 += sy;}
+	}
+}
 
 BOOL _Application_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text)
 {
@@ -35,12 +88,15 @@ DWORD _Application_GetMemoryStatus(MEMORYINFO* m)
 
 	msex.dwLength = sizeof(msex);
 
-	if(GlobalMemoryStatusEx(&msex) && m) // WARNING!!! don't tounch "m"!
+	if(GlobalMemoryStatusEx(&msex) && m) // WARNING!!! don't touch "m"!
 	{
 		m->percent_phys = msex.dwMemoryLoad;
 
 		m->free_phys = msex.ullAvailPhys;
 		m->total_phys = msex.ullTotalPhys;
+
+		//msex.ullTotalPageFile -= msex.ullTotalPhys;
+		//msex.ullAvailPageFile -= msex.ullAvailPhys;
 
 		m->percent_page = (DWORD)ROUTINE_PERCENT_OF(msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
 
@@ -61,22 +117,22 @@ DWORD _Application_GetMemoryStatus(MEMORYINFO* m)
 
 DWORD _Application_Reduct(HWND hwnd, DWORD mask)
 {
-	if(!sd.is_admin || (hwnd && _r_msg(MB_YESNO | MB_ICONQUESTION, _r_locale(IDS_QUESTION_1)) == IDNO))
+	if(!data.is_admin || (hwnd && _r_msg(MB_YESNO | MB_ICONQUESTION, _r_locale(IDS_QUESTION_1)) == IDNO))
 	{
 		return FALSE;
 	}
 
-	sd.reduct_before = _Application_GetMemoryStatus(NULL);
+	data.reduct_before = _Application_GetMemoryStatus(NULL);
 
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
 
 	if(!mask)
 	{
-		mask = sd.reduct_mask;
+		mask = data.reduct_mask;
 	}
 
 	// Working set
-	if(sd.is_supported_os && ((mask & REDUCT_WORKING_SET) != 0))
+	if(data.is_supported_os && ((mask & REDUCT_WORKING_SET) != 0))
 	{
 		smlc = MemoryEmptyWorkingSets;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
@@ -94,106 +150,133 @@ DWORD _Application_Reduct(HWND hwnd, DWORD mask)
 	}
 
 	// Standby priority-0 list
-	if(sd.is_supported_os && ((mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0))
+	if(data.is_supported_os && ((mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0))
 	{
 		smlc = MemoryPurgeLowPriorityStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
 	// Standby list
-	if(sd.is_supported_os && ((mask & REDUCT_STANDBY_LIST) != 0))
+	if(data.is_supported_os && ((mask & REDUCT_STANDBY_LIST) != 0))
 	{
 		smlc = MemoryPurgeStandbyList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
 	// Modified list
-	if(sd.is_supported_os && ((mask & REDUCT_MODIFIED_LIST) != 0))
+	if(data.is_supported_os && ((mask & REDUCT_MODIFIED_LIST) != 0))
 	{
 		smlc = MemoryFlushModifiedList;
 		NtSetSystemInformation(SystemMemoryListInformation, &smlc, sizeof(smlc));
 	}
 
-	sd.reduct_after = _Application_GetMemoryStatus(NULL);
+	data.reduct_after = _Application_GetMemoryStatus(NULL);
 
 	// Statistic
-	sd.statistic_last_reduct = _r_helper_unixtime64();
-	_r_cfg_write(L"StatisticLastReduct", (DWORD)sd.statistic_last_reduct); // time of last cleaning
+	data.statistic_last_reduct = _r_helper_unixtime64();
+	_r_cfg_write(L"StatisticLastReduct", (DWORD)data.statistic_last_reduct); // time of last cleaning
 
 	// Show result
-	_Application_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(sd.reduct_before - sd.reduct_after, sd.ms.total_phys))));
+	_Application_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(data.reduct_before - data.reduct_after, data.ms.total_phys))));
 
-	return sd.reduct_after;
+	return data.reduct_after;
 }
 
-HICON _Application_CreateIcon()
+HICON _Application_DrawIcon()
 {
-	BOOL is_smallfont = _r_cfg_read(L"is_smallfont", 1);
-	BOOL is_transparent = _r_cfg_read(L"is_transparent", 1);
-	BOOL is_border = _r_cfg_read(L"is_border", 1);
-	COLORREF clrText = _r_cfg_read(L"clrText", 111111);
-	COLORREF clrTextBk = _r_cfg_read(L"clrTextBk", 0);
-	UINT roundwidth = _r_cfg_read(L"roundwidth", 5);
+	COLORREF clrText = data.tray_color_text;
 
-	if(sd.ms.percent_phys >= sd.autoreduct_threshold_value)
+	HBRUSH bg_brush = data.border_brush;
+
+	if(data.ms.percent_phys >= data.autoreduct_threshold_value)
 	{
-		if(is_transparent)
+		if(data.is_transparent)
 		{
-			clrText = COLOR_LEVEL_DANGER;
+			clrText =  data.tray_color_warning;
 		}
 		else
 		{
-			clrTextBk = COLOR_LEVEL_DANGER;
+			bg_brush = data.border_brush_warning;
 		}
 	}
 
-	HBITMAP old_bitmap = (HBITMAP)SelectObject(sd.cdc, sd.bitmap);
+	// select bitmap
+	HBITMAP old_bitmap = (HBITMAP)SelectObject(data.cdc1, data.bitmap);
 
-	// Draw transparent mask
+	// draw transparent mask
+	COLORREF clr_prev = SetBkColor(data.cdc1, TRAY_COLOR_MASK);
+	ExtTextOut(data.cdc1, 0, 0, ETO_OPAQUE, &data.rc, NULL, 0, NULL);
+	SetBkColor(data.cdc1, clr_prev);
 
-	COLORREF clr_prev = SetBkColor(sd.cdc, COLOR_TRAY_MASK);
-	ExtTextOut(sd.cdc, 0, 0, ETO_OPAQUE, &sd.rc, NULL, 0, NULL);
-	SetBkColor(sd.cdc, clr_prev);
+	// draw background
+	if(!data.is_transparent)
+	{
+		HGDIOBJ prev_pen = SelectObject(data.cdc1, GetStockObject(NULL_PEN));
+		HGDIOBJ prev_brush = SelectObject(data.cdc1, bg_brush);
 
-	SelectObject(sd.cdc, is_smallfont ? sd.font_TEST : sd.font);
+		RoundRect(data.cdc1, 0, 0, data.rc.right, data.rc.bottom, data.is_round ? (data.rc.right / 2) : 0, data.is_round ? (data.rc.bottom / 2) : 0);
 
-	// rect border
-	HGDIOBJ prev1 = SelectObject(sd.cdc, is_border ? CreatePen(PS_SOLID, 1, clrText) : GetStockObject(NULL_PEN));
-	HGDIOBJ prev2 = SelectObject(sd.cdc, is_transparent ? GetStockObject(HOLLOW_BRUSH) : CreateSolidBrush(clrTextBk));
+		SelectObject(data.cdc1, prev_pen);
+		SelectObject(data.cdc1, prev_brush);
+	}
 
-	RoundRect(sd.cdc, 0, 0, sd.rc.right, sd.rc.bottom, roundwidth, roundwidth);
+	// draw border
+	if(data.is_border)
+	{
+		if(data.is_round)
+		{
+			POINT pt = {0};
 
-	SelectObject(sd.cdc, prev1);
-	SelectObject(sd.cdc, prev2);
+			pt.x = (data.rc.right / 2) - 1;
+			pt.y = (data.rc.bottom / 2) - 1;
 
-	// Draw text
-	SetTextColor(sd.cdc, clrText);
-	SetBkMode(sd.cdc, TRANSPARENT);
+			for(UINT i = 1; i < SCALE + 1; i++)
+			{
+				BresenhamCircle(data.cdc1, (data.rc.right / 2) - i, &pt, clrText);
+			}
+		}
+		else
+		{
+			for(UINT i = 0; i < SCALE; i++)
+			{
+				BresenhamLine(data.cdc1, i, 0, i, data.rc.bottom, clrText); // left
+				BresenhamLine(data.cdc1, i, i, data.rc.right, i, clrText); // top
+				BresenhamLine(data.cdc1, (data.rc.right - 1) - i, 0, (data.rc.right - 1) - i, data.rc.bottom, clrText); // right
+				BresenhamLine(data.cdc1, 0, (data.rc.bottom - 1) - i, data.rc.right, (data.rc.bottom - 1) - i, clrText); // bottom
+			}
+		}
+	}
 
-	CString buffer = _r_helper_format(L"%d", sd.ms.percent_phys);
+	// draw text
+	SetTextColor(data.cdc1, clrText);
+	SetBkMode(data.cdc1, TRANSPARENT);
 
-	DrawTextEx(sd.cdc, buffer.GetBuffer(), buffer.GetLength(), &sd.rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
+	CString buffer = _r_helper_format(L"%d", data.ms.percent_phys);
 
-	// BitBlt transparency mask
-	HDC dc = CreateCompatibleDC(NULL);
-	SelectObject(dc, sd.bitmap_mask);
+	SelectObject(data.cdc1, data.font);
+	DrawTextEx(data.cdc1, buffer.GetBuffer(), buffer.GetLength(), &data.rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, NULL);
 
-	SetBkColor(sd.cdc, COLOR_TRAY_MASK);
-	BitBlt(dc, 0, 0, sd.rc.right, sd.rc.bottom, sd.cdc, 0, 0, SRCCOPY);
+	// draw transparent mask
+	HGDIOBJ old_mask = SelectObject(data.cdc2, data.bitmap_mask);
 
-	DeleteDC(dc);
+	SetBkColor(data.cdc1, TRAY_COLOR_MASK);
+	BitBlt(data.cdc2, 0, 0, data.rc.right, data.rc.bottom, data.cdc1, 0, 0, SRCCOPY);
 
+	SelectObject(data.cdc1, old_bitmap);
+	SelectObject(data.cdc2, old_mask);
 
-	SelectObject(sd.dc, old_bitmap);
+	ICONINFO ii = {0};
 
-	ICONINFO ii = {TRUE, 0, 0, sd.bitmap_mask, sd.bitmap};
+	ii.fIcon = TRUE;
+	ii.hbmColor = data.bitmap;
+	ii.hbmMask = data.bitmap_mask;
 
 	return CreateIconIndirect(&ii);
 }
 
 VOID CALLBACK _Application_TimerCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 {
-	_Application_GetMemoryStatus(&sd.ms);
+	_Application_GetMemoryStatus(&data.ms);
 
 	if(nid.hIcon)
 	{
@@ -202,15 +285,15 @@ VOID CALLBACK _Application_TimerCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 
 	nid.uFlags = NIF_ICON | NIF_TIP;
 
-	StringCchPrintf(nid.szTip, _countof(nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), sd.ms.percent_phys, sd.ms.percent_page, sd.ms.percent_ws);
-	nid.hIcon = _Application_CreateIcon();
+	StringCchPrintf(nid.szTip, _countof(nid.szTip), _r_locale(IDS_TRAY_TOOLTIP), data.ms.percent_phys, data.ms.percent_page, data.ms.percent_ws);
+	nid.hIcon = _Application_DrawIcon();
 
 	Shell_NotifyIcon(NIM_MODIFY, &nid);
 
 	// Autoreduct
-	if(sd.is_admin)
+	if(data.is_admin)
 	{
-		if((sd.autoreduct_threshold && sd.ms.percent_phys >= sd.autoreduct_threshold_value) || (sd.autoreduct_timeout && sd.ms.percent_phys >= sd.autoreduct_timeout_threshold_value && ((_r_helper_unixtime64() - sd.statistic_last_reduct) >= sd.autoreduct_timeout_value * 60)))
+		if((data.autoreduct_threshold && data.ms.percent_phys >= data.autoreduct_threshold_value) || (data.autoreduct_timeout && data.ms.percent_phys >= data.autoreduct_timeout_threshold_value && ((_r_helper_unixtime64() - data.statistic_last_reduct) >= data.autoreduct_timeout_value * 60)))
 		{
 			_Application_Reduct(NULL, 0);
 		}
@@ -219,19 +302,19 @@ VOID CALLBACK _Application_TimerCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	if(IsWindowVisible(hwnd))
 	{
 		// Physical
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_phys), 0, 1, -1, -1, sd.ms.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_phys), 1, 1, -1, -1, sd.ms.percent_phys);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_phys), 2, 1, -1, -1, sd.ms.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", data.ms.percent_phys), 0, 1, -1, -1, data.ms.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.free_phys), 1, 1, -1, -1, data.ms.percent_phys);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.total_phys), 2, 1, -1, -1, data.ms.percent_phys);
 		
 		// Page file
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_page), 3, 1, -1, -1, sd.ms.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_page), 4, 1, -1, -1, sd.ms.percent_page);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_page), 5, 1, -1, -1, sd.ms.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", data.ms.percent_page), 3, 1, -1, -1, data.ms.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.free_page), 4, 1, -1, -1, data.ms.percent_page);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.total_page), 5, 1, -1, -1, data.ms.percent_page);
 
 		// System working set
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", sd.ms.percent_ws), 6, 1, -1, -1, sd.ms.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.free_ws), 7, 1, -1, -1, sd.ms.percent_ws);
-		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(sd.ms.total_ws), 8, 1, -1, -1, sd.ms.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_format(L"%d%%", data.ms.percent_ws), 6, 1, -1, -1, data.ms.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.free_ws), 7, 1, -1, -1, data.ms.percent_ws);
+		_r_listview_additem(hwnd, IDC_LISTVIEW, _r_helper_formatsize64(data.ms.total_ws), 8, 1, -1, -1, data.ms.percent_ws);
 
 		// Redraw listview
 		SendDlgItemMessage(hwnd, IDC_LISTVIEW, LVM_REDRAWITEMS, 0, 8);
@@ -253,95 +336,113 @@ VOID _Application_Unitialize(BOOL deletetrayicon)
 	UnregisterHotKey(_r_hwnd, UID);
 	KillTimer(_r_hwnd, UID);
 
-	DeleteObject(sd.font);
-	DeleteDC(sd.cdc);
-	DeleteDC(sd.dc);
-	DeleteObject(sd.bitmap);
-	DeleteObject(sd.bitmap_mask);
+	DeleteObject(data.font);
+
+	DeleteObject(data.border_brush);
+	DeleteObject(data.border_brush_warning);
+
+	DeleteObject(data.bitmap);
+	DeleteObject(data.bitmap_mask);
+
+	DeleteDC(data.cdc1);
+	DeleteDC(data.cdc2);
+	DeleteDC(data.dc);
 }
 
 VOID _Application_Initialize(BOOL createtrayicon)
 {
 	_Application_Unitialize(createtrayicon);
 
-	sd.statistic_last_reduct = _r_cfg_read(L"StatisticLastReduct", 0);
+	// init configuration
+	data.statistic_last_reduct = _r_cfg_read(L"StatisticLastReduct", 0);
 
-	sd.autoreduct_threshold = _r_cfg_read(L"AutoreductThreshold", 0);
-	sd.autoreduct_threshold_value = _r_cfg_read(L"AutoreductThresholdValue", 90);
+	data.autoreduct_threshold = _r_cfg_read(L"AutoreductThreshold", 1);
+	data.autoreduct_threshold_value = _r_cfg_read(L"AutoreductThresholdValue", 90);
 	
-	sd.autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 0);
-	sd.autoreduct_timeout_value = _r_cfg_read(L"AutoreductTimeoutValue", 10);
+	data.autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 0);
+	data.autoreduct_timeout_value = _r_cfg_read(L"AutoreductTimeoutValue", 10);
 
-	sd.autoreduct_timeout_threshold_value = _r_cfg_read(L"AutoreductTimeoutThresholdValue", 60);
+	data.autoreduct_timeout_threshold_value = _r_cfg_read(L"AutoreductTimeoutThresholdValue", 60);
 
-	sd.reduct_mask = _r_cfg_read(L"ReductMask", REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST);
+	data.reduct_mask = _r_cfg_read(L"ReductMask", REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST);
 
-	sd.rc.right = GetSystemMetrics(SM_CXSMICON);
-	sd.rc.bottom = GetSystemMetrics(SM_CYSMICON);
+	data.rc.right = GetSystemMetrics(SM_CXSMICON) * SCALE;
+	data.rc.bottom = GetSystemMetrics(SM_CYSMICON) * SCALE;
 
+	// create device context
+	data.dc = GetDC(NULL);
+
+	data.cdc1 = CreateCompatibleDC(data.dc);
+	data.cdc2 = CreateCompatibleDC(data.dc);
+
+	ReleaseDC(NULL, data.dc);
+
+	// create bitmap
 	BITMAPINFO bmi = {0};
 
 	bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
-	bmi.bmiHeader.biWidth = sd.rc.right;
-	bmi.bmiHeader.biHeight = sd.rc.bottom;
+	bmi.bmiHeader.biWidth = data.rc.right;
+	bmi.bmiHeader.biHeight = data.rc.bottom;
 	bmi.bmiHeader.biPlanes = 1;
 	bmi.bmiHeader.biBitCount = 32;
 	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biSizeImage = 0;
 
-	sd.dc = GetDC(NULL);
+	data.bitmap = CreateDIBSection(data.dc, &bmi, DIB_RGB_COLORS, NULL, NULL, 0);
+	data.bitmap_mask = CreateBitmap(data.rc.right, data.rc.bottom, 1, 1, NULL);
 
-	sd.bitmap = CreateDIBSection(sd.dc, &bmi, DIB_RGB_COLORS, NULL, NULL, 0);
-	sd.bitmap_mask = CreateBitmap(sd.rc.right, sd.rc.bottom, 1, 1, NULL);;
+	data.is_transparent = _r_cfg_read(L"TrayUseTransparency", 1);
+	data.is_border = _r_cfg_read(L"TrayShowBorder", 0);
+	data.is_round = _r_cfg_read(L"TrayRoundCorners", 0);
 
-	sd.cdc = CreateCompatibleDC(sd.dc);
+	data.tray_color_bg = _r_cfg_read(L"TrayColorBg", TRAY_COLOR_BG);
+	data.tray_color_text = _r_cfg_read(L"TrayColorText", TRAY_COLOR_TEXT);
+	data.tray_color_warning = _r_cfg_read(L"TrayColorWarning", TRAY_COLOR_WARNING);
 
-	ReleaseDC(NULL, sd.dc);
+	// brush
+	data.border_brush = CreateSolidBrush(data.tray_color_bg);
+	data.border_brush_warning = CreateSolidBrush(data.tray_color_warning);
 
-	// Font
-	LOGFONT lf = {0};
+	// load font
+	SecureZeroMemory(&data.lf, sizeof(data.lf));
 
-	lf.lfQuality = ANTIALIASED_QUALITY;
-	lf.lfCharSet = DEFAULT_CHARSET;
-	lf.lfPitchAndFamily = FF_DONTCARE;
-	lf.lfHeight = -MulDiv(FONT_SIZE, GetDeviceCaps(sd.cdc, LOGPIXELSY), 72);
+	data.lf.lfQuality = NONANTIALIASED_QUALITY;
+	data.lf.lfCharSet = DEFAULT_CHARSET;
+	data.lf.lfPitchAndFamily = FF_DONTCARE;
+	data.lf.lfWeight = _r_cfg_read(L"TrayFontWeight", FW_NORMAL);
+	data.lf.lfHeight = -MulDiv(_r_cfg_read(L"TrayFontSize", FONT_SIZE), GetDeviceCaps(data.cdc1, LOGPIXELSY), 72) * SCALE;
 
-	StringCchCopy(lf.lfFaceName, LF_FACESIZE, L"Tahoma");
+	StringCchCopy(data.lf.lfFaceName, LF_FACESIZE, _r_cfg_read(L"TrayFontName", FONT_NAME));
 
-	sd.font = CreateFontIndirect(&lf);
+	data.font = CreateFontIndirect(&data.lf);
 
-	lf.lfHeight = -MulDiv(FONT_SIZE_SMALL, GetDeviceCaps(sd.cdc, LOGPIXELSY), 72);
+	// hotkey
+	UINT hk = _r_cfg_read(L"Hotkey", MAKEWORD(VK_F1, HOTKEYF_CONTROL));
 
-	sd.font_TEST = CreateFontIndirect(&lf);
-
-	// Hotkey
-	UINT hk = _r_cfg_read(L"Hotkey", 0);
-
-	if(sd.is_admin && hk && _r_cfg_read(L"HotkeyEnable", 0))
+	if(data.is_admin && hk && _r_cfg_read(L"HotkeyEnable", 1))
 	{
 		RegisterHotKey(_r_hwnd, UID, (HIBYTE(hk) & 2) | ((HIBYTE(hk) & 4) >> 2) | ((HIBYTE(hk) & 1) << 2), LOBYTE(hk));
 	}
 
-	// Always on top
+	// always on top
 	_r_windowtotop(_r_hwnd, _r_cfg_read(L"AlwaysOnTop", 0));
 
-	// Tray icon
+	// init tray icon
 	if(createtrayicon)
 	{
-		nid.cbSize = sd.is_supported_os ? sizeof(nid) : NOTIFYICONDATA_V3_SIZE;
-		nid.uVersion = sd.is_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
+		nid.cbSize = data.is_supported_os ? sizeof(nid) : NOTIFYICONDATA_V3_SIZE;
+		nid.uVersion = data.is_supported_os ? NOTIFYICON_VERSION_4 : NOTIFYICON_VERSION;
 		nid.hWnd = _r_hwnd;
 		nid.uID = UID;
 		nid.uFlags = NIF_MESSAGE | NIF_ICON;
 		nid.uCallbackMessage = WM_TRAYICON;
-		nid.hIcon = _Application_CreateIcon();
+		nid.hIcon = _Application_DrawIcon();
 
 		Shell_NotifyIcon(NIM_ADD, &nid);
 	}
 
-	// Timer
+	// create timer
 	_Application_TimerCallback(_r_hwnd, 0, NULL, 0);
-	SetTimer(_r_hwnd, UID, 750, _Application_TimerCallback);
+	SetTimer(_r_hwnd, UID, TIMER, _Application_TimerCallback);
 }
 
 INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -354,13 +455,13 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			if((INT)lparam == IDD_SETTINGS_1)
 			{
-				if(!sd.is_supported_os || !sd.is_admin)
+				if(!data.is_supported_os || !data.is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_SKIPUACWARNING_CHK), FALSE);
 				}
 
 				CheckDlgButton(hwnd, IDC_ALWAYSONTOP_CHK, _r_cfg_read(L"AlwaysOnTop", 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_STARTMINIMIZED_CHK, _r_cfg_read(L"StartMinimized", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STARTMINIMIZED_CHK, _r_cfg_read(L"StartMinimized", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_LOADONSTARTUP_CHK, _r_autorun_is_present(APP_NAME) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_SKIPUACWARNING_CHK, _r_skipuac_is_present(FALSE) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_CHECKUPDATES_CHK, _r_cfg_read(L"CheckUpdates", 1) ? BST_CHECKED : BST_UNCHECKED);
@@ -372,35 +473,35 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			}
 			else if((INT)lparam == IDD_SETTINGS_2)
 			{
-				if(!sd.is_supported_os || !sd.is_admin)
+				if(!data.is_supported_os || !data.is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_WORKINGSET_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLISTPRIORITY0_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_STANDBYLIST_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_MODIFIEDLIST_CHK), FALSE);
 
-					if(!sd.is_admin)
+					if(!data.is_admin)
 					{
 						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
 					}
 				}
 
-				CheckDlgButton(hwnd, IDC_WORKINGSET_CHK, ((sd.reduct_mask & REDUCT_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_SYSTEMWORKINGSET_CHK, ((sd.reduct_mask & REDUCT_SYSTEM_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, ((sd.reduct_mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, ((sd.reduct_mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, ((sd.reduct_mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_WORKINGSET_CHK, ((data.reduct_mask & REDUCT_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_SYSTEMWORKINGSET_CHK, ((data.reduct_mask & REDUCT_SYSTEM_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, ((data.reduct_mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, ((data.reduct_mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, ((data.reduct_mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 			}
 			else if((INT)lparam == IDD_SETTINGS_3)
 			{
-				if(!sd.is_admin)
+				if(!data.is_admin)
 				{
 					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK), FALSE);
 					EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
 				}
 
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK, _r_cfg_read(L"AutoreductThreshold", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK, _r_cfg_read(L"AutoreductThreshold", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_SETRANGE32, 5, 95);
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductThresholdValue", 90));
@@ -413,13 +514,27 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_SETRANGE32, 0, 99);
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductTimeoutThresholdValue", 60));
 
-				CheckDlgButton(hwnd, IDC_HOTKEYENABLE_CHK, _r_cfg_read(L"HotkeyEnable", 0) ? BST_CHECKED : BST_UNCHECKED);
-				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", MAKEWORD(VK_F1, HOTKEYF_SHIFT)), NULL);
+				CheckDlgButton(hwnd, IDC_HOTKEYENABLE_CHK, _r_cfg_read(L"HotkeyEnable", 1) ? BST_CHECKED : BST_UNCHECKED);
+				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", MAKEWORD(VK_F1, HOTKEYF_CONTROL)), NULL);
 
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTHRESHOLD_CHK, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTIMEOUT_CHK, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_HOTKEYENABLE_CHK, 0), NULL);
+			}
+			else if((INT)lparam == IDD_SETTINGS_4)
+			{
+				CheckDlgButton(hwnd, IDC_TRAYUSETRANSPARENCY_CHK, _r_cfg_read(L"TrayUseTransparency", 1) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_TRAYSHOWBORDER_CHK, _r_cfg_read(L"TrayShowBorder", 0) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_TRAYROUNDCORNERS_CHK, _r_cfg_read(L"TrayRoundCorners", 0) ? BST_CHECKED : BST_UNCHECKED);
+				//CheckDlgButton(hwnd, IDC_TRAYROUNDCORNERS_CHK, _r_cfg_read(L"TrayRoundCorners", 0) ? BST_CHECKED : BST_UNCHECKED);
+
+				SetDlgItemText(hwnd, IDC_FONT, _r_helper_format(L"<a href=\"#\">%ls, %dpx</a>", _r_cfg_read(L"TrayFontName", FONT_NAME), _r_cfg_read(L"TrayFontSize", FONT_SIZE)));
+
+				SetProp(GetDlgItem(hwnd, IDC_COLOR_1), L"color", (HANDLE)_r_cfg_read(L"TrayColorBg", TRAY_COLOR_BG));
+				SetProp(GetDlgItem(hwnd, IDC_COLOR_2), L"color", (HANDLE)_r_cfg_read(L"TrayColorText", TRAY_COLOR_TEXT));
+				SetProp(GetDlgItem(hwnd, IDC_COLOR_3), L"color", (HANDLE)_r_cfg_read(L"TrayColorWarning", TRAY_COLOR_WARNING));
+				SetProp(GetDlgItem(hwnd, IDC_COLOR_4), L"color", (HANDLE)_r_cfg_read(L"TrayColorDanger", TRAY_COLOR_DANGER));
 			}
 
 			break;
@@ -500,8 +615,82 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					_r_cfg_write(L"HotkeyEnable", (IsDlgButtonChecked(hwnd, IDC_HOTKEYENABLE_CHK) == BST_CHECKED) ? TRUE : FALSE);
 					_r_cfg_write(L"Hotkey", (DWORD)SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_GETHOTKEY, 0, NULL));
 				}
+				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
+				{
+					_r_cfg_write(L"TrayUseTransparency", (IsDlgButtonChecked(hwnd, IDC_TRAYUSETRANSPARENCY_CHK) == BST_CHECKED) ? TRUE : FALSE);
+					_r_cfg_write(L"TrayShowBorder", (IsDlgButtonChecked(hwnd, IDC_TRAYSHOWBORDER_CHK) == BST_CHECKED) ? TRUE : FALSE);
+					_r_cfg_write(L"TrayRoundCorners", (IsDlgButtonChecked(hwnd, IDC_TRAYROUNDCORNERS_CHK) == BST_CHECKED) ? TRUE : FALSE);
+
+					_r_cfg_write(L"TrayColorBg", (DWORD)GetProp(GetDlgItem(hwnd, IDC_COLOR_1), L"color"));
+					_r_cfg_write(L"TrayColorText", (DWORD)GetProp(GetDlgItem(hwnd, IDC_COLOR_2), L"color"));
+					_r_cfg_write(L"TrayColorWarning", (DWORD)GetProp(GetDlgItem(hwnd, IDC_COLOR_3), L"color"));
+					_r_cfg_write(L"TrayColorDanger", (DWORD)GetProp(GetDlgItem(hwnd, IDC_COLOR_4), L"color"));
+				}
 			}
 
+			break;
+		}
+
+
+		case WM_NOTIFY:
+		{
+			LPNMHDR nmlp = (LPNMHDR)lparam;
+
+			switch(nmlp->code)
+			{
+				case NM_CLICK:
+				case NM_RETURN:
+				{
+					PNMLINK nmlp = (PNMLINK)lparam;
+
+					if(nmlp->hdr.idFrom == IDC_FONT)
+					{
+						CHOOSEFONT cf = {0};
+
+						cf.lStructSize = sizeof(cf);
+						cf.hwndOwner = hwnd;
+						cf.Flags = CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
+
+						data.lf.lfHeight /= SCALE; // font size fix
+						cf.lpLogFont = &data.lf;
+
+						if(ChooseFont(&cf))
+						{
+							data.lf.lfHeight = MulDiv(-data.lf.lfHeight, 72, GetDeviceCaps(data.cdc1, LOGPIXELSY));
+							SetDlgItemText(hwnd, IDC_FONT, _r_helper_format(L"<a href=\"#\">%ls, %dpx</a>", data.lf.lfFaceName, data.lf.lfHeight));
+
+							_r_cfg_write(L"TrayFontName", data.lf.lfFaceName);
+							_r_cfg_write(L"TrayFontSize", data.lf.lfHeight);
+							_r_cfg_write(L"TrayFontWeight", data.lf.lfWeight);
+
+							_Application_Initialize(FALSE);
+						}
+					}
+
+					break;
+				}
+
+				case NM_CUSTOMDRAW:
+				{
+					LPNMCUSTOMDRAW lpnmcd = (LPNMCUSTOMDRAW)lparam;
+
+					if(nmlp->idFrom >= IDC_COLOR_1 && nmlp->idFrom <= IDC_COLOR_4)
+					{
+						lpnmcd->rc.left += 3;
+						lpnmcd->rc.top += 3;
+						lpnmcd->rc.right -= 3;
+						lpnmcd->rc.bottom -= 3;
+
+						COLORREF clr_prev = SetBkColor(lpnmcd->hdc, (COLORREF)GetProp(nmlp->hwndFrom, L"color"));
+						ExtTextOut(lpnmcd->hdc, 0, 0, ETO_OPAQUE, &lpnmcd->rc, NULL, 0, NULL);
+						SetBkColor(lpnmcd->hdc, clr_prev);
+
+						return CDRF_DODEFAULT | CDRF_DOERASE;
+					}
+
+					break;
+				}
+			}
 			break;
 		}
 
@@ -541,6 +730,35 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					break;
 				}
+
+				case IDC_FONT:
+				{
+
+					break;
+				}
+
+				case IDC_COLOR_1:
+				case IDC_COLOR_2:
+				case IDC_COLOR_3:
+				case IDC_COLOR_4:
+				{
+					CHOOSECOLOR cc = {0};
+					COLORREF cust[16] = {TRAY_COLOR_BG, TRAY_COLOR_TEXT, TRAY_COLOR_WARNING, TRAY_COLOR_DANGER};
+
+					cc.lStructSize = sizeof(cc);
+					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
+					cc.hwndOwner = hwnd;
+					cc.lpCustColors = cust;
+					cc.rgbResult = (COLORREF)GetProp(GetDlgItem(hwnd, LOWORD(wparam)), L"color");
+
+					if(ChooseColor(&cc))
+					{
+						SetProp(GetDlgItem(hwnd, LOWORD(wparam)), L"color", (HANDLE)cc.rgbResult);
+					}
+
+					break;
+				}
+
 			}
 
 			break;
@@ -628,7 +846,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	if(msg == WM_TASKBARCREATED)
 	{
 		_Application_Initialize(TRUE);
-		return 0;
+		return FALSE;
 	}
 
 	switch(msg)
@@ -638,11 +856,11 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// static initializer
 			_r_hwnd = hwnd;
 
-			sd.is_admin = _r_system_adminstate();
-			sd.is_supported_os = _r_system_validversion(6, 0);
+			data.is_admin = _r_system_adminstate();
+			data.is_supported_os = _r_system_validversion(6, 0);
 
 			// set privileges
-			if(sd.is_admin)
+			if(data.is_admin)
 			{
 				_r_system_setprivilege(SE_INCREASE_QUOTA_NAME, TRUE);
 				_r_system_setprivilege(SE_PROF_SINGLE_PROCESS_NAME, TRUE);
@@ -655,7 +873,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_Application_Initialize(TRUE);
 
 			// enable taskbarcreated message bypass uipi
-			if(sd.is_supported_os)
+			if(data.is_supported_os)
 			{
 				CWMFEX _cwmfex = (CWMFEX)GetProcAddress(GetModuleHandle(L"user32.dll"), "ChangeWindowMessageFilterEx");
 
@@ -702,11 +920,12 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				}
 			}
 
-			if(!wcsstr(GetCommandLine(), L"/minimized") && !_r_cfg_read(L"StartMinimized", 0))
+			if(!wcsstr(GetCommandLine(), L"/minimized") && !_r_cfg_read(L"StartMinimized", 1))
 			{
 				_r_windowtoggle(hwnd, TRUE);
 			}
 
+			//return TRUE;
 			break;
 		}
 
@@ -790,9 +1009,9 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 							case CDDS_ITEMPREPAINT:
 							{
-								if((UINT)lpnmlv->nmcd.lItemlParam >= sd.autoreduct_threshold_value)
+								if((UINT)lpnmlv->nmcd.lItemlParam >= data.autoreduct_threshold_value)
 								{
-									lpnmlv->clrText = COLOR_LEVEL_DANGER;
+									lpnmlv->clrText = TRAY_COLOR_WARNING;
 									result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
 
 								}
@@ -846,7 +1065,7 @@ LRESULT CALLBACK DlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					HMENU menu = LoadMenu(NULL, MAKEINTRESOURCE(IDM_TRAY)), submenu = GetSubMenu(menu, 0);
 
-					SetForegroundWindow(hwnd);
+					SetForegroundWindow(hwnd); // don't touch
 
 					POINT pt = {0};
 					GetCursorPos(&pt);

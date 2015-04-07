@@ -1,5 +1,5 @@
 ﻿// Mem Reduct
-// Copyright © 2011-2013, 2015 Henry++
+// Copyright © 2011-2015 Henry++
 
 #ifndef __MAIN_H__
 #define __MAIN_H__
@@ -9,8 +9,8 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0.52"
-#define APP_VERSION_RES 3,0,52,0
+#define APP_VERSION L"3.0.144"
+#define APP_VERSION_RES 3,0,144,0
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
 #define APP_AUTHOR L"Henry++"
@@ -21,19 +21,23 @@
 #define APP_MACHINE L"32"
 #endif
 
-#define APP_SETTINGS_COUNT 3
+#define APP_SETTINGS_COUNT 4
 
 #define ROUTINE_ADMIN_RIGHTS 1
 
-#define UID 1337
 #define WM_TRAYICON WM_APP + 1
-
+#define FONT_NAME L"Tahoma"
 #define FONT_SIZE 8
-#define FONT_SIZE_SMALL 6
+#define TIMER 750
+#define SCALE 1
+#define UID 1337
 
-// Colors
-#define COLOR_TRAY_MASK 0xFF00FF
-#define COLOR_LEVEL_DANGER 0x241CED
+// Tray default colors
+#define TRAY_COLOR_MASK RGB(255, 0, 255)
+#define TRAY_COLOR_BG RGB(10, 10, 10)
+#define TRAY_COLOR_TEXT RGB(255, 255, 255)
+#define TRAY_COLOR_WARNING RGB(218, 83, 44)
+#define TRAY_COLOR_DANGER RGB(237, 28, 36)
 
 // Memory reduction area (mask)
 #define REDUCT_WORKING_SET 0x01
@@ -64,17 +68,25 @@ struct STATIC_DATA
 {
 	MEMORYINFO ms;
 
-	DWORD reduct_before;
 	DWORD reduct_after;
+	DWORD reduct_before;
 
 	HDC dc;
-	HDC cdc;
+	HDC cdc1;
+	HDC cdc2;
 
 	HBITMAP bitmap;
 	HBITMAP bitmap_mask;
 
 	HFONT font;
-	HFONT font_TEST;
+	LOGFONT lf;
+
+	HBRUSH border_brush;
+	HBRUSH border_brush_warning;
+
+	COLORREF tray_color_bg;
+	COLORREF tray_color_text;
+	COLORREF tray_color_warning;
 
 	RECT rc;
 
@@ -82,6 +94,10 @@ struct STATIC_DATA
 	BOOL is_supported_os;
 
 	__time64_t statistic_last_reduct;
+
+	BOOL is_transparent;
+	BOOL is_border;
+	BOOL is_round;
 
 	BOOL autoreduct_threshold;
 	UINT autoreduct_threshold_value;
