@@ -9,11 +9,13 @@
 
 #define APP_NAME L"Mem Reduct"
 #define APP_NAME_SHORT L"memreduct"
-#define APP_VERSION L"3.0.144"
-#define APP_VERSION_RES 3,0,144,0
+#define APP_VERSION L"3.0.180"
+#define APP_VERSION_RES 3,0,180,0
+#define APP_AUTHOR L"Henry++"
+#define APP_COPYRIGHT L"© 2015 " APP_AUTHOR L". All Rights Reserved."
+
 #define APP_HOST L"www.henrypp.org"
 #define APP_WEBSITE L"http://" APP_HOST
-#define APP_AUTHOR L"Henry++"
 
 #ifdef _WIN64
 #define APP_MACHINE L"64"
@@ -21,13 +23,13 @@
 #define APP_MACHINE L"32"
 #endif
 
-#define APP_SETTINGS_COUNT 4
+#define APP_SETTINGS_COUNT 3
 
 #define ROUTINE_ADMIN_RIGHTS 1
 
 #define WM_TRAYICON WM_APP + 1
 #define FONT_NAME L"Tahoma"
-#define FONT_SIZE 8
+#define FONT_SIZE 9
 #define TIMER 750
 #define SCALE 1
 #define UID 1337
@@ -102,8 +104,8 @@ struct STATIC_DATA
 	BOOL autoreduct_threshold;
 	UINT autoreduct_threshold_value;
 
-	BOOL autoreduct_timeout;
-	UINT autoreduct_timeout_value;
+//	BOOL autoreduct_timeout;
+//	UINT autoreduct_timeout_value;
 
 	UINT autoreduct_timeout_threshold_value;
 

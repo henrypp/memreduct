@@ -69,7 +69,7 @@ VOID BresenhamLine(HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 BOOL _Application_ShowNotification(DWORD icon, LPCWSTR title, LPCWSTR text)
 {
 	nid.uFlags = NIF_INFO;
-	nid.dwInfoFlags = NIIF_LARGE_ICON | icon;
+	nid.dwInfoFlags = NIIF_RESPECT_QUIET_TIME | NIIF_LARGE_ICON | icon;
 
 	StringCchCopy(nid.szInfoTitle, _countof(nid.szInfoTitle), title);
 	StringCchCopy(nid.szInfo, _countof(nid.szInfo), text);
@@ -94,9 +94,6 @@ DWORD _Application_GetMemoryStatus(MEMORYINFO* m)
 
 		m->free_phys = msex.ullAvailPhys;
 		m->total_phys = msex.ullTotalPhys;
-
-		//msex.ullTotalPageFile -= msex.ullTotalPhys;
-		//msex.ullAvailPageFile -= msex.ullAvailPhys;
 
 		m->percent_page = (DWORD)ROUTINE_PERCENT_OF(msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
 
@@ -177,7 +174,10 @@ DWORD _Application_Reduct(HWND hwnd, DWORD mask)
 	_r_cfg_write(L"StatisticLastReduct", (DWORD)data.statistic_last_reduct); // time of last cleaning
 
 	// Show result
-	_Application_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(data.reduct_before - data.reduct_after, data.ms.total_phys))));
+	if(data.reduct_before > data.reduct_after)
+	{
+		_Application_ShowNotification(NIIF_INFO, APP_NAME, _r_helper_format(_r_locale(IDS_BALLOON_REDUCT), _r_helper_formatsize64((DWORDLONG)ROUTINE_PERCENT_VAL(data.reduct_before - data.reduct_after, data.ms.total_phys))));
+	}
 
 	return data.reduct_after;
 }
@@ -214,7 +214,7 @@ HICON _Application_DrawIcon()
 		HGDIOBJ prev_pen = SelectObject(data.cdc1, GetStockObject(NULL_PEN));
 		HGDIOBJ prev_brush = SelectObject(data.cdc1, bg_brush);
 
-		RoundRect(data.cdc1, 0, 0, data.rc.right, data.rc.bottom, data.is_round ? (data.rc.right / 2) : 0, data.is_round ? (data.rc.bottom / 2) : 0);
+		RoundRect(data.cdc1, 0, 0, data.rc.right, data.rc.bottom, data.is_round ? (data.rc.right / 2) : 0, data.is_round ? (data.rc.right / 2) : 0);
 
 		SelectObject(data.cdc1, prev_pen);
 		SelectObject(data.cdc1, prev_brush);
@@ -293,9 +293,36 @@ VOID CALLBACK _Application_TimerCallback(HWND hwnd, UINT, UINT_PTR, DWORD)
 	// Autoreduct
 	if(data.is_admin)
 	{
-		if((data.autoreduct_threshold && data.ms.percent_phys >= data.autoreduct_threshold_value) || (data.autoreduct_timeout && data.ms.percent_phys >= data.autoreduct_timeout_threshold_value && ((_r_helper_unixtime64() - data.statistic_last_reduct) >= data.autoreduct_timeout_value * 60)))
+		if((data.autoreduct_threshold && data.ms.percent_phys >= data.autoreduct_threshold_value) /*|| (data.autoreduct_timeout && data.ms.percent_phys >= data.autoreduct_timeout_threshold_value && ((_r_helper_unixtime64() - data.statistic_last_reduct) >= data.autoreduct_timeout_value * 60))*/)
 		{
-			_Application_Reduct(NULL, 0);
+			const int mask[] = {REDUCT_STANDBY_PRIORITY0_LIST, REDUCT_SYSTEM_WORKING_SET, REDUCT_WORKING_SET, REDUCT_MODIFIED_LIST, REDUCT_STANDBY_LIST};
+//			const int try_count = 2;
+
+			int i = 0;
+
+/*
+REDUCT_WORKING_SET 0x01
+REDUCT_SYSTEM_WORKING_SET 0x02
+REDUCT_STANDBY_PRIORITY0_LIST 0x04
+REDUCT_STANDBY_LIST 0x08
+REDUCT_MODIFIED_LIST 0x10
+*/
+
+			//for(i = 0; i < try_count; i++)
+			for(i = 0; i < _countof(mask); i++)
+			{
+				if((data.reduct_mask & mask[i]) == 0)
+				{
+					continue;
+				}
+
+				if(_Application_Reduct(NULL, mask[i]) < data.autoreduct_threshold_value)
+				{
+					//_r_msg(0, L"current: %d\r\nj: %d", mask[i], i);
+					break;
+				}
+				
+			}
 		}
 	}
 
@@ -358,10 +385,10 @@ VOID _Application_Initialize(BOOL createtrayicon)
 
 	data.autoreduct_threshold = _r_cfg_read(L"AutoreductThreshold", 1);
 	data.autoreduct_threshold_value = _r_cfg_read(L"AutoreductThresholdValue", 90);
-	
+/*	
 	data.autoreduct_timeout = _r_cfg_read(L"AutoreductTimeout", 0);
 	data.autoreduct_timeout_value = _r_cfg_read(L"AutoreductTimeoutValue", 10);
-
+*/
 	data.autoreduct_timeout_threshold_value = _r_cfg_read(L"AutoreductTimeoutThresholdValue", 60);
 
 	data.reduct_mask = _r_cfg_read(L"ReductMask", REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST);
@@ -441,8 +468,8 @@ VOID _Application_Initialize(BOOL createtrayicon)
 	}
 
 	// create timer
-	_Application_TimerCallback(_r_hwnd, 0, NULL, 0);
 	SetTimer(_r_hwnd, UID, TIMER, _Application_TimerCallback);
+	_Application_TimerCallback(_r_hwnd, 0, NULL, 0);
 }
 
 INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
@@ -464,6 +491,7 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_STARTMINIMIZED_CHK, _r_cfg_read(L"StartMinimized", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_LOADONSTARTUP_CHK, _r_autorun_is_present(APP_NAME) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_SKIPUACWARNING_CHK, _r_skipuac_is_present(FALSE) ? BST_CHECKED : BST_UNCHECKED);
+				CheckDlgButton(hwnd, IDC_PORTABLEMODE_CHK, _r_cfg_is_portable() ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_CHECKUPDATES_CHK, _r_cfg_read(L"CheckUpdates", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				SendDlgItemMessage(hwnd, IDC_LANGUAGE, CB_INSERTSTRING, 0, (LPARAM)L"System default");
@@ -484,6 +512,9 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					{
 						EnableWindow(GetDlgItem(hwnd, IDC_SYSTEMWORKINGSET_CHK), FALSE);
 					}
+
+					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK), FALSE);
+					EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
 				}
 
 				CheckDlgButton(hwnd, IDC_WORKINGSET_CHK, ((data.reduct_mask & REDUCT_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
@@ -491,43 +522,23 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				CheckDlgButton(hwnd, IDC_STANDBYLISTPRIORITY0_CHK, ((data.reduct_mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_STANDBYLIST_CHK, ((data.reduct_mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_MODIFIEDLIST_CHK, ((data.reduct_mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-			}
-			else if((INT)lparam == IDD_SETTINGS_3)
-			{
-				if(!data.is_admin)
-				{
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK), FALSE);
-					EnableWindow(GetDlgItem(hwnd, IDC_HOTKEYENABLE_CHK), FALSE);
-				}
 
 				CheckDlgButton(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK, _r_cfg_read(L"AutoreductThreshold", 1) ? BST_CHECKED : BST_UNCHECKED);
 
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_SETRANGE32, 5, 95);
 				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductThresholdValue", 90));
 
-				CheckDlgButton(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK, _r_cfg_read(L"AutoreductTimeout", 0) ? BST_CHECKED : BST_UNCHECKED);
-
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT_VALUE, UDM_SETRANGE32, 5, 1440); // min: 5 minutes, max: 1 day
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT_VALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductTimeoutValue", 10));
-
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_SETRANGE32, 0, 99);
-				SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_SETPOS32, 0, _r_cfg_read(L"AutoreductTimeoutThresholdValue", 60));
-
 				CheckDlgButton(hwnd, IDC_HOTKEYENABLE_CHK, _r_cfg_read(L"HotkeyEnable", 1) ? BST_CHECKED : BST_UNCHECKED);
 				SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_SETHOTKEY, _r_cfg_read(L"Hotkey", MAKEWORD(VK_F1, HOTKEYF_CONTROL)), NULL);
 
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTHRESHOLD_CHK, 0), NULL);
-				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTIMEOUT_CHK, 0), NULL);
-				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, 0), NULL);
 				SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(IDC_HOTKEYENABLE_CHK, 0), NULL);
 			}
-			else if((INT)lparam == IDD_SETTINGS_4)
+			else if((INT)lparam == IDD_SETTINGS_3)
 			{
 				CheckDlgButton(hwnd, IDC_TRAYUSETRANSPARENCY_CHK, _r_cfg_read(L"TrayUseTransparency", 1) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_TRAYSHOWBORDER_CHK, _r_cfg_read(L"TrayShowBorder", 0) ? BST_CHECKED : BST_UNCHECKED);
 				CheckDlgButton(hwnd, IDC_TRAYROUNDCORNERS_CHK, _r_cfg_read(L"TrayRoundCorners", 0) ? BST_CHECKED : BST_UNCHECKED);
-				//CheckDlgButton(hwnd, IDC_TRAYROUNDCORNERS_CHK, _r_cfg_read(L"TrayRoundCorners", 0) ? BST_CHECKED : BST_UNCHECKED);
 
 				SetDlgItemText(hwnd, IDC_FONT, _r_helper_format(L"<a href=\"#\">%ls, %dpx</a>", _r_cfg_read(L"TrayFontName", FONT_NAME), _r_cfg_read(L"TrayFontSize", FONT_SIZE)));
 
@@ -554,6 +565,8 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					{
 						_r_skipuac_cancer(IsDlgButtonChecked(hwnd, IDC_SKIPUACWARNING_CHK) == BST_UNCHECKED);
 					}
+
+					SetProp(_r_hwnd, L"is_portable", (HANDLE)(IsDlgButtonChecked(hwnd, IDC_PORTABLEMODE_CHK) == BST_CHECKED));
 
 					_r_cfg_write(L"CheckUpdates", INT((IsDlgButtonChecked(hwnd, IDC_CHECKUPDATES_CHK) == BST_CHECKED) ? TRUE : FALSE));
 
@@ -601,21 +614,14 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					}
 
 					_r_cfg_write(L"ReductMask", mask);
-				}
-				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
-				{
+
 					_r_cfg_write(L"AutoreductThreshold", (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK) == BST_CHECKED) ? TRUE : FALSE);
 					_r_cfg_write(L"AutoreductThresholdValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_GETPOS32, 0, NULL));
-				
-					_r_cfg_write(L"AutoreductTimeout", (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK) == BST_CHECKED) ? TRUE : FALSE);
-					_r_cfg_write(L"AutoreductTimeoutValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT_VALUE, UDM_GETPOS32, 0, NULL));
-
-					_r_cfg_write(L"AutoreductTimeoutThresholdValue", (DWORD)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_GETPOS32, 0, NULL));
 
 					_r_cfg_write(L"HotkeyEnable", (IsDlgButtonChecked(hwnd, IDC_HOTKEYENABLE_CHK) == BST_CHECKED) ? TRUE : FALSE);
 					_r_cfg_write(L"Hotkey", (DWORD)SendDlgItemMessage(hwnd, IDC_HOTKEY, HKM_GETHOTKEY, 0, NULL));
 				}
-				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_4)
+				else if(INT(GetProp(hwnd, L"id")) == IDD_SETTINGS_3)
 				{
 					_r_cfg_write(L"TrayUseTransparency", (IsDlgButtonChecked(hwnd, IDC_TRAYUSETRANSPARENCY_CHK) == BST_CHECKED) ? TRUE : FALSE);
 					_r_cfg_write(L"TrayShowBorder", (IsDlgButtonChecked(hwnd, IDC_TRAYSHOWBORDER_CHK) == BST_CHECKED) ? TRUE : FALSE);
@@ -698,26 +704,18 @@ INT_PTR WINAPI PagesDlgProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			switch(LOWORD(wparam))
 			{
+				case IDC_PORTABLEMODE_CHK:
+				{
+					_r_cfg_cancer((IsDlgButtonChecked(hwnd, IDC_PORTABLEMODE_CHK) == BST_CHECKED));
+					break;
+				}
+
 				case IDC_AUTOREDUCTTHRESHOLD_CHK:
 				{
 					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTTHRESHOLD_CHK) == BST_CHECKED);
 
 					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE), is_enabled);
 					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTHRESHOLD_VALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
-
-					break;
-				}
-
-				case IDC_AUTOREDUCTTIMEOUT_CHK:
-				{
-					BOOL is_enabled = IsWindowEnabled(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK)) && (IsDlgButtonChecked(hwnd, IDC_AUTOREDUCTTIMEOUT_CHK) == BST_CHECKED);
-		
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUT_VALUE), is_enabled);
-					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUT_VALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
-
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD), is_enabled);
-					EnableWindow(GetDlgItem(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE), is_enabled);
-					EnableWindow((HWND)SendDlgItemMessage(hwnd, IDC_AUTOREDUCTTIMEOUTTHRESHOLD_VALUE, UDM_GETBUDDY, 0, NULL), is_enabled);
 
 					break;
 				}
