@@ -207,6 +207,7 @@
     <ClInclude Include="src\resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="src\i18n\korean.rc" />
     <ResourceCompile Include="src\i18n\russian.rc" />
     <ResourceCompile Include="src\resource.rc" />
   </ItemGroup>
