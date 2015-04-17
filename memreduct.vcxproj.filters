@@ -43,5 +43,8 @@
     <ResourceCompile Include="src\i18n\korean.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
+    <ResourceCompile Include="src\i18n\portuguese.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
