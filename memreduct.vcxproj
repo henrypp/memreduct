@@ -208,6 +208,7 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\i18n\korean.rc" />
+    <ResourceCompile Include="src\i18n\polish.rc" />
     <ResourceCompile Include="src\i18n\portuguese.rc" />
     <ResourceCompile Include="src\i18n\russian.rc" />
     <ResourceCompile Include="src\resource.rc" />
