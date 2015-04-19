@@ -169,6 +169,9 @@
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <EnablePREfast>false</EnablePREfast>
     </ClCompile>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_WIN64;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -196,6 +199,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
     </Link>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_WIN64;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\routine.c" />
@@ -207,10 +213,13 @@
     <ClInclude Include="src\resource.h" />
   </ItemGroup>
   <ItemGroup>
+    <ResourceCompile Include="src\i18n\greek.rc" />
     <ResourceCompile Include="src\i18n\korean.rc" />
     <ResourceCompile Include="src\i18n\polish.rc" />
     <ResourceCompile Include="src\i18n\portuguese.rc" />
     <ResourceCompile Include="src\i18n\russian.rc" />
+    <ResourceCompile Include="src\i18n\slovak.rc" />
+    <ResourceCompile Include="src\i18n\spanish.rc" />
     <ResourceCompile Include="src\resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
