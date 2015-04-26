@@ -221,6 +221,7 @@
     <ResourceCompile Include="src\i18n\portuguese.rc" />
     <ResourceCompile Include="src\i18n\russian.rc" />
     <ResourceCompile Include="src\i18n\slovak.rc" />
+    <ResourceCompile Include="src\i18n\spanish (argentina).rc" />
     <ResourceCompile Include="src\i18n\spanish.rc" />
     <ResourceCompile Include="src\resource.rc" />
   </ItemGroup>
