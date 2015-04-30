@@ -11,8 +11,8 @@ Var /Global Executable
 !define APP_NAME_LONG "Mem Reduct"
 !define APP_NAME_SHORT "memreduct"
 !define APP_AUTHOR "Henry++"
-!define APP_VERSION "3.0.435"
-!define APP_VERSION_FULL "3.0.435.0"
+!define APP_VERSION "3.0.436"
+!define APP_VERSION_FULL "3.0.436.0"
 !define APP_WEBSITE "http://www.henrypp.org/product/${APP_NAME_SHORT}"
 !define APP_FILES_DIR "bin"
 
