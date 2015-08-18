@@ -14,7 +14,7 @@ Var /Global Executable
 !define APP_VERSION "3.0.436"
 !define APP_VERSION_FULL "3.0.436.0"
 !define APP_WEBSITE "http://www.henrypp.org/product/${APP_NAME_SHORT}"
-!define APP_FILES_DIR "bin"
+!define APP_FILES_DIR "..\bin"
 
 !define COPYRIGHT "© 2015 Henry++. All Rights Reserved."
 !define LICENSE_FILE "${APP_FILES_DIR}\License.txt"
@@ -91,8 +91,6 @@ FunctionEnd
 Section "${APP_NAME_LONG}"
 	SectionIn RO
 
-	ExecWait '"cmd.exe" /c "taskkill.exe /im ${APP_NAME_SHORT}.exe && taskkill.exe /im ${APP_NAME_SHORT}64.exe"'
-
 	SetOutPath $INSTDIR
 
 	${If} ${RunningX64}
@@ -101,6 +99,7 @@ Section "${APP_NAME_LONG}"
 		File "${APP_FILES_DIR}\${APP_NAME_SHORT}.exe"
 	${EndIf}
 
+	File "${APP_FILES_DIR}\Readme.txt"
 	File "${APP_FILES_DIR}\History.txt"
 	File "${APP_FILES_DIR}\License.txt"
 
@@ -121,8 +120,9 @@ Section "${APP_NAME_LONG}"
 	CreateDirectory "$SMPROGRAMS\$StartMenuFolder"
 
 	CreateShortCut "$SMPROGRAMS\$StartMenuFolder\${APP_NAME_LONG}.lnk" "$INSTDIR\$Executable"
+CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Readme.lnk" "$INSTDIR\Readme.txt"
+CreateShortCut "$SMPROGRAMS\$StartMenuFolder\History.lnk" "$INSTDIR\History.txt"
 	CreateShortCut "$SMPROGRAMS\$StartMenuFolder\License.lnk" "$INSTDIR\License.txt"
-	CreateShortCut "$SMPROGRAMS\$StartMenuFolder\History.lnk" "$INSTDIR\History.txt"
 	CreateShortCut "$SMPROGRAMS\$StartMenuFolder\Uninstall.lnk" "$INSTDIR\uninstall.exe"
 
 	!insertmacro MUI_STARTMENU_WRITE_END
