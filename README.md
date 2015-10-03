@@ -10,7 +10,7 @@ You can download either the installer or portable version. For correct working, 
 To activate portable mode, create "memreduct.ini" in application folder, or move it from "%APPDATA%\Henry++\Mem Reduct".
 ```
 
-Website: http://www.henrypp.org/product/memreduct<br />
+Website: www.henrypp.org<br />
 Support: support@henrypp.org<br />
 <br />
 © 2011-2015 Henry++
