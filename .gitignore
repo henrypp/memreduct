@@ -3,7 +3,8 @@ Debug/
 Release/
 x64/
 Temp/
-bin/
+bin/*.exe
+bin/*.ini
 
 Thumbs.db
 ehthumbs.db
