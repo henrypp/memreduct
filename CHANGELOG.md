@@ -1,7 +1,7 @@
-v3.1.1072 (x October 2015)
+v3.1.1186 (27 October 2015)
 + added antialiasing
 + added memory cleaning by timeout
-+ added tray control feature
++ added middle click tray icon action customization
 + new localization model (plain text)
 - changed default tray icon style
 - improved settings window
