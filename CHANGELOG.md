@@ -1,3 +1,9 @@
+v3.1.1201 (28 October 2015)
++ added french localization
++ added hungarian localization
+- fixed cleaning by timeout doesn't triggered due optimizations
+- fixed windows xp support
+
 v3.1.1186 (27 October 2015)
 + added antialiasing
 + added memory cleaning by timeout
