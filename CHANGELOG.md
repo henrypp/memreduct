@@ -1,3 +1,8 @@
+v3.1.1310 (20 November 2015)
++ added tray menu for configure clean areas
+- fixed tray menu incorrect range calculation bug
+- returned the "reductconfirmation" config [issue #9]
+
 v3.1.1262 (31 October 2015)
 + added option to disable balloon tips
 - fixed hotkey settings
