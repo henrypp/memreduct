@@ -1,6 +1,6 @@
 $RECYCLE.BIN/
-Debug/
-Release/
+debug/
+release/
 x64/
 Temp/
 bin/*.exe
@@ -23,6 +23,8 @@ Desktop.ini
 *.exp
 *.sdf
 *.opensdf
+*.db
+*.opendb
 *.suo
 *.exp
 *.user
