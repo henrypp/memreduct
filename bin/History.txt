@@ -1,3 +1,8 @@
+v3.1.1450 (10 February 2016)
++ added windows xp (64-bit) support
+- small ui fixes
+- fixed bugs
+
 v3.1.1310 (20 November 2015)
 + added tray menu for configure clean areas
 - fixed tray menu incorrect range calculation bug
