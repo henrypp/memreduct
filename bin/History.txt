@@ -1,3 +1,6 @@
+v3.1.1451 (11 February 2016)
+- fixed transparent background with antialiased font
+
 v3.1.1450 (10 February 2016)
 + added windows xp (64-bit) support
 - small ui fixes
