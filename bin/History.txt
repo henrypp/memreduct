@@ -1,3 +1,8 @@
+v3.1.1453 (26 February 2016)
++ now locale applied without restart
+- fixed critical bug in locale engine
+- fixed muted messagebox
+
 v3.1.1452 (12 February 2016)
 - fixed uac incorrect checking when spaces in path
 - stability fixes (now compiled with "treat warning as errors" key)
