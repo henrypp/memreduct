@@ -126,7 +126,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_NO_UAC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
@@ -165,7 +165,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_NO_UAC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
@@ -210,7 +210,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_NO_UAC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
@@ -254,7 +254,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_NO_UAC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>false</BufferSecurityCheck>

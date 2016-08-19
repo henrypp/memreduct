@@ -1,3 +1,6 @@
+v3.1.1454 (19 August 2016)
+- updated to the latest sdk
+
 v3.1.1453 (26 February 2016)
 + now locale applied without restart
 - fixed critical bug in locale engine
