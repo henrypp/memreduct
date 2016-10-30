@@ -1,6 +1,7 @@
 v3.2 (30 October 2016)
 - fixed skip uac doesn't worked
 - fixed footer postition
+- updated translations
 
 v3.1.1454 (19 August 2016)
 - updated to the latest sdk
