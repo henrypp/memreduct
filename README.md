@@ -1,4 +1,4 @@
-##Mem Reduct
+## Mem Reduct
 
 ![Mem Reduct](http://www.henrypp.org/images/memreduct.jpg)
 
