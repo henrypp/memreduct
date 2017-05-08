@@ -1,3 +1,8 @@
+v3.2.1 (9 May 2017)
++ show clean result even if it's empty
+- fixed settings window tabstop
+- updated to the latest sdk
+
 v3.2 (30 October 2016)
 - fixed skip uac doesn't worked
 - fixed footer postition

@@ -1,6 +1,6 @@
 ## Mem Reduct
 
-![Mem Reduct](http://www.henrypp.org/images/memreduct.jpg)
+![Mem Reduct](http://www.henrypp.org/images/memreduct.jpg?f)
 
 Lightweight real-time memory management application to monitor and clean system memory on your computer.
 
@@ -15,4 +15,4 @@ To activate portable mode, create "memreduct.ini" in application folder, or move
 Website: www.henrypp.org<br />
 Support: support@henrypp.org<br />
 <br />
-(c) 2011-2016 Henry++
+(c) 2011-2017 Henry++
