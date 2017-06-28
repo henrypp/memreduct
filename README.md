@@ -1,6 +1,6 @@
 ## Mem Reduct
 
-![Mem Reduct](http://www.henrypp.org/images/memreduct.jpg?f)
+![Mem Reduct](http://www.henrypp.org/images/memreduct.jpg)
 
 Lightweight real-time memory management application to monitor and clean system memory on your computer.
 
