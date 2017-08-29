@@ -289,12 +289,13 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\routine\rapp.h" />
-    <ClInclude Include="..\routine\rconfig.h" />
-    <ClInclude Include="..\routine\routine.h" />
-    <ClInclude Include="..\routine\rstring.h" />
-    <ClInclude Include="src\main.h" />
-    <ClInclude Include="src\resource.h" />
+    <ClInclude Include="..\routine\rapp.hpp" />
+    <ClInclude Include="..\routine\rconfig.hpp" />
+    <ClInclude Include="..\routine\routine.hpp" />
+    <ClInclude Include="..\routine\rstring.hpp" />
+    <ClInclude Include="src\main.hpp" />
+    <ClInclude Include="src\app.hpp" />
+    <ClInclude Include="src\resource.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc" />

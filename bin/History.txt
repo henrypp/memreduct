@@ -1,3 +1,7 @@
+v3.2.2 (x September 2017)
++ more precise cleaning result
+- updated project sdk
+
 v3.2.1 (9 May 2017)
 + show clean result even if it's empty
 - fixed settings window tabstop
