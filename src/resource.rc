@@ -204,7 +204,7 @@ STRINGTABLE
 	IDS_UPDATE_YES "New version (%s) available. Open download page?"
 
 	IDS_DONATE "Donate"
-	IDS_DONATE_TITLE "Development is powered by your donations!"
+	IDS_DONATE_TEXT "Development is powered by your donations!"
 	IDS_SHOWATSTARTUP_CHK "Show at startup"
 
 	IDS_FILE "File"

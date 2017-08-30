@@ -141,8 +141,8 @@ DWORD _app_clean (HWND hwnd)
 	SYSTEM_MEMORY_LIST_COMMAND smlc;
 	const DWORD mask = app.ConfigGet (L"ReductMask", MASK_DEFAULT).AsUlong ();
 
-	if (!mask || !app.IsAdmin () || (hwnd && app.ConfigGet (L"ReductConfirmation", TRUE).AsBool () && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, I18N (&app, IDS_QUESTION, 0)) != IDYES))
-		return FALSE;
+	if (!mask || !app.IsAdmin () || (hwnd && app.ConfigGet (L"ReductConfirmation", true).AsBool () && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, I18N (&app, IDS_QUESTION, 0)) != IDYES))
+		return 0;
 
 	// difference (before)
 	_app_getstatus (&mem);
@@ -193,7 +193,7 @@ DWORD _app_clean (HWND hwnd)
 
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
-	if (app.ConfigGet (L"BalloonCleanResults", TRUE).AsBool ())
+	if (app.ConfigGet (L"BalloonCleanResults", true).AsBool ())
 		app.TrayPopup (NIIF_INFO, APP_NAME, _r_fmt (I18N (&app, IDS_STATUS_CLEANED, 0), _r_fmt_size64 ((DWORDLONG)reduct_result)));
 
 	return reduct_result;
@@ -203,18 +203,18 @@ HICON _app_drawicon ()
 {
 	COLORREF color = app.ConfigGet (L"TrayColorText", TRAY_COLOR_TEXT).AsUlong ();
 	HBRUSH bg_brush = config.bg_brush;
-	BOOL is_transparent = app.ConfigGet (L"TrayUseTransparency", FALSE).AsBool ();
-	const BOOL is_round = app.ConfigGet (L"TrayRoundCorners", FALSE).AsBool ();
+	bool is_transparent = app.ConfigGet (L"TrayUseTransparency", false).AsBool ();
+	const bool is_round = app.ConfigGet (L"TrayRoundCorners", false).AsBool ();
 
-	const BOOL has_danger = config.ms.percent_phys >= app.ConfigGet (L"TrayLevelDanger", 90).AsUlong ();
-	const BOOL has_warning = has_danger || config.ms.percent_phys >= app.ConfigGet (L"TrayLevelWarning", 60).AsUlong ();
+	const bool has_danger = config.ms.percent_phys >= app.ConfigGet (L"TrayLevelDanger", 90).AsUlong ();
+	const bool has_warning = has_danger || config.ms.percent_phys >= app.ConfigGet (L"TrayLevelWarning", 60).AsUlong ();
 
 	if (has_danger || has_warning)
 	{
-		if (app.ConfigGet (L"TrayChangeBg", TRUE).AsBool ())
+		if (app.ConfigGet (L"TrayChangeBg", true).AsBool ())
 		{
 			bg_brush = has_danger ? config.bg_brush_danger : config.bg_brush_warning;
-			is_transparent = FALSE;
+			is_transparent = false;
 		}
 		else
 		{
@@ -250,7 +250,7 @@ HICON _app_drawicon ()
 	}
 
 	// draw border
-	if (app.ConfigGet (L"TrayShowBorder", FALSE).AsBool ())
+	if (app.ConfigGet (L"TrayShowBorder", false).AsBool ())
 	{
 		if (is_round)
 		{
@@ -314,8 +314,8 @@ VOID CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 	// autoreduct
 	if (app.IsAdmin ())
 	{
-		if ((app.ConfigGet (L"AutoreductEnable", TRUE).AsBool () && config.ms.percent_phys >= app.ConfigGet (L"AutoreductValue", 90).AsUlong ()) ||
-			(app.ConfigGet (L"AutoreductIntervalEnable", FALSE).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", 30).AsInt () * 60)))
+		if ((app.ConfigGet (L"AutoreductEnable", true).AsBool () && config.ms.percent_phys >= app.ConfigGet (L"AutoreductValue", 90).AsUlong ()) ||
+			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", 30).AsInt () * 60)))
 		{
 			_app_clean (nullptr);
 		}
@@ -358,7 +358,7 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// clear params
 			config.ms_prev = 0;
 
-			config.scale = app.ConfigGet (L"TrayUseAntialiasing", FALSE).AsBool () ? 16 : 1;
+			config.scale = app.ConfigGet (L"TrayUseAntialiasing", false).AsBool () ? 16 : 1;
 
 			// init resolution
 			config.rc.right = GetSystemMetrics (SM_CXSMICON) * config.scale;
@@ -393,7 +393,7 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// init font
 			SecureZeroMemory (&config.lf, sizeof (config.lf));
 
-			config.lf.lfQuality = (app.ConfigGet (L"TrayUseTransparency", FALSE).AsBool () || app.ConfigGet (L"TrayUseAntialiasing", FALSE).AsBool ()) ? NONANTIALIASED_QUALITY : CLEARTYPE_QUALITY;
+			config.lf.lfQuality = (app.ConfigGet (L"TrayUseTransparency", false).AsBool () || app.ConfigGet (L"TrayUseAntialiasing", false).AsBool ()) ? NONANTIALIASED_QUALITY : CLEARTYPE_QUALITY;
 			config.lf.lfCharSet = DEFAULT_CHARSET;
 			config.lf.lfPitchAndFamily = FF_DONTCARE;
 			config.lf.lfWeight = app.ConfigGet (L"TrayFontWeight", FW_NORMAL).AsLong ();
@@ -406,13 +406,13 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// init hotkey
 			UINT hk = app.ConfigGet (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)).AsUint ();
 
-			if (app.IsAdmin () && hk && app.ConfigGet (L"HotkeyCleanEnable", TRUE).AsBool ())
+			if (app.IsAdmin () && hk && app.ConfigGet (L"HotkeyCleanEnable", true).AsBool ())
 			{
 				RegisterHotKey (hwnd, UID, (HIBYTE (hk) & 2) | ((HIBYTE (hk) & 4) >> 2) | ((HIBYTE (hk) & 1) << 2), LOBYTE (hk));
 			}
 
 			// init tray icon
-			app.TrayCreate (hwnd, UID, WM_TRAYICON, _app_drawicon (), FALSE);
+			app.TrayCreate (hwnd, UID, WM_TRAYICON, _app_drawicon (), false);
 
 			// init timer
 			_app_timercallback (hwnd, 0, 0, 0);
@@ -438,14 +438,14 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// configure menu
 			HMENU menu = GetMenu (hwnd);
 
-			app.LocaleMenu (menu, I18N (&app, IDS_FILE, 0), 0, TRUE);
-			app.LocaleMenu (menu, I18N (&app, IDS_SETTINGS, 0), IDM_SETTINGS, FALSE);
-			app.LocaleMenu (menu, I18N (&app, IDS_EXIT, 0), IDM_EXIT, FALSE);
-			app.LocaleMenu (menu, I18N (&app, IDS_HELP, 0), 1, TRUE);
-			app.LocaleMenu (menu, I18N (&app, IDS_WEBSITE, 0), IDM_WEBSITE, FALSE);
-			app.LocaleMenu (menu, I18N (&app, IDS_DONATE, 0), IDM_DONATE, FALSE);
-			app.LocaleMenu (menu, I18N (&app, IDS_CHECKUPDATES, 0), IDM_CHECKUPDATES, FALSE);
-			app.LocaleMenu (menu, I18N (&app, IDS_ABOUT, 0), IDM_ABOUT, FALSE);
+			app.LocaleMenu (menu, I18N (&app, IDS_FILE, 0), 0, true);
+			app.LocaleMenu (menu, I18N (&app, IDS_SETTINGS, 0), IDM_SETTINGS, false);
+			app.LocaleMenu (menu, I18N (&app, IDS_EXIT, 0), IDM_EXIT, false);
+			app.LocaleMenu (menu, I18N (&app, IDS_HELP, 0), 1, true);
+			app.LocaleMenu (menu, I18N (&app, IDS_WEBSITE, 0), IDM_WEBSITE, false);
+			app.LocaleMenu (menu, I18N (&app, IDS_DONATE, 0), IDM_DONATE, false);
+			app.LocaleMenu (menu, I18N (&app, IDS_CHECKUPDATES, 0), IDM_CHECKUPDATES, false);
+			app.LocaleMenu (menu, I18N (&app, IDS_ABOUT, 0), IDM_ABOUT, false);
 
 			// configure button
 			SetDlgItemText (hwnd, IDC_CLEAN, I18N (&app, IDS_CLEAN, 0));
@@ -507,23 +507,23 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 					// set checks
 					if (!app.IsVistaOrLater () || !app.IsAdmin ())
-						_r_ctrl_enable (hwnd, IDC_SKIPUACWARNING_CHK, FALSE);
+						_r_ctrl_enable (hwnd, IDC_SKIPUACWARNING_CHK, false);
 
-					CheckDlgButton (hwnd, IDC_ALWAYSONTOP_CHK, app.ConfigGet (L"AlwaysOnTop", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_ALWAYSONTOP_CHK, app.ConfigGet (L"AlwaysOnTop", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 #ifdef _APP_HAVE_AUTORUN
 					CheckDlgButton (hwnd, IDC_LOADONSTARTUP_CHK, app.AutorunIsEnabled () ? BST_CHECKED : BST_UNCHECKED);
 #endif // _APP_HAVE_AUTORUN
 
-					CheckDlgButton (hwnd, IDC_REDUCTCONFIRMATION_CHK, app.ConfigGet (L"ReductConfirmation", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_REDUCTCONFIRMATION_CHK, app.ConfigGet (L"ReductConfirmation", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 #ifdef _APP_HAVE_SKIPUAC
 					CheckDlgButton (hwnd, IDC_SKIPUACWARNING_CHK, app.SkipUacIsEnabled () ? BST_CHECKED : BST_UNCHECKED);
 #endif // _APP_HAVE_SKIPUAC
 
-					CheckDlgButton (hwnd, IDC_CHECKUPDATES_CHK, app.ConfigGet (L"CheckUpdates", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_CHECKUPDATES_CHK, app.ConfigGet (L"CheckUpdates", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
-					app.LocaleEnum (hwnd, IDC_LANGUAGE, FALSE, 0);
+					app.LocaleEnum (hwnd, IDC_LANGUAGE, false, 0);
 
 					SetWindowLongPtr (hwnd, GWLP_USERDATA, (LONG_PTR)SendDlgItemMessage (hwnd, IDC_LANGUAGE, CB_GETCURSEL, 0, 0)); // check on save
 
@@ -551,17 +551,17 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					// set checks
 					if (!app.IsVistaOrLater () || !app.IsAdmin ())
 					{
-						_r_ctrl_enable (hwnd, IDC_WORKINGSET_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_STANDBYLIST_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_MODIFIEDLIST_CHK, FALSE);
+						_r_ctrl_enable (hwnd, IDC_WORKINGSET_CHK, false);
+						_r_ctrl_enable (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, false);
+						_r_ctrl_enable (hwnd, IDC_STANDBYLIST_CHK, false);
+						_r_ctrl_enable (hwnd, IDC_MODIFIEDLIST_CHK, false);
 
 						if (!app.IsAdmin ())
 						{
-							_r_ctrl_enable (hwnd, IDC_SYSTEMWORKINGSET_CHK, FALSE);
-							_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, FALSE);
-							_r_ctrl_enable (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, FALSE);
-							_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN_CHK, FALSE);
+							_r_ctrl_enable (hwnd, IDC_SYSTEMWORKINGSET_CHK, false);
+							_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, false);
+							_r_ctrl_enable (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, false);
+							_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN_CHK, false);
 						}
 					}
 
@@ -573,17 +573,17 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					CheckDlgButton (hwnd, IDC_STANDBYLIST_CHK, ((mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 					CheckDlgButton (hwnd, IDC_MODIFIEDLIST_CHK, ((mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 
-					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.ConfigGet (L"AutoreductEnable", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.ConfigGet (L"AutoreductEnable", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 10, 99);
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, app.ConfigGet (L"AutoreductValue", 90).AsUint ());
 
-					CheckDlgButton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, app.ConfigGet (L"AutoreductIntervalEnable", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 5, 1440);
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, app.ConfigGet (L"AutoreductIntervalValue", 30).AsUint ());
 
-					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, app.ConfigGet (L"HotkeyCleanEnable", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, app.ConfigGet (L"HotkeyCleanEnable", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, app.ConfigGet (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)).AsUint (), 0);
 
@@ -613,11 +613,11 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					SetDlgItemText (hwnd, IDC_COLOR_DANGER_HINT, I18N (&app, IDS_COLOR_DANGER_HINT, 0));
 
 					// set checks
-					CheckDlgButton (hwnd, IDC_TRAYUSETRANSPARENCY_CHK, app.ConfigGet (L"TrayUseTransparency", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_TRAYSHOWBORDER_CHK, app.ConfigGet (L"TrayShowBorder", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_TRAYROUNDCORNERS_CHK, app.ConfigGet (L"TrayRoundCorners", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_TRAYCHANGEBG_CHK, app.ConfigGet (L"TrayChangeBg", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.ConfigGet (L"TrayUseAntialiasing", FALSE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_TRAYUSETRANSPARENCY_CHK, app.ConfigGet (L"TrayUseTransparency", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_TRAYSHOWBORDER_CHK, app.ConfigGet (L"TrayShowBorder", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_TRAYROUNDCORNERS_CHK, app.ConfigGet (L"TrayRoundCorners", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_TRAYCHANGEBG_CHK, app.ConfigGet (L"TrayChangeBg", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.ConfigGet (L"TrayUseAntialiasing", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", app.ConfigGet (L"TrayFontName", FONT_NAME), app.ConfigGet (L"TrayFontSize", FONT_SIZE).AsInt ());
 
@@ -672,7 +672,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, app.ConfigGet (L"TrayActionDc", 0).AsUint (), 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, app.ConfigGet (L"TrayActionMc", 1).AsUint (), 0);
 
-					CheckDlgButton (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, app.ConfigGet (L"BalloonCleanResults", TRUE).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, app.ConfigGet (L"BalloonCleanResults", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					break;
 				}
@@ -687,13 +687,13 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 			{
 				case IDD_SETTINGS_1:
 				{
-					app.ConfigSet (L"AlwaysOnTop", DWORD ((IsDlgButtonChecked (hwnd, IDC_ALWAYSONTOP_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"AlwaysOnTop", (IsDlgButtonChecked (hwnd, IDC_ALWAYSONTOP_CHK) == BST_CHECKED) ? true : false);
 
 #ifdef _APP_HAVE_AUTORUN
 					app.AutorunEnable (IsDlgButtonChecked (hwnd, IDC_LOADONSTARTUP_CHK) == BST_CHECKED);
 #endif // _APP_HAVE_AUTORUN
 
-					app.ConfigSet (L"ReductConfirmation", DWORD ((IsDlgButtonChecked (hwnd, IDC_REDUCTCONFIRMATION_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"ReductConfirmation", (IsDlgButtonChecked (hwnd, IDC_REDUCTCONFIRMATION_CHK) == BST_CHECKED) ? true : false);
 
 #ifdef _APP_HAVE_SKIPUAC
 					if (!_r_sys_uacstate ())
@@ -702,7 +702,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					}
 #endif // _APP_HAVE_SKIPUAC
 
-					app.ConfigSet (L"CheckUpdates", ((IsDlgButtonChecked (hwnd, IDC_CHECKUPDATES_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"CheckUpdates", (IsDlgButtonChecked (hwnd, IDC_CHECKUPDATES_CHK) == BST_CHECKED) ? true : false);
 
 					// set language
 					rstring buffer;
@@ -743,13 +743,13 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 					app.ConfigSet (L"ReductMask", mask);
 
-					app.ConfigSet (L"AutoreductEnable", ((IsDlgButtonChecked (hwnd, IDC_AUTOREDUCTENABLE_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"AutoreductEnable", (IsDlgButtonChecked (hwnd, IDC_AUTOREDUCTENABLE_CHK) == BST_CHECKED) ? true : false);
 					app.ConfigSet (L"AutoreductValue", (DWORD)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0));
 
-					app.ConfigSet (L"AutoreductIntervalEnable", ((IsDlgButtonChecked (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"AutoreductIntervalEnable", (IsDlgButtonChecked (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK) == BST_CHECKED) ? true : false);
 					app.ConfigSet (L"AutoreductIntervalValue", (DWORD)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0));
 
-					app.ConfigSet (L"HotkeyCleanEnable", ((IsDlgButtonChecked (hwnd, IDC_HOTKEY_CLEAN_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"HotkeyCleanEnable", (IsDlgButtonChecked (hwnd, IDC_HOTKEY_CLEAN_CHK) == BST_CHECKED) ? true : false);
 					app.ConfigSet (L"HotkeyClean", (DWORD)SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_GETHOTKEY, 0, 0));
 
 					break;
@@ -757,16 +757,16 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 				case IDD_SETTINGS_3:
 				{
-					app.ConfigSet (L"TrayUseTransparency", ((IsDlgButtonChecked (hwnd, IDC_TRAYUSETRANSPARENCY_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					app.ConfigSet (L"TrayShowBorder", ((IsDlgButtonChecked (hwnd, IDC_TRAYSHOWBORDER_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					app.ConfigSet (L"TrayRoundCorners", ((IsDlgButtonChecked (hwnd, IDC_TRAYROUNDCORNERS_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					app.ConfigSet (L"TrayChangeBg", ((IsDlgButtonChecked (hwnd, IDC_TRAYCHANGEBG_CHK) == BST_CHECKED) ? TRUE : FALSE));
-					app.ConfigSet (L"TrayUseAntialiasing", ((IsDlgButtonChecked (hwnd, IDC_TRAYUSEANTIALIASING_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"TrayUseTransparency", (IsDlgButtonChecked (hwnd, IDC_TRAYUSETRANSPARENCY_CHK) == BST_CHECKED) ? true : false);
+					app.ConfigSet (L"TrayShowBorder", (IsDlgButtonChecked (hwnd, IDC_TRAYSHOWBORDER_CHK) == BST_CHECKED) ? true : false);
+					app.ConfigSet (L"TrayRoundCorners", (IsDlgButtonChecked (hwnd, IDC_TRAYROUNDCORNERS_CHK) == BST_CHECKED) ? true : false);
+					app.ConfigSet (L"TrayChangeBg", (IsDlgButtonChecked (hwnd, IDC_TRAYCHANGEBG_CHK) == BST_CHECKED) ? true : false);
+					app.ConfigSet (L"TrayUseAntialiasing", (IsDlgButtonChecked (hwnd, IDC_TRAYUSEANTIALIASING_CHK) == BST_CHECKED) ? true : false);
 
-					app.ConfigSet (L"TrayColorText", GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA));
-					app.ConfigSet (L"TrayColorBg", GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA));
-					app.ConfigSet (L"TrayColorWarning", GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_WARNING), GWLP_USERDATA));
-					app.ConfigSet (L"TrayColorDanger", GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_DANGER), GWLP_USERDATA));
+					app.ConfigSet (L"TrayColorText", (DWORD)GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA));
+					app.ConfigSet (L"TrayColorBg", (DWORD)GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA));
+					app.ConfigSet (L"TrayColorWarning", (DWORD)GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_WARNING), GWLP_USERDATA));
+					app.ConfigSet (L"TrayColorDanger", (DWORD)GetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_DANGER), GWLP_USERDATA));
 
 					break;
 				}
@@ -779,7 +779,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					app.ConfigSet (L"TrayLevelWarning", (DWORD)SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0));
 					app.ConfigSet (L"TrayLevelDanger", (DWORD)SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0));
 
-					app.ConfigSet (L"BalloonCleanResults", ((IsDlgButtonChecked (hwnd, IDC_SHOW_CLEAN_RESULT_CHK) == BST_CHECKED) ? TRUE : FALSE));
+					app.ConfigSet (L"BalloonCleanResults", (IsDlgButtonChecked (hwnd, IDC_SHOW_CLEAN_RESULT_CHK) == BST_CHECKED) ? true : false);
 
 					break;
 				}
@@ -837,10 +837,10 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 						case IDC_AUTOREDUCTENABLE_CHK:
 						case IDC_AUTOREDUCTINTERVALENABLE_CHK:
 						{
-							UINT ctrl1 = LOWORD (pmsg->wParam);
-							UINT ctrl2 = LOWORD (pmsg->wParam) + 1;
+							const UINT ctrl1 = LOWORD (pmsg->wParam);
+							const UINT ctrl2 = LOWORD (pmsg->wParam) + 1;
 
-							BOOL is_enabled = IsWindowEnabled (GetDlgItem (hwnd, ctrl1)) && (IsDlgButtonChecked (hwnd, ctrl1) == BST_CHECKED);
+							const bool is_enabled = IsWindowEnabled (GetDlgItem (hwnd, ctrl1)) && (IsDlgButtonChecked (hwnd, ctrl1) == BST_CHECKED);
 
 							_r_ctrl_enable (hwnd, ctrl2, is_enabled);
 							EnableWindow ((HWND)SendDlgItemMessage (hwnd, ctrl2, UDM_GETBUDDY, 0, 0), is_enabled);
@@ -850,7 +850,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 						case IDC_HOTKEY_CLEAN_CHK:
 						{
-							BOOL is_enabled = IsWindowEnabled (GetDlgItem (hwnd, IDC_HOTKEY_CLEAN_CHK)) && (IsDlgButtonChecked (hwnd, IDC_HOTKEY_CLEAN_CHK) == BST_CHECKED);
+							const bool is_enabled = IsWindowEnabled (GetDlgItem (hwnd, IDC_HOTKEY_CLEAN_CHK)) && (IsDlgButtonChecked (hwnd, IDC_HOTKEY_CLEAN_CHK) == BST_CHECKED);
 
 							_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, is_enabled);
 
@@ -893,8 +893,8 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 							if (ChooseFont (&cf))
 							{
 								app.ConfigSet (L"TrayFontName", config.lf.lfFaceName);
-								app.ConfigSet (L"TrayFontSize", MulDiv (-config.lf.lfHeight, 72, GetDeviceCaps (config.cdc1, LOGPIXELSY)));
-								app.ConfigSet (L"TrayFontWeight", config.lf.lfWeight);
+								app.ConfigSet (L"TrayFontSize", (DWORD)MulDiv (-config.lf.lfHeight, 72, GetDeviceCaps (config.cdc1, LOGPIXELSY)));
+								app.ConfigSet (L"TrayFontWeight", (DWORD)config.lf.lfWeight);
 
 								_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", app.ConfigGet (L"TrayFontName", FONT_NAME), app.ConfigGet (L"TrayFontSize", FONT_SIZE).AsInt ());
 
@@ -925,8 +925,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// set privileges
 			if (app.IsAdmin ())
 			{
-				_r_sys_setprivilege (SE_INCREASE_QUOTA_NAME, TRUE);
-				_r_sys_setprivilege (SE_PROF_SINGLE_PROCESS_NAME, TRUE);
+				_r_sys_setprivilege (SE_INCREASE_QUOTA_NAME, true);
+				_r_sys_setprivilege (SE_PROF_SINGLE_PROCESS_NAME, true);
 			}
 
 			// uac indicator (windows vista and above)
@@ -1081,7 +1081,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 						default:
 						{
-							_r_wnd_toggle (hwnd, FALSE);
+							_r_wnd_toggle (hwnd, false);
 							break;
 						}
 					}
@@ -1106,24 +1106,24 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					HMENU submenu3 = GetSubMenu (submenu, SUBMENU3);
 
 					// localize
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_SHOW, 0), IDM_TRAY_SHOW, FALSE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_CLEAN, 0), IDM_TRAY_CLEAN, FALSE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_1, 0), SUBMENU1, TRUE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_2, 0), SUBMENU2, TRUE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_3, 0), SUBMENU3, TRUE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_SETTINGS, 0), IDM_TRAY_SETTINGS, FALSE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_WEBSITE, 0), IDM_TRAY_WEBSITE, FALSE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_ABOUT, 0), IDM_TRAY_ABOUT, FALSE);
-					app.LocaleMenu (submenu, I18N (&app, IDS_EXIT, 0), IDM_TRAY_EXIT, FALSE);
+					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_SHOW, 0), IDM_TRAY_SHOW, false);
+					app.LocaleMenu (submenu, I18N (&app, IDS_CLEAN, 0), IDM_TRAY_CLEAN, false);
+					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_1, 0), SUBMENU1, true);
+					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_2, 0), SUBMENU2, true);
+					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_3, 0), SUBMENU3, true);
+					app.LocaleMenu (submenu, I18N (&app, IDS_SETTINGS, 0), IDM_TRAY_SETTINGS, false);
+					app.LocaleMenu (submenu, I18N (&app, IDS_WEBSITE, 0), IDM_TRAY_WEBSITE, false);
+					app.LocaleMenu (submenu, I18N (&app, IDS_ABOUT, 0), IDM_TRAY_ABOUT, false);
+					app.LocaleMenu (submenu, I18N (&app, IDS_EXIT, 0), IDM_TRAY_EXIT, false);
 
-					app.LocaleMenu (submenu1, I18N (&app, IDS_WORKINGSET_CHK, 0), IDM_WORKINGSET_CHK, FALSE);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_SYSTEMWORKINGSET_CHK, 0), IDM_SYSTEMWORKINGSET_CHK, FALSE);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_STANDBYLISTPRIORITY0_CHK, 0), IDM_STANDBYLISTPRIORITY0_CHK, FALSE);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_STANDBYLIST_CHK, 0), IDM_STANDBYLIST_CHK, FALSE);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_MODIFIEDLIST_CHK, 0), IDM_MODIFIEDLIST_CHK, FALSE);
+					app.LocaleMenu (submenu1, I18N (&app, IDS_WORKINGSET_CHK, 0), IDM_WORKINGSET_CHK, false);
+					app.LocaleMenu (submenu1, I18N (&app, IDS_SYSTEMWORKINGSET_CHK, 0), IDM_SYSTEMWORKINGSET_CHK, false);
+					app.LocaleMenu (submenu1, I18N (&app, IDS_STANDBYLISTPRIORITY0_CHK, 0), IDM_STANDBYLISTPRIORITY0_CHK, false);
+					app.LocaleMenu (submenu1, I18N (&app, IDS_STANDBYLIST_CHK, 0), IDM_STANDBYLIST_CHK, false);
+					app.LocaleMenu (submenu1, I18N (&app, IDS_MODIFIEDLIST_CHK, 0), IDM_MODIFIEDLIST_CHK, false);
 
-					app.LocaleMenu (submenu2, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_1, FALSE);
-					app.LocaleMenu (submenu3, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_2, FALSE);
+					app.LocaleMenu (submenu2, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_1, false);
+					app.LocaleMenu (submenu3, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_2, false);
 
 					// configure submenu #1
 					DWORD mask = app.ConfigGet (L"ReductMask", MASK_DEFAULT).AsUlong ();
@@ -1180,7 +1180,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						}
 					}
 
-					if (!app.ConfigGet (L"AutoreductEnable", TRUE).AsBool ())
+					if (!app.ConfigGet (L"AutoreductEnable", true).AsBool ())
 					{
 						CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), 0, MF_BYPOSITION);
 					}
@@ -1203,7 +1203,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						}
 					}
 
-					if (!app.ConfigGet (L"AutoreductIntervalEnable", FALSE).AsBool ())
+					if (!app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool ())
 					{
 						CheckMenuRadioItem (submenu3, 0, static_cast<UINT>(interval_vec.size ()), 0, MF_BYPOSITION);
 					}
@@ -1231,15 +1231,15 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		{
 			if ((LOWORD (wparam) >= IDM_TRAY_POPUP_1 && LOWORD (wparam) <= IDM_TRAY_POPUP_1 + limit_vec.size ()))
 			{
-				app.ConfigSet (L"AutoreductEnable", 1);
-				app.ConfigSet (L"AutoreductValue", limit_vec.at (LOWORD (wparam) - IDM_TRAY_POPUP_1));
+				app.ConfigSet (L"AutoreductEnable", true);
+				app.ConfigSet (L"AutoreductValue", (DWORD)limit_vec.at (LOWORD (wparam) - IDM_TRAY_POPUP_1));
 
 				break;
 			}
 			else if ((LOWORD (wparam) >= IDM_TRAY_POPUP_2 && LOWORD (wparam) <= IDM_TRAY_POPUP_2 + interval_vec.size ()))
 			{
-				app.ConfigSet (L"AutoreductIntervalEnable", 1);
-				app.ConfigSet (L"AutoreductIntervalValue", interval_vec.at (LOWORD (wparam) - IDM_TRAY_POPUP_2));
+				app.ConfigSet (L"AutoreductIntervalEnable", true);
+				app.ConfigSet (L"AutoreductIntervalValue", (DWORD)interval_vec.at (LOWORD (wparam) - IDM_TRAY_POPUP_2));
 
 				break;
 			}
@@ -1283,13 +1283,13 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				case IDM_TRAY_DISABLE_1:
 				{
-					app.ConfigSet (L"AutoreductEnable", !app.ConfigGet (L"AutoreductEnable", TRUE).AsBool ());
+					app.ConfigSet (L"AutoreductEnable", !app.ConfigGet (L"AutoreductEnable", true).AsBool ());
 					break;
 				}
 
 				case IDM_TRAY_DISABLE_2:
 				{
-					app.ConfigSet (L"AutoreductIntervalEnable", !app.ConfigGet (L"AutoreductIntervalEnable", FALSE).AsBool ());
+					app.ConfigSet (L"AutoreductIntervalEnable", !app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool ());
 					break;
 				}
 
@@ -1310,7 +1310,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDCANCEL: // process Esc key
 				case IDM_TRAY_SHOW:
 				{
-					_r_wnd_toggle (hwnd, FALSE);
+					_r_wnd_toggle (hwnd, false);
 					break;
 				}
 
@@ -1352,7 +1352,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				case IDM_CHECKUPDATES:
 				{
-					app.CheckForUpdates (FALSE);
+					app.CheckForUpdates (false);
 					break;
 				}
 
