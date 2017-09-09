@@ -138,7 +138,7 @@ DWORD _app_getstatus (MEMORYINFO* m)
 DWORD _app_clean (HWND hwnd)
 {
 	MEMORYINFO mem = {0};
-	SYSTEM_MEMORY_LIST_COMMAND smlc;
+	UINT command = 0;
 	const DWORD mask = app.ConfigGet (L"ReductMask", MASK_DEFAULT).AsUlong ();
 
 	if (!mask || !app.IsAdmin () || (hwnd && app.ConfigGet (L"ReductConfirmation", true).AsBool () && _r_msg (hwnd, MB_YESNO | MB_ICONQUESTION, APP_NAME, nullptr, I18N (&app, IDS_QUESTION, 0)) != IDYES))
@@ -151,8 +151,8 @@ DWORD _app_clean (HWND hwnd)
 	// Working set
 	if (app.IsVistaOrLater () && (mask & REDUCT_WORKING_SET) != 0)
 	{
-		smlc = MemoryEmptyWorkingSets;
-		NtSetSystemInformation (SystemMemoryListInformation, &smlc, sizeof (smlc));
+		command = MemoryEmptyWorkingSets;
+		NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 	}
 
 	// System working set
@@ -169,27 +169,27 @@ DWORD _app_clean (HWND hwnd)
 	// Standby priority-0 list
 	if (app.IsVistaOrLater () && (mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0)
 	{
-		smlc = MemoryPurgeLowPriorityStandbyList;
-		NtSetSystemInformation (SystemMemoryListInformation, &smlc, sizeof (smlc));
+		command = MemoryPurgeLowPriorityStandbyList;
+		NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 	}
 
 	// Standby list
 	if (app.IsVistaOrLater () && (mask & REDUCT_STANDBY_LIST) != 0)
 	{
-		smlc = MemoryPurgeStandbyList;
-		NtSetSystemInformation (SystemMemoryListInformation, &smlc, sizeof (smlc));
+		command = MemoryPurgeStandbyList;
+		NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 	}
 
 	// Modified list
 	if (app.IsVistaOrLater () && (mask & REDUCT_MODIFIED_LIST) != 0)
 	{
-		smlc = MemoryFlushModifiedList;
-		NtSetSystemInformation (SystemMemoryListInformation, &smlc, sizeof (smlc));
+		command = MemoryFlushModifiedList;
+		NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 	}
 
 	// difference (after)
 	_app_getstatus (&mem);
-	const DWORD reduct_result = reduct_before - DWORD (mem.total_phys - mem.free_phys);
+	const DWORD reduct_result = max (0, reduct_before - DWORD (mem.total_phys - mem.free_phys));
 
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
@@ -697,27 +697,16 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 #ifdef _APP_HAVE_SKIPUAC
 					if (!_r_sys_uacstate ())
-					{
 						app.SkipUacEnable (IsDlgButtonChecked (hwnd, IDC_SKIPUACWARNING_CHK) == BST_CHECKED);
-					}
 #endif // _APP_HAVE_SKIPUAC
 
 					app.ConfigSet (L"CheckUpdates", (IsDlgButtonChecked (hwnd, IDC_CHECKUPDATES_CHK) == BST_CHECKED) ? true : false);
 
 					// set language
-					rstring buffer;
-
-					if (SendDlgItemMessage (hwnd, IDC_LANGUAGE, CB_GETCURSEL, 0, 0) >= 1)
-					{
-						buffer = _r_ctrl_gettext (hwnd, IDC_LANGUAGE);
-					}
-
-					app.ConfigSet (L"Language", buffer);
+					app.ConfigSet (L"Language", _r_ctrl_gettext (hwnd, IDC_LANGUAGE));
 
 					if (GetWindowLongPtr (hwnd, GWLP_USERDATA) != (INT)SendDlgItemMessage (hwnd, IDC_LANGUAGE, CB_GETCURSEL, 0, 0))
-					{
 						return TRUE; // for restart
-					}
 
 					break;
 				}

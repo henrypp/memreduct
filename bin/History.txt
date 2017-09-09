@@ -1,11 +1,14 @@
-v3.2.2 (x September 2017)
+v3.2.2 (9 September 2017)
++ added set default language as in system
 + more precise cleaning result
+- fixed cleaning result crash
+- updated translations
 - updated project sdk
 
 v3.2.1 (9 May 2017)
 + show clean result even if it's empty
 - fixed settings window tabstop
-- updated to the latest sdk
+- updated project sdk
 
 v3.2 (30 October 2016)
 - fixed skip uac doesn't worked
@@ -13,8 +16,8 @@ v3.2 (30 October 2016)
 - updated translations
 
 v3.1.1454 (19 August 2016)
-- updated to the latest sdk
 - updated translations
+- updated project sdk
 
 v3.1.1453 (26 February 2016)
 + now locale applied without restart
