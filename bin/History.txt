@@ -1,3 +1,13 @@
+v3.3 (20 October 2017)
++ new settings dialog
++ added "combine memory lists" area (win10 and above)
++ added warning message for "standby list" & "modified page list" about freezes (issue #17)
+- updated translations
+- updated project sdk
+- fixed freezes after auto-reduct
+- fixed ui bugs
+- fixed bugs
+
 v3.2.2 (9 September 2017)
 + added set default language as in system
 + more precise cleaning result

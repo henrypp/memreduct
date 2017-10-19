@@ -1,4 +1,5 @@
 $RECYCLE.BIN/
+.vs/
 debug/
 release/
 x64/
@@ -29,5 +30,6 @@ Desktop.ini
 *.exp
 *.user
 *.iobj
+*.ipch
 *.ipdb
 *.ilk

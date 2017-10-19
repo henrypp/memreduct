@@ -10,8 +10,7 @@
 #include "app.hpp"
 
 #define WM_TRAYICON WM_APP + 1
-#define FONT_NAME L"Tahoma"
-#define FONT_SIZE 8
+#define FONT_DEFAULT L"Tahoma;8;400"
 #define TIMER 1000
 #define UID 1337
 
@@ -24,6 +23,7 @@
 #define REDUCT_STANDBY_PRIORITY0_LIST 0x04
 #define REDUCT_STANDBY_LIST 0x08
 #define REDUCT_MODIFIED_LIST 0x10
+#define REDUCT_COMBINE_MEMORY_LISTS 0x20
 
 // def. colors
 #define TRAY_COLOR_MASK RGB(255, 0, 255)
@@ -33,94 +33,42 @@
 #define TRAY_COLOR_DANGER RGB(237, 28, 36)
 
 // def. memory cleaning area
-#define MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST)
+#define REDUCT_MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST | REDUCT_COMBINE_MEMORY_LISTS)
+#define REDUCT_MASK_FREEZES (REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 
 struct MEMORYINFO
 {
-	// Physical
-	DWORD percent_phys;
-	DWORDLONG total_phys;
-	DWORDLONG free_phys;
+	DWORD percent_phys = 0;
+	DWORD percent_page = 0;
+	DWORD percent_ws = 0;
 
-	// Page file
-	DWORD percent_page;
-	DWORDLONG total_page;
-	DWORDLONG free_page;
+	DWORDLONG total_phys = 0;
+	DWORDLONG free_phys = 0;
 
-	// System working set
-	DWORD percent_ws;
-	DWORDLONG total_ws;
-	DWORDLONG free_ws;
+	DWORDLONG total_page = 0;
+	DWORDLONG free_page = 0;
+
+	DWORDLONG total_ws = 0;
+	DWORDLONG free_ws = 0;
 };
 
 struct STATIC_DATA
 {
-	LONG scale;
+	LONG scale = 0;
 
-	DWORD ms_prev;
+	DWORD ms_prev = 0;
 
-	RECT rc;
+	HDC cdc1 = nullptr;
+	HDC cdc2 = nullptr;
 
-	HDC dc;
-	HDC cdc1;
-	HDC cdc2;
+	HBITMAP bitmap = nullptr;
+	HBITMAP bitmap_mask = nullptr;
 
-	HBITMAP bitmap;
-	HBITMAP bitmap_mask;
+	HFONT font = nullptr;
 
-	HFONT font;
-	LOGFONT lf;
-
-	HBRUSH bg_brush;
-	HBRUSH bg_brush_warning;
-	HBRUSH bg_brush_danger;
-
-	MEMORYINFO ms;
+	HBRUSH bg_brush = nullptr;
+	HBRUSH bg_brush_warning = nullptr;
+	HBRUSH bg_brush_danger = nullptr;
 };
-
-// rev
-// private
-// source: http://www.microsoft.com/whdc/system/Sysinternals/MoreThan64proc.mspx
-
-#define SystemFileCacheInformation 21
-#define SystemMemoryListInformation 80
-
-#define MemoryEmptyWorkingSets 2
-#define MemoryFlushModifiedList 3
-#define MemoryPurgeStandbyList 4
-#define MemoryPurgeLowPriorityStandbyList 5
-
-struct SYSTEM_CACHE_INFORMATION
-{
-	ULONG_PTR	CurrentSize;
-	ULONG_PTR	PeakSize;
-	ULONG_PTR	PageFaultCount;
-	ULONG_PTR	MinimumWorkingSet;
-	ULONG_PTR	MaximumWorkingSet;
-	ULONG_PTR	TransitionSharedPages;
-	ULONG_PTR	PeakTransitionSharedPages;
-	DWORD		Unused[2];
-};
-
-extern "C" {
-	NTSYSCALLAPI
-		NTSTATUS
-		NTAPI
-		NtQuerySystemInformation (
-			_In_ UINT SystemInformationClass,
-			_Out_writes_bytes_opt_ (SystemInformationLength) PVOID SystemInformation,
-			_In_ ULONG SystemInformationLength,
-			_Out_opt_ PULONG ReturnLength
-			);
-
-	NTSYSCALLAPI
-		NTSTATUS
-		NTAPI
-		NtSetSystemInformation (
-			_In_ UINT SystemInformationClass,
-			_In_reads_bytes_opt_ (SystemInformationLength) PVOID SystemInformation,
-			_In_ ULONG SystemInformationLength
-			);
-}
 
 #endif // __MAIN_H__
