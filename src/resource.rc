@@ -203,7 +203,7 @@ FONT 8, "Ms Shell Dlg"
 STRINGTABLE
 {
 	IDS_UPDATE_NO "No updates available."
-	IDS_UPDATE_YES "New version (%s) available. Open download page?"
+	IDS_UPDATE_YES "New version (%s) available. Open the download page?"
 
 	IDS_DONATE "Donate"
 	IDS_DONATE_TEXT "Development is powered by your donations!"
@@ -242,7 +242,7 @@ STRINGTABLE
 
 	IDS_TITLE_1 "General configuration:"
 	IDS_TITLE_2 "Language:"
-	IDS_TITLE_3 "Memory regions to be a cleaned:"
+	IDS_TITLE_3 "Memory regions to be cleaned:"
 	IDS_TITLE_4 "Memory management:"
 	IDS_TITLE_5 "Hotkeys (global):"
 	IDS_TITLE_6 "Style:"
@@ -294,13 +294,13 @@ STRINGTABLE
 
 	IDS_SHOW_CLEAN_RESULT_CHK "Show memory cleaning results"
 
-	IDS_QUESTION "Are you sure you want to clean memory?"
+	IDS_QUESTION "Are you sure you want to clean the memory?"
 	IDS_QUESTION_WARNING_TITLE "Warning!"
-	IDS_QUESTION_WARNING "Switching-on ""Standby list"" and ""Modified page list"" may freeze your computer for almost a minute or so, are you sure enable this option?"
+	IDS_QUESTION_WARNING "Switching-on ""Standby list"" and ""Modified page list"" may freeze your computer for almost a minute or so, are you sure to enable this option?"
 	IDS_QUESTION_FLAG_CHK "Do not show anymore"
 
 	IDS_STATUS_CLEANED "Memory was released with %s result."
-	IDS_STATUS_NOPRIVILEGES "Required administrator privileges, please run program as the administrator!"
+	IDS_STATUS_NOPRIVILEGES "Required administrator privileges, please run program as administrator!"
 }
 
 //
