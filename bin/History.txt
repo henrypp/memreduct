@@ -1,4 +1,5 @@
 v3.3.1 (x January 2018)
+- disable auto-reduct by default
 - updated translations
 - updated project sdk
 

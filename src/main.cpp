@@ -407,7 +407,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 	// autoreduct functional
 	if (app.IsAdmin ())
 	{
-		if ((app.ConfigGet (L"AutoreductEnable", true).AsBool () && meminfo.percent_phys >= app.ConfigGet (L"AutoreductValue", 90).AsUlong ()) ||
+		if ((app.ConfigGet (L"AutoreductEnable", false).AsBool () && meminfo.percent_phys >= app.ConfigGet (L"AutoreductValue", 90).AsUlong ()) ||
 			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", 30).AsInt () * 60)))
 		{
 			_app_memoryclean (nullptr, true);
@@ -708,7 +708,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					CheckDlgButton (hwnd, IDC_MODIFIEDLIST_CHK, ((mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
 					CheckDlgButton (hwnd, IDC_COMBINEMEMORYLISTS_CHK, ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0) ? BST_CHECKED : BST_UNCHECKED);
 
-					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.ConfigGet (L"AutoreductEnable", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.ConfigGet (L"AutoreductEnable", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 10, 99);
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, app.ConfigGet (L"AutoreductValue", 90).AsUint ());
@@ -823,7 +823,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					SetDlgItemText (hwnd, IDC_TRAYSHOWBORDER_CHK, I18N (&app, IDS_TRAYSHOWBORDER_CHK, 0));
 					SetDlgItemText (hwnd, IDC_TRAYROUNDCORNERS_CHK, I18N (&app, IDS_TRAYROUNDCORNERS_CHK, 0));
 					SetDlgItemText (hwnd, IDC_TRAYCHANGEBG_CHK, I18N (&app, IDS_TRAYCHANGEBG_CHK, 0));
-					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, I18N (&app, IDS_TRAYUSEANTIALIASING_CHK, 0));
+					_r_ctrl_settext (hwnd, IDC_TRAYUSEANTIALIASING_CHK, L"%s [BETA]", I18N (&app, IDS_TRAYUSEANTIALIASING_CHK, 0));
 
 					SetDlgItemText (hwnd, IDC_FONT_HINT, I18N (&app, IDS_FONT_HINT, 0));
 					SetDlgItemText (hwnd, IDC_COLOR_TEXT_HINT, I18N (&app, IDS_COLOR_TEXT_HINT, 0));
@@ -1516,7 +1516,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
 					}
 
-					if (!app.ConfigGet (L"AutoreductEnable", true).AsBool ())
+					if (!app.ConfigGet (L"AutoreductEnable", false).AsBool ())
 						CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), 0, MF_BYPOSITION);
 
 					// configure submenu #3
@@ -1556,7 +1556,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				const size_t idx = (LOWORD (wparam) - IDM_TRAY_POPUP_1);
 
-				app.ConfigSet (L"AutoreductEnable", true);
+				app.ConfigSet (L"AutoreductEnable", false);
 				app.ConfigSet (L"AutoreductValue", (DWORD)limit_vec.at (idx));
 
 				return FALSE;
@@ -1618,7 +1618,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				case IDM_TRAY_DISABLE_1:
 				{
-					app.ConfigSet (L"AutoreductEnable", !app.ConfigGet (L"AutoreductEnable", true).AsBool ());
+					app.ConfigSet (L"AutoreductEnable", !app.ConfigGet (L"AutoreductEnable", false).AsBool ());
 					break;
 				}
 
