@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2017 Henry++
+// Copyright (c) 2011-2018 Henry++
 
 #include <windows.h>
 #include <subauth.h>
@@ -103,53 +103,19 @@ VOID BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 	}
 }
 
-BOOL _app_confirmmessage (HWND hwnd, LPCWSTR title, LPCWSTR text, LPCWSTR cfg_name)
+bool _app_confirmmessage (HWND hwnd, LPCWSTR text, LPCWSTR config_cfg)
 {
-	if (!app.ConfigGet (cfg_name, true).AsBool ())
+	if (!app.ConfigGet (config_cfg, true).AsBool ())
 		return true;
 
-	if (app.IsVistaOrLater ())
+	BOOL is_flagchecked = FALSE;
+
+	if (_r_msg_checkbox (hwnd, APP_NAME, text, I18N (&app, IDS_QUESTION_FLAG_CHK, 0), &is_flagchecked))
 	{
-		TASKDIALOGCONFIG tdc = {0};
+		if (is_flagchecked)
+			app.ConfigSet (config_cfg, false);
 
-		INT result = 0;
-		BOOL is_flagchecked = 0;
-
-		WCHAR main[128] = {0};
-		WCHAR flag[128] = {0};
-		WCHAR content[256] = {0};
-
-		tdc.cbSize = sizeof (tdc);
-		tdc.dwFlags = TDF_ALLOW_DIALOG_CANCELLATION;
-		tdc.hwndParent = hwnd;
-		tdc.pszWindowTitle = APP_NAME;
-		tdc.pfCallback = &_r_msg_callback;
-		tdc.pszMainIcon = TD_WARNING_ICON;
-		tdc.dwCommonButtons = TDCBF_YES_BUTTON | TDCBF_NO_BUTTON;
-		tdc.pszContent = content;
-		tdc.pszVerificationText = flag;
-
-		if (title)
-		{
-			tdc.pszMainInstruction = main;
-			StringCchCopy (main, _countof (main), title);
-		}
-
-		StringCchCopy (content, _countof (content), text);
-		StringCchCopy (flag, _countof (flag), I18N (&app, IDS_QUESTION_FLAG_CHK, 0));
-
-		if (_r_msg_taskdialog (&tdc, &result, nullptr, &is_flagchecked))
-		{
-			if (result == IDYES)
-			{
-				app.ConfigSet (cfg_name, is_flagchecked ? false : true);
-				return true;
-			}
-		}
-	}
-	else
-	{
-		return _r_msg (hwnd, MB_YESNO | MB_ICONEXCLAMATION, APP_NAME, nullptr, L"%s", text) == IDYES;
+		return true;
 	}
 
 	return false;
@@ -201,7 +167,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	if (is_preventfrezes)
 		mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
 
-	if (hwnd && !_app_confirmmessage (hwnd, nullptr, I18N (&app, IDS_QUESTION, 0), L"IsShowReductConfirmation"))
+	if (hwnd && !_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION, 0), L"IsShowReductConfirmation"))
 		return 0;
 
 	SetCursor (LoadCursor (nullptr, IDC_WAIT));
@@ -568,30 +534,33 @@ void _app_iconinit (HWND hwnd)
 	icon_rc.bottom = GetSystemMetrics (SM_CYSMICON) * config.scale;
 
 	// init dc
-	HDC hdc = GetWindowDC (nullptr);
+	const HDC hdc = GetWindowDC (nullptr);
 
-	config.cdc1 = CreateCompatibleDC (hdc);
-	config.cdc2 = CreateCompatibleDC (hdc);
+	if (hdc)
+	{
+		config.cdc1 = CreateCompatibleDC (hdc);
+		config.cdc2 = CreateCompatibleDC (hdc);
 
-	// init bitmap
-	BITMAPINFO bmi = {0};
+		// init bitmap
+		BITMAPINFO bmi = {0};
 
-	bmi.bmiHeader.biSize = sizeof (bmi.bmiHeader);
-	bmi.bmiHeader.biWidth = icon_rc.right;
-	bmi.bmiHeader.biHeight = icon_rc.bottom;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biBitCount = 32;
-	bmi.bmiHeader.biCompression = BI_RGB;
+		bmi.bmiHeader.biSize = sizeof (bmi.bmiHeader);
+		bmi.bmiHeader.biWidth = icon_rc.right;
+		bmi.bmiHeader.biHeight = icon_rc.bottom;
+		bmi.bmiHeader.biPlanes = 1;
+		bmi.bmiHeader.biBitCount = 32;
+		bmi.bmiHeader.biCompression = BI_RGB;
 
-	config.bitmap = CreateDIBSection (hdc, &bmi, DIB_RGB_COLORS, 0, nullptr, 0);
-	config.bitmap_mask = CreateBitmap (icon_rc.right, icon_rc.bottom, 1, 1, nullptr);
+		config.bitmap = CreateDIBSection (hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+		config.bitmap_mask = CreateBitmap (icon_rc.right, icon_rc.bottom, 1, 1, nullptr);
 
-	// init brush
-	config.bg_brush = CreateSolidBrush (app.ConfigGet (L"TrayColorBg", TRAY_COLOR_BG).AsUlong ());
-	config.bg_brush_warning = CreateSolidBrush (app.ConfigGet (L"TrayColorWarning", TRAY_COLOR_WARNING).AsUlong ());
-	config.bg_brush_danger = CreateSolidBrush (app.ConfigGet (L"TrayColorDanger", TRAY_COLOR_DANGER).AsUlong ());
+		// init brush
+		config.bg_brush = CreateSolidBrush (app.ConfigGet (L"TrayColorBg", TRAY_COLOR_BG).AsUlong ());
+		config.bg_brush_warning = CreateSolidBrush (app.ConfigGet (L"TrayColorWarning", TRAY_COLOR_WARNING).AsUlong ());
+		config.bg_brush_danger = CreateSolidBrush (app.ConfigGet (L"TrayColorDanger", TRAY_COLOR_DANGER).AsUlong ());
 
-	ReleaseDC (nullptr, hdc);
+		ReleaseDC (nullptr, hdc);
+	}
 
 	_app_iconredraw (hwnd);
 }
@@ -619,12 +588,12 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 		case _RM_INITIALIZE:
 		{
 			_app_hotkeyinit (hwnd);
-
 			_app_iconinit (nullptr);
 
 			app.TrayCreate (hwnd, UID, WM_TRAYICON, _app_iconcreate (), false);
 
 			_app_iconredraw (hwnd);
+
 			SetTimer (hwnd, UID, TIMER, &_app_timercallback);
 
 			break;
@@ -633,16 +602,15 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 		case _RM_LOCALIZE:
 		{
 			// localize menu
-			HMENU menu = GetMenu (hwnd);
+			const HMENU menu = GetMenu (hwnd);
 
 			app.LocaleMenu (menu, I18N (&app, IDS_FILE, 0), 0, true, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_SETTINGS, 0), IDM_SETTINGS, false, nullptr);
+			app.LocaleMenu (menu, I18N (&app, IDS_SETTINGS, 0), IDM_SETTINGS, false, L"\tCtrl+P");
 			app.LocaleMenu (menu, I18N (&app, IDS_EXIT, 0), IDM_EXIT, false, nullptr);
 			app.LocaleMenu (menu, I18N (&app, IDS_HELP, 0), 1, true, nullptr);
 			app.LocaleMenu (menu, I18N (&app, IDS_WEBSITE, 0), IDM_WEBSITE, false, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_DONATE, 0), IDM_DONATE, false, nullptr);
 			app.LocaleMenu (menu, I18N (&app, IDS_CHECKUPDATES, 0), IDM_CHECKUPDATES, false, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_ABOUT, 0), IDM_ABOUT, false, nullptr);
+			app.LocaleMenu (menu, I18N (&app, IDS_ABOUT, 0), IDM_ABOUT, false, L"\tF1");
 
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
@@ -1114,7 +1082,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 									(ctrl_id == IDC_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) != 0)
 									)
 								{
-									if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING_TITLE, 0), I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
+									if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
 									{
 										settings_callback (hwnd, _RM_INITIALIZE, nullptr, page);
 										return FALSE;
@@ -1193,9 +1161,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 							}
 
 							if (is_stylechanged)
-							{
 								_app_iconinit (nullptr);
-							}
 
 							break;
 						}
@@ -1303,11 +1269,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			if (_r_sys_uacstate ())
 			{
 				RECT rc = {0};
+				rc.left = rc.right = app.GetDPI (4);
 
 				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
-
-				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_GETTEXTMARGIN, 0, (LPARAM)&rc);
-				rc.left += GetSystemMetrics (SM_CXSMICON) / 2;
 				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETTEXTMARGIN, 0, (LPARAM)&rc);
 			}
 
@@ -1643,7 +1607,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						(ctrl_id == IDM_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) == 0)
 						)
 					{
-						if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING_TITLE, 0), I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
+						if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
 							return FALSE;
 					}
 
@@ -1715,12 +1679,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					break;
 				}
 
-				case IDM_DONATE:
-				{
-					app.CreateDonateWindow ();
-					break;
-				}
-
 				case IDM_CHECKUPDATES:
 				{
 					app.CheckForUpdates (false);
@@ -1730,7 +1688,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
-					app.CreateAboutWindow ();
+					app.CreateAboutWindow (hwnd, I18N (&app, IDS_DONATE, 0));
 					break;
 				}
 			}
@@ -1744,19 +1702,27 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 INT APIENTRY wWinMain (HINSTANCE, HINSTANCE, LPWSTR, INT)
 {
-	if (app.CreateMainWindow (&DlgProc, &initializer_callback))
+	MSG msg = {0};
+
+	if (app.CreateMainWindow (IDD_MAIN, IDI_MAIN, &DlgProc, &initializer_callback))
 	{
-		MSG msg = {0};
+		const HACCEL haccel = LoadAccelerators (app.GetHINSTANCE (), MAKEINTRESOURCE (IDA_MAIN));
 
 		while (GetMessage (&msg, nullptr, 0, 0) > 0)
 		{
+			if (haccel)
+				TranslateAccelerator (app.GetHWND (), haccel, &msg);
+
 			if (!IsDialogMessage (app.GetHWND (), &msg))
 			{
 				TranslateMessage (&msg);
 				DispatchMessage (&msg);
 			}
 		}
+
+		if (haccel)
+			DestroyAcceleratorTable (haccel);
 	}
 
-	return ERROR_SUCCESS;
+	return (INT)msg.wParam;
 }

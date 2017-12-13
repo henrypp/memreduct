@@ -1,3 +1,7 @@
+v3.3.1 (x January 2018)
+- updated translations
+- updated project sdk
+
 v3.3 (20 October 2017)
 + new settings dialog
 + added "combine memory lists" area (win10 and above)

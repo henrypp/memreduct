@@ -9,6 +9,15 @@
 LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
 
 //
+// Accelerator resources
+//
+IDA_MAIN ACCELERATORS
+{
+	"P", IDM_SETTINGS, CONTROL, VIRTKEY
+	VK_F1, IDM_ABOUT, VIRTKEY
+}
+
+//
 // Menu resources
 //
 IDM_MAIN MENU
@@ -21,7 +30,6 @@ IDM_MAIN MENU
 	POPUP " "
 	{
 		MENUITEM " ", IDM_WEBSITE
-		MENUITEM " ", IDM_DONATE
 		MENUITEM " ", IDM_CHECKUPDATES
 		MENUITEM " ", IDM_ABOUT
 	}
@@ -205,10 +213,6 @@ STRINGTABLE
 	IDS_UPDATE_NO "No updates available."
 	IDS_UPDATE_YES "New version (%s) available. Open the download page?"
 
-	IDS_DONATE "Donate"
-	IDS_DONATE_TEXT "Development is powered by your donations!"
-	IDS_SHOWATSTARTUP_CHK "Show at startup"
-
 	IDS_FILE "File"
 	IDS_SETTINGS "Settings..."
 	IDS_EXIT "Exit"
@@ -216,6 +220,7 @@ STRINGTABLE
 	IDS_WEBSITE "Website"
 	IDS_CHECKUPDATES "Check for updates"
 	IDS_ABOUT "About"
+	IDS_DONATE "Donate"
 
 	IDS_TRAY_SHOW "Show/Hide"
 	IDS_TRAY_DISABLE "Disable"
@@ -295,7 +300,6 @@ STRINGTABLE
 	IDS_SHOW_CLEAN_RESULT_CHK "Show memory cleaning results"
 
 	IDS_QUESTION "Are you sure you want to clean the memory?"
-	IDS_QUESTION_WARNING_TITLE "Warning!"
 	IDS_QUESTION_WARNING "Switching-on ""Standby list"" and ""Modified page list"" may freeze your computer for almost a minute or so, are you sure to enable this option?"
 	IDS_QUESTION_FLAG_CHK "Do not show anymore"
 
