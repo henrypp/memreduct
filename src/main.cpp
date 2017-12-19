@@ -110,7 +110,7 @@ bool _app_confirmmessage (HWND hwnd, LPCWSTR text, LPCWSTR config_cfg)
 
 	BOOL is_flagchecked = FALSE;
 
-	if (_r_msg_checkbox (hwnd, APP_NAME, text, I18N (&app, IDS_QUESTION_FLAG_CHK, 0), &is_flagchecked))
+	if (_r_msg_checkbox (hwnd, APP_NAME, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
 	{
 		if (is_flagchecked)
 			app.ConfigSet (config_cfg, false);
@@ -167,7 +167,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	if (is_preventfrezes)
 		mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
 
-	if (hwnd && !_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION, 0), L"IsShowReductConfirmation"))
+	if (hwnd && !_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION, nullptr), L"IsShowReductConfirmation"))
 		return 0;
 
 	SetCursor (LoadCursor (nullptr, IDC_WAIT));
@@ -238,7 +238,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
 	if (app.ConfigGet (L"BalloonCleanResults", true).AsBool ())
-		app.TrayPopup (UID, NIIF_USER, APP_NAME, _r_fmt (I18N (&app, IDS_STATUS_CLEANED, 0), _r_fmt_size64 ((DWORDLONG)reduct_result).GetString ()));
+		app.TrayPopup (UID, NIIF_USER, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_CLEANED, nullptr), _r_fmt_size64 ((DWORDLONG)reduct_result).GetString ()));
 
 	return reduct_result;
 }
@@ -425,7 +425,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			config.ms_prev = meminfo.percent_phys; // store last percentage value (required!)
 		}
 
-		app.TraySetInfo (UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", I18N (&app, IDS_GROUP_1, 0), meminfo.percent_phys, I18N (&app, IDS_GROUP_2, 0), meminfo.percent_page, I18N (&app, IDS_GROUP_3, 0), meminfo.percent_ws));
+		app.TraySetInfo (UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString(), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
 	}
 
 	// refresh listview information
@@ -604,25 +604,25 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// localize menu
 			const HMENU menu = GetMenu (hwnd);
 
-			app.LocaleMenu (menu, I18N (&app, IDS_FILE, 0), 0, true, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_SETTINGS, 0), IDM_SETTINGS, false, L"\tCtrl+P");
-			app.LocaleMenu (menu, I18N (&app, IDS_EXIT, 0), IDM_EXIT, false, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_HELP, 0), 1, true, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_WEBSITE, 0), IDM_WEBSITE, false, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_CHECKUPDATES, 0), IDM_CHECKUPDATES, false, nullptr);
-			app.LocaleMenu (menu, I18N (&app, IDS_ABOUT, 0), IDM_ABOUT, false, L"\tF1");
+			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
+			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"\tCtrl+P");
+			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
+			app.LocaleMenu (menu, IDS_HELP, 1, true, nullptr);
+			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
+			app.LocaleMenu (menu, IDS_CHECKUPDATES, IDM_CHECKUPDATES, false, nullptr);
+			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
 
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, I18N (&app, IDS_GROUP_1 + i, _r_fmt (L"IDS_GROUP_%d", i + 1)));
+				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr));
 
 				for (INT j = 0; j < 3; j++)
-					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, I18N (&app, IDS_ITEM_1 + j, _r_fmt (L"IDS_ITEM_%d", j + 1)));
+					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr));
 			}
 
 			// configure button
-			SetDlgItemText (hwnd, IDC_CLEAN, I18N (&app, IDS_CLEAN, 0));
+			SetDlgItemText (hwnd, IDC_CLEAN, app.LocaleString (IDS_CLEAN, nullptr));
 
 			_r_wnd_addstyle (hwnd, IDC_CLEAN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
 
@@ -775,61 +775,61 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 		case _RM_LOCALIZE:
 		{
 			// localize titles
-			SetDlgItemText (hwnd, IDC_TITLE_1, I18N (&app, IDS_TITLE_1, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_2, I18N (&app, IDS_TITLE_2, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_3, I18N (&app, IDS_TITLE_3, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_4, I18N (&app, IDS_TITLE_4, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_5, I18N (&app, IDS_TITLE_5, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_6, I18N (&app, IDS_TITLE_6, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_7, I18N (&app, IDS_TITLE_7, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_8, I18N (&app, IDS_TITLE_8, 0));
-			SetDlgItemText (hwnd, IDC_TITLE_9, I18N (&app, IDS_TITLE_9, 0));
+			SetDlgItemText (hwnd, IDC_TITLE_1, app.LocaleString (IDS_TITLE_1, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_2, app.LocaleString (IDS_TITLE_2, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_3, app.LocaleString (IDS_TITLE_3, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_4, app.LocaleString (IDS_TITLE_4, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_5, app.LocaleString (IDS_TITLE_5, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_6, app.LocaleString (IDS_TITLE_6, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_7, app.LocaleString (IDS_TITLE_7, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_8, app.LocaleString (IDS_TITLE_8, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_9, app.LocaleString (IDS_TITLE_9, nullptr));
 
 			switch (page->dlg_id)
 			{
 				case IDD_SETTINGS_GENERAL:
 				{
-					SetDlgItemText (hwnd, IDC_ALWAYSONTOP_CHK, I18N (&app, IDS_ALWAYSONTOP_CHK, 0));
-					SetDlgItemText (hwnd, IDC_LOADONSTARTUP_CHK, I18N (&app, IDS_LOADONSTARTUP_CHK, 0));
-					SetDlgItemText (hwnd, IDC_REDUCTCONFIRMATION_CHK, I18N (&app, IDS_REDUCTCONFIRMATION_CHK, 0));
-					SetDlgItemText (hwnd, IDC_SKIPUACWARNING_CHK, I18N (&app, IDS_SKIPUACWARNING_CHK, 0));
-					SetDlgItemText (hwnd, IDC_CHECKUPDATES_CHK, I18N (&app, IDS_CHECKUPDATES_CHK, 0));
+					SetDlgItemText (hwnd, IDC_ALWAYSONTOP_CHK, app.LocaleString (IDS_ALWAYSONTOP_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_LOADONSTARTUP_CHK, app.LocaleString (IDS_LOADONSTARTUP_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_REDUCTCONFIRMATION_CHK, app.LocaleString (IDS_REDUCTCONFIRMATION_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_SKIPUACWARNING_CHK, app.LocaleString (IDS_SKIPUACWARNING_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_CHECKUPDATES_CHK, app.LocaleString (IDS_CHECKUPDATES_CHK, nullptr));
 
-					SetDlgItemText (hwnd, IDC_LANGUAGE_HINT, I18N (&app, IDS_LANGUAGE_HINT, 0));
+					SetDlgItemText (hwnd, IDC_LANGUAGE_HINT, app.LocaleString (IDS_LANGUAGE_HINT, nullptr));
 
 					break;
 				}
 
 				case IDD_SETTINGS_MEMORY:
 				{
-					SetDlgItemText (hwnd, IDC_WORKINGSET_CHK, I18N (&app, IDS_WORKINGSET_CHK, 0));
-					SetDlgItemText (hwnd, IDC_SYSTEMWORKINGSET_CHK, I18N (&app, IDS_SYSTEMWORKINGSET_CHK, 0));
-					SetDlgItemText (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, I18N (&app, IDS_STANDBYLISTPRIORITY0_CHK, 0));
-					SetDlgItemText (hwnd, IDC_STANDBYLIST_CHK, _r_fmt (L"%s*", I18N (&app, IDS_STANDBYLIST_CHK, 0)));
-					SetDlgItemText (hwnd, IDC_MODIFIEDLIST_CHK, _r_fmt (L"%s*", I18N (&app, IDS_MODIFIEDLIST_CHK, 0)));
-					SetDlgItemText (hwnd, IDC_COMBINEMEMORYLISTS_CHK, I18N (&app, IDS_COMBINEMEMORYLISTS_CHK, 0));
+					SetDlgItemText (hwnd, IDC_WORKINGSET_CHK, app.LocaleString (IDS_WORKINGSET_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_SYSTEMWORKINGSET_CHK, app.LocaleString (IDS_SYSTEMWORKINGSET_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, app.LocaleString (IDS_STANDBYLISTPRIORITY0_CHK, nullptr));
+					_r_ctrl_settext (hwnd, IDC_STANDBYLIST_CHK, app.LocaleString (IDS_STANDBYLIST_CHK, L"*"));
+					_r_ctrl_settext (hwnd, IDC_MODIFIEDLIST_CHK, app.LocaleString (IDS_MODIFIEDLIST_CHK, L"*"));
+					SetDlgItemText (hwnd, IDC_COMBINEMEMORYLISTS_CHK, app.LocaleString (IDS_COMBINEMEMORYLISTS_CHK, nullptr));
 
-					SetDlgItemText (hwnd, IDC_AUTOREDUCTENABLE_CHK, I18N (&app, IDS_AUTOREDUCTENABLE_CHK, 0));
-					SetDlgItemText (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, I18N (&app, IDS_AUTOREDUCTINTERVALENABLE_CHK, 0));
+					SetDlgItemText (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.LocaleString (IDS_AUTOREDUCTENABLE_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, app.LocaleString (IDS_AUTOREDUCTINTERVALENABLE_CHK, nullptr));
 
-					SetDlgItemText (hwnd, IDC_HOTKEY_CLEAN_CHK, I18N (&app, IDS_HOTKEY_CLEAN_CHK, 0));
+					SetDlgItemText (hwnd, IDC_HOTKEY_CLEAN_CHK, app.LocaleString (IDS_HOTKEY_CLEAN_CHK, nullptr));
 
 					break;
 				}
 
 				case IDD_SETTINGS_APPEARANCE:
 				{
-					SetDlgItemText (hwnd, IDC_TRAYUSETRANSPARENCY_CHK, I18N (&app, IDS_TRAYUSETRANSPARENCY_CHK, 0));
-					SetDlgItemText (hwnd, IDC_TRAYSHOWBORDER_CHK, I18N (&app, IDS_TRAYSHOWBORDER_CHK, 0));
-					SetDlgItemText (hwnd, IDC_TRAYROUNDCORNERS_CHK, I18N (&app, IDS_TRAYROUNDCORNERS_CHK, 0));
-					SetDlgItemText (hwnd, IDC_TRAYCHANGEBG_CHK, I18N (&app, IDS_TRAYCHANGEBG_CHK, 0));
-					_r_ctrl_settext (hwnd, IDC_TRAYUSEANTIALIASING_CHK, L"%s [BETA]", I18N (&app, IDS_TRAYUSEANTIALIASING_CHK, 0));
+					SetDlgItemText (hwnd, IDC_TRAYUSETRANSPARENCY_CHK, app.LocaleString (IDS_TRAYUSETRANSPARENCY_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYSHOWBORDER_CHK, app.LocaleString (IDS_TRAYSHOWBORDER_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYROUNDCORNERS_CHK, app.LocaleString (IDS_TRAYROUNDCORNERS_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYCHANGEBG_CHK, app.LocaleString (IDS_TRAYCHANGEBG_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.LocaleString (IDS_TRAYUSEANTIALIASING_CHK, L" [BETA]"));
 
-					SetDlgItemText (hwnd, IDC_FONT_HINT, I18N (&app, IDS_FONT_HINT, 0));
-					SetDlgItemText (hwnd, IDC_COLOR_TEXT_HINT, I18N (&app, IDS_COLOR_TEXT_HINT, 0));
-					SetDlgItemText (hwnd, IDC_COLOR_BACKGROUND_HINT, I18N (&app, IDS_COLOR_BACKGROUND_HINT, 0));
-					SetDlgItemText (hwnd, IDC_COLOR_WARNING_HINT, I18N (&app, IDS_COLOR_WARNING_HINT, 0));
-					SetDlgItemText (hwnd, IDC_COLOR_DANGER_HINT, I18N (&app, IDS_COLOR_DANGER_HINT, 0));
+					SetDlgItemText (hwnd, IDC_FONT_HINT, app.LocaleString (IDS_FONT_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_COLOR_TEXT_HINT, app.LocaleString (IDS_COLOR_TEXT_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_COLOR_BACKGROUND_HINT, app.LocaleString (IDS_COLOR_BACKGROUND_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_COLOR_WARNING_HINT, app.LocaleString (IDS_COLOR_WARNING_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_COLOR_DANGER_HINT, app.LocaleString (IDS_COLOR_DANGER_HINT, nullptr));
 
 					_r_wnd_addstyle (hwnd, IDC_FONT, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
 
@@ -843,18 +843,18 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 
 				case IDD_SETTINGS_TRAY:
 				{
-					SetDlgItemText (hwnd, IDC_TRAYLEVELWARNING_HINT, I18N (&app, IDS_TRAYLEVELWARNING_HINT, 0));
-					SetDlgItemText (hwnd, IDC_TRAYLEVELDANGER_HINT, I18N (&app, IDS_TRAYLEVELDANGER_HINT, 0));
+					SetDlgItemText (hwnd, IDC_TRAYLEVELWARNING_HINT, app.LocaleString (IDS_TRAYLEVELWARNING_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYLEVELDANGER_HINT, app.LocaleString (IDS_TRAYLEVELDANGER_HINT, nullptr));
 
-					SetDlgItemText (hwnd, IDC_TRAYACTIONDC_HINT, I18N (&app, IDS_TRAYACTIONDC_HINT, 0));
-					SetDlgItemText (hwnd, IDC_TRAYACTIONMC_HINT, I18N (&app, IDS_TRAYACTIONMC_HINT, 0));
+					SetDlgItemText (hwnd, IDC_TRAYACTIONDC_HINT, app.LocaleString (IDS_TRAYACTIONDC_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_TRAYACTIONMC_HINT, app.LocaleString (IDS_TRAYACTIONMC_HINT, nullptr));
 
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_RESETCONTENT, 0, 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_RESETCONTENT, 0, 0);
 
 					for (INT i = 0; i < 3; i++)
 					{
-						rstring item = I18N (&app, IDS_TRAY_ACTION_1 + i, _r_fmt (L"IDS_TRAY_ACTION_%d", i + 1));
+						rstring item = app.LocaleString (IDS_TRAY_ACTION_1 + i, nullptr);
 
 						SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_INSERTSTRING, i, (LPARAM)item.GetString ());
 						SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_INSERTSTRING, i, (LPARAM)item.GetString ());
@@ -863,7 +863,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, app.ConfigGet (L"TrayActionDc", 0).AsUint (), 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, app.ConfigGet (L"TrayActionMc", 1).AsUint (), 0);
 
-					SetDlgItemText (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, I18N (&app, IDS_SHOW_CLEAN_RESULT_CHK, 0));
+					SetDlgItemText (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, app.LocaleString (IDS_SHOW_CLEAN_RESULT_CHK, nullptr));
 
 					break;
 				}
@@ -1082,7 +1082,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 									(ctrl_id == IDC_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) != 0)
 									)
 								{
-									if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
+									if (!_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
 									{
 										settings_callback (hwnd, _RM_INITIALIZE, nullptr, page);
 										return FALSE;
@@ -1284,17 +1284,17 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, I18N (&app, IDS_GROUP_1 + i, _r_fmt (L"IDS_GROUP_%d", i + 1)), 0, 0);
+				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
 
 				for (INT j = 0; j < 3; j++)
-					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, I18N (&app, IDS_ITEM_1 + j, _r_fmt (L"IDS_ITEM_%d", j + 1)), LAST_VALUE, i);
+					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr), LAST_VALUE, i);
 			}
 
 			// settings
-			app.AddSettingsPage (nullptr, IDD_SETTINGS_GENERAL, IDS_SETTINGS_GENERAL, L"IDS_SETTINGS_GENERAL", &settings_callback);
-			app.AddSettingsPage (nullptr, IDD_SETTINGS_MEMORY, IDS_SETTINGS_MEMORY, L"IDS_SETTINGS_MEMORY", &settings_callback);
-			app.AddSettingsPage (nullptr, IDD_SETTINGS_APPEARANCE, IDS_SETTINGS_APPEARANCE, L"IDS_SETTINGS_APPEARANCE", &settings_callback);
-			app.AddSettingsPage (nullptr, IDD_SETTINGS_TRAY, IDS_SETTINGS_TRAY, L"IDS_SETTINGS_TRAY", &settings_callback);
+			app.AddSettingsPage (IDD_SETTINGS_GENERAL, IDS_SETTINGS_GENERAL, &settings_callback);
+			app.AddSettingsPage (IDD_SETTINGS_MEMORY, IDS_SETTINGS_MEMORY, &settings_callback);
+			app.AddSettingsPage (IDD_SETTINGS_APPEARANCE, IDS_SETTINGS_APPEARANCE, &settings_callback);
+			app.AddSettingsPage (IDD_SETTINGS_TRAY, IDS_SETTINGS_TRAY, &settings_callback);
 
 			break;
 		}
@@ -1446,25 +1446,25 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					HMENU submenu3 = GetSubMenu (submenu, SUBMENU3);
 
 					// localize
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_SHOW, 0), IDM_TRAY_SHOW, false, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_CLEAN, 0), IDM_TRAY_CLEAN, false, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_1, 0), SUBMENU1, true, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_2, 0), SUBMENU2, true, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_TRAY_POPUP_3, 0), SUBMENU3, true, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_SETTINGS, 0), IDM_TRAY_SETTINGS, false, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_WEBSITE, 0), IDM_TRAY_WEBSITE, false, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_ABOUT, 0), IDM_TRAY_ABOUT, false, nullptr);
-					app.LocaleMenu (submenu, I18N (&app, IDS_EXIT, 0), IDM_TRAY_EXIT, false, nullptr);
+					app.LocaleMenu (submenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
+					app.LocaleMenu (submenu, IDS_CLEAN, IDM_TRAY_CLEAN, false, nullptr);
+					app.LocaleMenu (submenu, IDS_TRAY_POPUP_1, SUBMENU1, true, nullptr);
+					app.LocaleMenu (submenu, IDS_TRAY_POPUP_2, SUBMENU2, true, nullptr);
+					app.LocaleMenu (submenu, IDS_TRAY_POPUP_3, SUBMENU3, true, nullptr);
+					app.LocaleMenu (submenu, IDS_SETTINGS, IDM_TRAY_SETTINGS, false, nullptr);
+					app.LocaleMenu (submenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
+					app.LocaleMenu (submenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
+					app.LocaleMenu (submenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
 
-					app.LocaleMenu (submenu1, I18N (&app, IDS_WORKINGSET_CHK, 0), IDM_WORKINGSET_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_SYSTEMWORKINGSET_CHK, 0), IDM_SYSTEMWORKINGSET_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_STANDBYLISTPRIORITY0_CHK, 0), IDM_STANDBYLISTPRIORITY0_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, _r_fmt (L"%s*", I18N (&app, IDS_STANDBYLIST_CHK, 0)), IDM_STANDBYLIST_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, _r_fmt (L"%s*", I18N (&app, IDS_MODIFIEDLIST_CHK, 0)), IDM_MODIFIEDLIST_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, I18N (&app, IDS_COMBINEMEMORYLISTS_CHK, 0), IDM_COMBINEMEMORYLISTS_CHK, false, nullptr);
+					app.LocaleMenu (submenu1, IDS_WORKINGSET_CHK, IDM_WORKINGSET_CHK, false, nullptr);
+					app.LocaleMenu (submenu1, IDS_SYSTEMWORKINGSET_CHK, IDM_SYSTEMWORKINGSET_CHK, false, nullptr);
+					app.LocaleMenu (submenu1, IDS_STANDBYLISTPRIORITY0_CHK, IDM_STANDBYLISTPRIORITY0_CHK, false, nullptr);
+					app.LocaleMenu (submenu1, IDS_STANDBYLIST_CHK, IDM_STANDBYLIST_CHK, false, L"*");
+					app.LocaleMenu (submenu1, IDS_MODIFIEDLIST_CHK, IDM_MODIFIEDLIST_CHK, false, L"*");
+					app.LocaleMenu (submenu1,IDS_COMBINEMEMORYLISTS_CHK, IDM_COMBINEMEMORYLISTS_CHK, false, nullptr);
 
-					app.LocaleMenu (submenu2, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_1, false, nullptr);
-					app.LocaleMenu (submenu3, I18N (&app, IDS_TRAY_DISABLE, 0), IDM_TRAY_DISABLE_2, false, nullptr);
+					app.LocaleMenu (submenu2, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_1, false, nullptr);
+					app.LocaleMenu (submenu3, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_2, false, nullptr);
 
 					// configure submenu #1
 					const DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
@@ -1607,7 +1607,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						(ctrl_id == IDM_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) == 0)
 						)
 					{
-						if (!_app_confirmmessage (hwnd, I18N (&app, IDS_QUESTION_WARNING, 0), L"IsShowWarningConfirmation"))
+						if (!_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
 							return FALSE;
 					}
 
@@ -1660,7 +1660,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						if (app.RunAsAdmin ())
 							DestroyWindow (hwnd);
 
-						app.TrayPopup (UID, NIIF_ERROR, APP_NAME, I18N (&app, IDS_STATUS_NOPRIVILEGES, 0));
+						app.TrayPopup (UID, NIIF_ERROR, APP_NAME, app.LocaleString (IDS_STATUS_NOPRIVILEGES, nullptr));
 					}
 					else
 					{
@@ -1688,7 +1688,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
-					app.CreateAboutWindow (hwnd, I18N (&app, IDS_DONATE, 0));
+					app.CreateAboutWindow (hwnd, app.LocaleString (IDS_DONATE, nullptr));
 					break;
 				}
 			}
