@@ -110,7 +110,7 @@ bool _app_confirmmessage (HWND hwnd, LPCWSTR text, LPCWSTR config_cfg)
 
 	BOOL is_flagchecked = FALSE;
 
-	if (_r_msg_checkbox (hwnd, APP_NAME, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
+	if (_r_msg_checkbox (hwnd, APP_NAME,  nullptr, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
 	{
 		if (is_flagchecked)
 			app.ConfigSet (config_cfg, false);
@@ -1507,10 +1507,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					for (size_t i = 0; i < limit_vec.size (); i++)
 					{
-						AppendMenu (submenu2, MF_STRING, IDM_TRAY_POPUP_1 + i, _r_fmt (L"%d%%", limit_vec.at (i)));
+						AppendMenu (submenu2, MF_STRING, IDX_TRAY_POPUP_1 + i, _r_fmt (L"%d%%", limit_vec.at (i)));
 
 						if (!app.IsAdmin ())
-							EnableMenuItem (submenu2, static_cast<UINT>(IDM_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+							EnableMenuItem (submenu2, static_cast<UINT>(IDX_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 						if (app.ConfigGet (L"AutoreductValue", 90).AsSizeT () == limit_vec.at (i))
 							CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
@@ -1524,10 +1524,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					for (size_t i = 0; i < interval_vec.size (); i++)
 					{
-						AppendMenu (submenu3, MF_STRING, IDM_TRAY_POPUP_2 + i, _r_fmt (L"%d min.", interval_vec.at (i)));
+						AppendMenu (submenu3, MF_STRING, IDX_TRAY_POPUP_2 + i, _r_fmt (L"%d min.", interval_vec.at (i)));
 
 						if (!app.IsAdmin ())
-							EnableMenuItem (submenu3, static_cast<UINT>(IDM_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+							EnableMenuItem (submenu3, static_cast<UINT>(IDX_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 						if (app.ConfigGet (L"AutoreductIntervalValue", 30).AsSizeT () == interval_vec.at (i))
 							CheckMenuRadioItem (submenu3, 0, static_cast<UINT>(interval_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
@@ -1552,18 +1552,18 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_COMMAND:
 		{
-			if ((LOWORD (wparam) >= IDM_TRAY_POPUP_1 && LOWORD (wparam) <= IDM_TRAY_POPUP_1 + limit_vec.size ()))
+			if ((LOWORD (wparam) >= IDX_TRAY_POPUP_1 && LOWORD (wparam) <= IDX_TRAY_POPUP_1 + limit_vec.size ()))
 			{
-				const size_t idx = (LOWORD (wparam) - IDM_TRAY_POPUP_1);
+				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_1);
 
 				app.ConfigSet (L"AutoreductEnable", false);
 				app.ConfigSet (L"AutoreductValue", (DWORD)limit_vec.at (idx));
 
 				return FALSE;
 			}
-			else if ((LOWORD (wparam) >= IDM_TRAY_POPUP_2 && LOWORD (wparam) <= IDM_TRAY_POPUP_2 + interval_vec.size ()))
+			else if ((LOWORD (wparam) >= IDX_TRAY_POPUP_2 && LOWORD (wparam) <= IDX_TRAY_POPUP_2 + interval_vec.size ()))
 			{
-				const size_t idx = (LOWORD (wparam) - IDM_TRAY_POPUP_2);
+				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_2);
 
 				app.ConfigSet (L"AutoreductIntervalEnable", true);
 				app.ConfigSet (L"AutoreductIntervalValue", (DWORD)interval_vec.at (idx));
