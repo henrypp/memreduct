@@ -231,7 +231,7 @@ STRINGTABLE
 	IDS_WEBSITE "Website"
 	IDS_CHECKUPDATES "Check for updates"
 	IDS_ABOUT "About"
-	IDS_DONATE "Donate"
+	IDS_DONATE "Give thanks!"
 
 	IDS_TRAY_SHOW "Show/Hide"
 	IDS_TRAY_DISABLE "Disable"
@@ -312,7 +312,7 @@ STRINGTABLE
 
 	IDS_QUESTION "Are you sure you want to clean the memory?"
 	IDS_QUESTION_WARNING "Switching-on ""Standby list"" and ""Modified page list"" may freeze your computer for almost a minute or so, are you sure to enable this option?"
-	IDS_QUESTION_FLAG_CHK "Do not show anymore"
+	IDS_QUESTION_FLAG_CHK "Do not ask again"
 
 	IDS_STATUS_CLEANED "Memory was released with %s result."
 	IDS_STATUS_NOPRIVILEGES "Required administrator privileges, please run program as administrator!"
