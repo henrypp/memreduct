@@ -29,6 +29,16 @@ IDM_MAIN MENU
 	}
 	POPUP " "
 	{
+		MENUITEM " ", IDM_ALWAYSONTOP_CHK
+		MENUITEM " ", IDM_CHECKUPDATES_CHK
+		MENUITEM SEPARATOR
+		POPUP " "
+		{
+			MENUITEM " ", IDX_LANGUAGE
+		}
+	}
+	POPUP " "
+	{
 		MENUITEM " ", IDM_WEBSITE
 		MENUITEM " ", IDM_CHECKUPDATES
 		MENUITEM " ", IDM_ABOUT
@@ -214,8 +224,9 @@ STRINGTABLE
 	IDS_UPDATE_YES "New version (%s) available. Open the download page?"
 
 	IDS_FILE "File"
-	IDS_SETTINGS "Settings..."
+	IDS_SETTINGS "Settings"
 	IDS_EXIT "Exit"
+	IDS_LANGUAGE "Language"
 	IDS_HELP "Help"
 	IDS_WEBSITE "Website"
 	IDS_CHECKUPDATES "Check for updates"
@@ -245,15 +256,15 @@ STRINGTABLE
 
 	IDS_CLOSE "Close"
 
-	IDS_TITLE_1 "General configuration:"
-	IDS_TITLE_2 "Language:"
-	IDS_TITLE_3 "Memory regions to be cleaned:"
-	IDS_TITLE_4 "Memory management:"
-	IDS_TITLE_5 "Hotkeys (global):"
-	IDS_TITLE_6 "Style:"
-	IDS_TITLE_7 "Color indication:"
-	IDS_TITLE_8 "Mouse control:"
-	IDS_TITLE_9 "Balloon tips:"
+	IDS_TITLE_1 "General configuration"
+	IDS_TITLE_2 "Language"
+	IDS_TITLE_3 "Memory regions to be cleaned"
+	IDS_TITLE_4 "Memory management"
+	IDS_TITLE_5 "Hotkeys (global)"
+	IDS_TITLE_6 "Style"
+	IDS_TITLE_7 "Color indication"
+	IDS_TITLE_8 "Mouse control"
+	IDS_TITLE_9 "Balloon tips"
 
 	IDS_ALWAYSONTOP_CHK "Always on top"
 	IDS_LOADONSTARTUP_CHK "Load on system startup"
@@ -263,12 +274,12 @@ STRINGTABLE
 
 	IDS_LANGUAGE_HINT "Select language:"
 
-	IDS_WORKINGSET_CHK "Working set (Windows Vista and above)"
+	IDS_WORKINGSET_CHK "Working set"
 	IDS_SYSTEMWORKINGSET_CHK "System working set"
-	IDS_STANDBYLISTPRIORITY0_CHK "Standby list without priority (Windows Vista and above)"
+	IDS_STANDBYLISTPRIORITY0_CHK "Standby list without priority"
 	IDS_STANDBYLIST_CHK "Standby list (Windows Vista and above)"
-	IDS_MODIFIEDLIST_CHK "Modified page list (Windows Vista and above)"
-	IDS_COMBINEMEMORYLISTS_CHK "Combine memory lists (Windows 10 and above)"
+	IDS_MODIFIEDLIST_CHK "Modified page list"
+	IDS_COMBINEMEMORYLISTS_CHK "Combine memory lists"
 
 	IDS_AUTOREDUCTENABLE_CHK "Clean when above: (%)"
 	IDS_AUTOREDUCTINTERVALENABLE_CHK "Clean every: (min.)"

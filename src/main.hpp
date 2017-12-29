@@ -13,6 +13,7 @@
 #define FONT_DEFAULT L"Tahoma;8;400"
 #define TIMER 1000
 #define UID 1337
+#define LANG_MENU 3
 
 // libs
 #pragma comment(lib, "ntdll.lib")

@@ -110,7 +110,7 @@ bool _app_confirmmessage (HWND hwnd, LPCWSTR text, LPCWSTR config_cfg)
 
 	BOOL is_flagchecked = FALSE;
 
-	if (_r_msg_checkbox (hwnd, APP_NAME,  nullptr, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
+	if (_r_msg_checkbox (hwnd, APP_NAME, nullptr, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
 	{
 		if (is_flagchecked)
 			app.ConfigSet (config_cfg, false);
@@ -425,7 +425,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			config.ms_prev = meminfo.percent_phys; // store last percentage value (required!)
 		}
 
-		app.TraySetInfo (UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString(), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
+		app.TraySetInfo (UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString (), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
 	}
 
 	// refresh listview information
@@ -596,6 +596,10 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 
 			SetTimer (hwnd, UID, TIMER, &_app_timercallback);
 
+			// configure menu
+			CheckMenuItem (GetMenu (hwnd), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (app.ConfigGet (L"AlwaysOnTop", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (app.ConfigGet (L"CheckUpdates", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+
 			break;
 		}
 
@@ -605,9 +609,13 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			const HMENU menu = GetMenu (hwnd);
 
 			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
-			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"\tCtrl+P");
+			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tCtrl+P");
 			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
-			app.LocaleMenu (menu, IDS_HELP, 1, true, nullptr);
+			app.LocaleMenu (menu, IDS_SETTINGS, 1, true, nullptr);
+			app.LocaleMenu (menu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
+			app.LocaleMenu (menu, IDS_CHECKUPDATES_CHK, IDM_CHECKUPDATES_CHK, false, nullptr);
+			app.LocaleMenu (GetSubMenu (menu, 1), IDS_LANGUAGE, 3, true, L" (Language)");
+			app.LocaleMenu (menu, IDS_HELP, 2, true, nullptr);
 			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
 			app.LocaleMenu (menu, IDS_CHECKUPDATES, IDM_CHECKUPDATES, false, nullptr);
 			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
@@ -625,6 +633,8 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			SetDlgItemText (hwnd, IDC_CLEAN, app.LocaleString (IDS_CLEAN, nullptr));
 
 			_r_wnd_addstyle (hwnd, IDC_CLEAN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
+
+			app.LocaleEnum ((HWND)GetSubMenu (menu, 1), LANG_MENU, true, IDX_LANGUAGE); // enum localizations
 
 			break;
 		}
@@ -775,15 +785,15 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 		case _RM_LOCALIZE:
 		{
 			// localize titles
-			SetDlgItemText (hwnd, IDC_TITLE_1, app.LocaleString (IDS_TITLE_1, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_2, app.LocaleString (IDS_TITLE_2, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_3, app.LocaleString (IDS_TITLE_3, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_4, app.LocaleString (IDS_TITLE_4, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_5, app.LocaleString (IDS_TITLE_5, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_6, app.LocaleString (IDS_TITLE_6, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_7, app.LocaleString (IDS_TITLE_7, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_8, app.LocaleString (IDS_TITLE_8, nullptr));
-			SetDlgItemText (hwnd, IDC_TITLE_9, app.LocaleString (IDS_TITLE_9, nullptr));
+			SetDlgItemText (hwnd, IDC_TITLE_1, app.LocaleString (IDS_TITLE_1, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_2, app.LocaleString (IDS_TITLE_2, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_3, app.LocaleString (IDS_TITLE_3, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_4, app.LocaleString (IDS_TITLE_4, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_5, app.LocaleString (IDS_TITLE_5, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_6, app.LocaleString (IDS_TITLE_6, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_7, app.LocaleString (IDS_TITLE_7, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_8, app.LocaleString (IDS_TITLE_8, L":"));
+			SetDlgItemText (hwnd, IDC_TITLE_9, app.LocaleString (IDS_TITLE_9, L":"));
 
 			switch (page->dlg_id)
 			{
@@ -795,19 +805,19 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					SetDlgItemText (hwnd, IDC_SKIPUACWARNING_CHK, app.LocaleString (IDS_SKIPUACWARNING_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_CHECKUPDATES_CHK, app.LocaleString (IDS_CHECKUPDATES_CHK, nullptr));
 
-					SetDlgItemText (hwnd, IDC_LANGUAGE_HINT, app.LocaleString (IDS_LANGUAGE_HINT, nullptr));
+					SetDlgItemText (hwnd, IDC_LANGUAGE_HINT, app.LocaleString (IDS_LANGUAGE_HINT, L" (Language)"));
 
 					break;
 				}
 
 				case IDD_SETTINGS_MEMORY:
 				{
-					SetDlgItemText (hwnd, IDC_WORKINGSET_CHK, app.LocaleString (IDS_WORKINGSET_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_WORKINGSET_CHK, app.LocaleString (IDS_WORKINGSET_CHK, L" (vista+)"));
 					SetDlgItemText (hwnd, IDC_SYSTEMWORKINGSET_CHK, app.LocaleString (IDS_SYSTEMWORKINGSET_CHK, nullptr));
-					SetDlgItemText (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, app.LocaleString (IDS_STANDBYLISTPRIORITY0_CHK, nullptr));
-					_r_ctrl_settext (hwnd, IDC_STANDBYLIST_CHK, app.LocaleString (IDS_STANDBYLIST_CHK, L"*"));
-					_r_ctrl_settext (hwnd, IDC_MODIFIEDLIST_CHK, app.LocaleString (IDS_MODIFIEDLIST_CHK, L"*"));
-					SetDlgItemText (hwnd, IDC_COMBINEMEMORYLISTS_CHK, app.LocaleString (IDS_COMBINEMEMORYLISTS_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, app.LocaleString (IDS_STANDBYLISTPRIORITY0_CHK, L" (vista+)"));
+					_r_ctrl_settext (hwnd, IDC_STANDBYLIST_CHK, app.LocaleString (IDS_STANDBYLIST_CHK, L"* (vista+)"));
+					_r_ctrl_settext (hwnd, IDC_MODIFIEDLIST_CHK, app.LocaleString (IDS_MODIFIEDLIST_CHK, L"* (vista+)"));
+					SetDlgItemText (hwnd, IDC_COMBINEMEMORYLISTS_CHK, app.LocaleString (IDS_COMBINEMEMORYLISTS_CHK, L" (win10+)"));
 
 					SetDlgItemText (hwnd, IDC_AUTOREDUCTENABLE_CHK, app.LocaleString (IDS_AUTOREDUCTENABLE_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, app.LocaleString (IDS_AUTOREDUCTINTERVALENABLE_CHK, nullptr));
@@ -1027,6 +1037,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 							if (ctrl_id == IDC_ALWAYSONTOP_CHK && notify_code == BN_CLICKED)
 							{
 								app.ConfigSet (L"AlwaysOnTop", (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? true : false);
+								CheckMenuItem (GetMenu (app.GetHWND ()), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | ((IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? MF_CHECKED : MF_UNCHECKED));
 							}
 							else if (ctrl_id == IDC_REDUCTCONFIRMATION_CHK && notify_code == BN_CLICKED)
 							{
@@ -1043,6 +1054,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 							else if (ctrl_id == IDC_CHECKUPDATES_CHK && notify_code == BN_CLICKED)
 							{
 								app.ConfigSet (L"CheckUpdates", (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? true : false);
+								CheckMenuItem (GetMenu (app.GetHWND ()), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | ((IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? MF_CHECKED : MF_UNCHECKED));
 							}
 							else if (ctrl_id == IDC_LANGUAGE && notify_code == CBN_SELCHANGE)
 							{
@@ -1451,7 +1463,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					app.LocaleMenu (submenu, IDS_TRAY_POPUP_1, SUBMENU1, true, nullptr);
 					app.LocaleMenu (submenu, IDS_TRAY_POPUP_2, SUBMENU2, true, nullptr);
 					app.LocaleMenu (submenu, IDS_TRAY_POPUP_3, SUBMENU3, true, nullptr);
-					app.LocaleMenu (submenu, IDS_SETTINGS, IDM_TRAY_SETTINGS, false, nullptr);
+					app.LocaleMenu (submenu, IDS_SETTINGS, IDM_TRAY_SETTINGS, false, L"...");
 					app.LocaleMenu (submenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
 					app.LocaleMenu (submenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
 					app.LocaleMenu (submenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
@@ -1461,7 +1473,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					app.LocaleMenu (submenu1, IDS_STANDBYLISTPRIORITY0_CHK, IDM_STANDBYLISTPRIORITY0_CHK, false, nullptr);
 					app.LocaleMenu (submenu1, IDS_STANDBYLIST_CHK, IDM_STANDBYLIST_CHK, false, L"*");
 					app.LocaleMenu (submenu1, IDS_MODIFIEDLIST_CHK, IDM_MODIFIEDLIST_CHK, false, L"*");
-					app.LocaleMenu (submenu1,IDS_COMBINEMEMORYLISTS_CHK, IDM_COMBINEMEMORYLISTS_CHK, false, nullptr);
+					app.LocaleMenu (submenu1, IDS_COMBINEMEMORYLISTS_CHK, IDM_COMBINEMEMORYLISTS_CHK, false, nullptr);
 
 					app.LocaleMenu (submenu2, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_1, false, nullptr);
 					app.LocaleMenu (submenu3, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_2, false, nullptr);
@@ -1552,7 +1564,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_COMMAND:
 		{
-			if ((LOWORD (wparam) >= IDX_TRAY_POPUP_1 && LOWORD (wparam) <= IDX_TRAY_POPUP_1 + limit_vec.size ()))
+			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + app.LocaleGetCount ())
+			{
+				app.LocaleApplyFromMenu (GetSubMenu (GetSubMenu (GetMenu (hwnd), 1), LANG_MENU), LOWORD (wparam), IDX_LANGUAGE);
+				return FALSE;
+			}
+			else if ((LOWORD (wparam) >= IDX_TRAY_POPUP_1 && LOWORD (wparam) <= IDX_TRAY_POPUP_1 + limit_vec.size ()))
 			{
 				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_1);
 
@@ -1573,6 +1590,28 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			switch (LOWORD (wparam))
 			{
+				case IDM_ALWAYSONTOP_CHK:
+				{
+					const bool new_val = !app.ConfigGet (L"AlwaysOnTop", false).AsBool ();
+
+					CheckMenuItem (GetMenu (hwnd), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					app.ConfigSet (L"AlwaysOnTop", new_val);
+
+					_r_wnd_top (hwnd, new_val);
+
+					break;
+				}
+
+				case IDM_CHECKUPDATES_CHK:
+				{
+					const bool new_val = !app.ConfigGet (L"CheckUpdates", true).AsBool ();
+
+					CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					app.ConfigSet (L"CheckUpdates", new_val);
+
+					break;
+				}
+
 				case IDM_WORKINGSET_CHK:
 				case IDM_SYSTEMWORKINGSET_CHK:
 				case IDM_STANDBYLISTPRIORITY0_CHK:
