@@ -2,6 +2,7 @@ v3.3.1 (x January 2018)
 - disable auto-reduct by default
 - updated translations
 - updated project sdk
+- cosmetic fixes
 
 v3.3 (20 October 2017)
 + new settings dialog
