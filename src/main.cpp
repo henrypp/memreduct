@@ -103,24 +103,6 @@ VOID BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 	}
 }
 
-bool _app_confirmmessage (HWND hwnd, LPCWSTR text, LPCWSTR config_cfg)
-{
-	if (!app.ConfigGet (config_cfg, true).AsBool ())
-		return true;
-
-	BOOL is_flagchecked = FALSE;
-
-	if (_r_msg_checkbox (hwnd, APP_NAME, nullptr, text, app.LocaleString (IDS_QUESTION_FLAG_CHK, nullptr), &is_flagchecked))
-	{
-		if (is_flagchecked)
-			app.ConfigSet (config_cfg, false);
-
-		return true;
-	}
-
-	return false;
-}
-
 DWORD _app_memorystatus (MEMORYINFO* m)
 {
 	MEMORYSTATUSEX msex = {0};
@@ -167,7 +149,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	if (is_preventfrezes)
 		mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
 
-	if (hwnd && !_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION, nullptr), L"IsShowReductConfirmation"))
+	if (hwnd && !app.ConfirmMessage (hwnd, nullptr, app.LocaleString (IDS_QUESTION, nullptr), L"IsShowReductConfirmation"))
 		return 0;
 
 	SetCursor (LoadCursor (nullptr, IDC_WAIT));
@@ -609,7 +591,7 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			const HMENU menu = GetMenu (hwnd);
 
 			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
-			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tCtrl+P");
+			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tF2");
 			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
 			app.LocaleMenu (menu, IDS_SETTINGS, 1, true, nullptr);
 			app.LocaleMenu (menu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
@@ -623,7 +605,7 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr));
+				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
 
 				for (INT j = 0; j < 3; j++)
 					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr));
@@ -1094,7 +1076,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 									(ctrl_id == IDC_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) != 0)
 									)
 								{
-									if (!_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
+									if (!app.ConfirmMessage (hwnd, nullptr, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
 									{
 										settings_callback (hwnd, _RM_INITIALIZE, nullptr, page);
 										return FALSE;
@@ -1646,7 +1628,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						(ctrl_id == IDM_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST) == 0)
 						)
 					{
-						if (!_app_confirmmessage (hwnd, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
+						if (!app.ConfirmMessage (hwnd, nullptr, app.LocaleString (IDS_QUESTION_WARNING, nullptr), L"IsShowWarningConfirmation"))
 							return FALSE;
 					}
 
