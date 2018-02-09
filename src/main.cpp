@@ -297,14 +297,7 @@ HICON _app_iconcreate ()
 		}
 		else
 		{
-			if (has_danger)
-			{
-				color = app.ConfigGet (L"TrayColorDanger", TRAY_COLOR_DANGER).AsUlong ();
-			}
-			else
-			{
-				color = app.ConfigGet (L"TrayColorWarning", TRAY_COLOR_WARNING).AsUlong ();
-			}
+			color = has_danger ? app.ConfigGet (L"TrayColorDanger", TRAY_COLOR_DANGER).AsUlong () : app.ConfigGet (L"TrayColorWarning", TRAY_COLOR_WARNING).AsUlong ();
 		}
 	}
 
@@ -580,6 +573,9 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 
 			// configure menu
 			CheckMenuItem (GetMenu (hwnd), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (app.ConfigGet (L"AlwaysOnTop", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (GetMenu (hwnd), IDM_LOADONSTARTUP_CHK, MF_BYCOMMAND | (app.AutorunIsEnabled () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (GetMenu (hwnd), IDM_STARTMINIMIZED_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsStartMinimized", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (GetMenu (hwnd), IDM_REDUCTCONFIRMATION_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsShowReductConfirmation", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
 			CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (app.ConfigGet (L"CheckUpdates", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
 
 			break;
@@ -595,8 +591,11 @@ BOOL initializer_callback (HWND hwnd, DWORD msg, LPVOID, LPVOID)
 			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
 			app.LocaleMenu (menu, IDS_SETTINGS, 1, true, nullptr);
 			app.LocaleMenu (menu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
+			app.LocaleMenu (menu, IDS_LOADONSTARTUP_CHK, IDM_LOADONSTARTUP_CHK, false, nullptr);
+			app.LocaleMenu (menu, IDS_STARTMINIMIZED_CHK, IDM_STARTMINIMIZED_CHK, false, nullptr);
+			app.LocaleMenu (menu, IDS_REDUCTCONFIRMATION_CHK, IDM_REDUCTCONFIRMATION_CHK, false, nullptr);
 			app.LocaleMenu (menu, IDS_CHECKUPDATES_CHK, IDM_CHECKUPDATES_CHK, false, nullptr);
-			app.LocaleMenu (GetSubMenu (menu, 1), IDS_LANGUAGE, 3, true, L" (Language)");
+			app.LocaleMenu (GetSubMenu (menu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
 			app.LocaleMenu (menu, IDS_HELP, 2, true, nullptr);
 			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
 			app.LocaleMenu (menu, IDS_CHECKUPDATES, IDM_CHECKUPDATES, false, nullptr);
@@ -656,6 +655,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 					CheckDlgButton (hwnd, IDC_LOADONSTARTUP_CHK, app.AutorunIsEnabled () ? BST_CHECKED : BST_UNCHECKED);
 #endif // _APP_HAVE_AUTORUN
 
+					CheckDlgButton (hwnd, IDC_STARTMINIMIZED_CHK, app.ConfigGet (L"IsStartMinimized", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 					CheckDlgButton (hwnd, IDC_REDUCTCONFIRMATION_CHK, app.ConfigGet (L"IsShowReductConfirmation", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 #ifdef _APP_HAVE_SKIPUAC
@@ -783,6 +783,7 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 				{
 					SetDlgItemText (hwnd, IDC_ALWAYSONTOP_CHK, app.LocaleString (IDS_ALWAYSONTOP_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_LOADONSTARTUP_CHK, app.LocaleString (IDS_LOADONSTARTUP_CHK, nullptr));
+					SetDlgItemText (hwnd, IDC_STARTMINIMIZED_CHK, app.LocaleString (IDS_STARTMINIMIZED_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_REDUCTCONFIRMATION_CHK, app.LocaleString (IDS_REDUCTCONFIRMATION_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_SKIPUACWARNING_CHK, app.LocaleString (IDS_SKIPUACWARNING_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_CHECKUPDATES_CHK, app.LocaleString (IDS_CHECKUPDATES_CHK, nullptr));
@@ -988,8 +989,9 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 						}
 
 						case IDC_ALWAYSONTOP_CHK:
-						case IDC_REDUCTCONFIRMATION_CHK:
 						case IDC_LOADONSTARTUP_CHK:
+						case IDC_STARTMINIMIZED_CHK:
+						case IDC_REDUCTCONFIRMATION_CHK:
 						case IDC_SKIPUACWARNING_CHK:
 						case IDC_CHECKUPDATES_CHK:
 						case IDC_LANGUAGE:
@@ -1020,6 +1022,10 @@ BOOL settings_callback (HWND hwnd, DWORD msg, LPVOID lpdata1, LPVOID lpdata2)
 							{
 								app.ConfigSet (L"AlwaysOnTop", (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? true : false);
 								CheckMenuItem (GetMenu (app.GetHWND ()), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | ((IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? MF_CHECKED : MF_UNCHECKED));
+							}
+							else if (ctrl_id == IDC_STARTMINIMIZED_CHK && notify_code == BN_CLICKED)
+							{
+								app.ConfigSet (L"IsStartMinimized", (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) ? true : false);
 							}
 							else if (ctrl_id == IDC_REDUCTCONFIRMATION_CHK && notify_code == BN_CLICKED)
 							{
@@ -1576,10 +1582,40 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					const bool new_val = !app.ConfigGet (L"AlwaysOnTop", false).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"AlwaysOnTop", new_val);
 
 					_r_wnd_top (hwnd, new_val);
+
+					break;
+				}
+
+				case IDM_STARTMINIMIZED_CHK:
+				{
+					const bool new_val = !app.ConfigGet (L"IsStartMinimized", false).AsBool ();
+
+					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					app.ConfigSet (L"IsStartMinimized", new_val);
+
+					break;
+				}
+
+				case IDM_REDUCTCONFIRMATION_CHK:
+				{
+					const bool new_val = !app.ConfigGet (L"IsShowReductConfirmation", true).AsBool ();
+
+					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					app.ConfigSet (L"IsShowReductConfirmation", new_val);
+
+					break;
+				}
+
+				case IDM_LOADONSTARTUP_CHK:
+				{
+					const bool new_val = !app.AutorunIsEnabled ();
+
+					app.AutorunEnable (new_val);
+					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 
 					break;
 				}
@@ -1588,7 +1624,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					const bool new_val = !app.ConfigGet (L"CheckUpdates", true).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"CheckUpdates", new_val);
 
 					break;

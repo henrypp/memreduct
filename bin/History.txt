@@ -1,3 +1,8 @@
+v3.3.2 (9 February 2018)
+- revert "start minimized" option (issue #39)
+- updated project sdk
+- cosmetic fixes
+
 v3.3.1 (5 January 2018)
 - disable auto-reduct by default
 - updated translations
