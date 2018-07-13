@@ -1,6 +1,6 @@
 ## Mem Reduct
 
-![Mem Reduct](https://www.henrypp.org/images/memreduct.png?cachefix)
+![Mem Reduct](https://www.henrypp.org/images/memreduct.png?cachefix2)
 
 ### Description:
 Lightweight real-time memory management application to monitor and clean system memory on your computer.
