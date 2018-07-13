@@ -106,6 +106,7 @@ FONT 8, "Ms Shell Dlg"
 {
 	CONTROL			"", IDC_NAV, WC_TREEVIEW, TVS_SHOWSELALWAYS | TVS_TRACKSELECT | TVS_FULLROWSELECT | WS_HSCROLL | WS_TABSTOP, 2, 1, 103, 244
 
+	PUSHBUTTON		"", IDC_RESET, 110, 192, 50, 14
 	PUSHBUTTON		"", IDC_CLOSE, 322, 192, 50, 14
 }
 
@@ -225,7 +226,12 @@ FONT 8, "Ms Shell Dlg"
 STRINGTABLE
 {
 	IDS_UPDATE_NO "No updates available."
-	IDS_UPDATE_YES "New version (%s) available. Open the download page?"
+	IDS_UPDATE_YES "Update available, download and install them?"
+	IDS_UPDATE_DOWNLOAD "Downloading update..."
+	IDS_UPDATE_DONE "Downloading update finished."
+	IDS_UPDATE_ERROR "Update server connection error."
+	IDS_UPDATE_INIT "Checking for new releases..."
+	IDS_UPDATE_INSTALL "Update available, do you want to install them?"
 
 	IDS_FILE "File"
 	IDS_SETTINGS "Settings"
@@ -258,6 +264,7 @@ STRINGTABLE
 	IDS_SETTINGS_APPEARANCE "Appearance"
 	IDS_SETTINGS_TRAY "Tray icon"
 
+	IDS_RESET "Reset"
 	IDS_CLOSE "Close"
 
 	IDS_TITLE_1 "General configuration"
@@ -317,6 +324,7 @@ STRINGTABLE
 
 	IDS_QUESTION "Are you sure you want to clean the memory?"
 	IDS_QUESTION_WARNING "Switching-on ""Standby list"" and ""Modified page list"" may freeze your computer for almost a minute or so, are you sure to enable this option?"
+	IDS_QUESTION_RESET "Are you really sure you want to reset all application settings?"
 	IDS_QUESTION_FLAG_CHK "Do not ask again"
 
 	IDS_STATUS_CLEANED "Memory was released with %s result."
