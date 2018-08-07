@@ -232,7 +232,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 	if (!plf)
 		return;
 
-	rstring buffer = app.ConfigGet (L"TrayFont", FONT_DEFAULT);
+	const rstring buffer = app.ConfigGet (L"TrayFont", FONT_DEFAULT);
 
 	if (buffer)
 	{
@@ -240,27 +240,22 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 
 		for (size_t i = 0; i < vc.size (); i++)
 		{
-			rstring font = vc.at (i).Trim (L" \r\n");
+			const rstring font = vc.at (i).Trim (L" \r\n");
 
 			if (font.IsEmpty ())
 				continue;
 
 			if (i == 0)
-			{
 				StringCchCopy (plf->lfFaceName, LF_FACESIZE, vc.at (i));
-			}
+
 			else if (i == 1)
-			{
 				plf->lfHeight = _r_dc_fontsizetoheight (vc.at (i).AsInt ());
-			}
+
 			else if (i == 2)
-			{
 				plf->lfWeight = vc.at (i).AsInt ();
-			}
+
 			else
-			{
 				break;
-			}
 		}
 	}
 
@@ -304,21 +299,21 @@ HICON _app_iconcreate ()
 	}
 
 	// select bitmap
-	const HBITMAP old_bitmap = (HBITMAP)SelectObject (config.cdc1, config.bitmap);
+	HGDIOBJ prev_bmp = SelectObject (config.hdc, config.hbitmap);
 
 	// draw transparent mask
-	_r_dc_fillrect (config.cdc1, &icon_rc, TRAY_COLOR_MASK);
+	_r_dc_fillrect (config.hdc, &icon_rc, TRAY_COLOR_MASK);
 
 	// draw background
 	if (!is_transparent)
 	{
-		HGDIOBJ prev_pen = SelectObject (config.cdc1, GetStockObject (NULL_PEN));
-		HGDIOBJ prev_brush = SelectObject (config.cdc1, bg_brush);
+		const HGDIOBJ prev_pen = SelectObject (config.hdc, GetStockObject (NULL_PEN));
+		const HGDIOBJ prev_brush = SelectObject (config.hdc, bg_brush);
 
-		RoundRect (config.cdc1, 0, 0, icon_rc.right, icon_rc.bottom, is_round ? ((icon_rc.right - 2)) : 0, is_round ? ((icon_rc.right) / 2) : 0);
+		RoundRect (config.hdc, 0, 0, icon_rc.right, icon_rc.bottom, is_round ? ((icon_rc.right - 2)) : 0, is_round ? ((icon_rc.right) / 2) : 0);
 
-		SelectObject (config.cdc1, prev_pen);
-		SelectObject (config.cdc1, prev_brush);
+		SelectObject (config.hdc, prev_pen);
+		SelectObject (config.hdc, prev_brush);
 	}
 
 	// draw border
@@ -334,45 +329,55 @@ HICON _app_iconcreate ()
 			INT half = pt.x + 1;
 
 			for (LONG i = 1; i < config.scale + 1; i++)
-				BresenhamCircle (config.cdc1, half - (i), &pt, color);
+				BresenhamCircle (config.hdc, half - (i), &pt, color);
 		}
 		else
 		{
 			for (LONG i = 0; i < config.scale; i++)
 			{
-				BresenhamLine (config.cdc1, i, 0, i, icon_rc.bottom, color); // left
-				BresenhamLine (config.cdc1, i, i, icon_rc.right, i, color); // top
-				BresenhamLine (config.cdc1, (icon_rc.right - 1) - i, 0, (icon_rc.right - 1) - i, icon_rc.bottom, color); // right
-				BresenhamLine (config.cdc1, 0, (icon_rc.bottom - 1) - i, icon_rc.right, (icon_rc.bottom - 1) - i, color); // bottom
+				BresenhamLine (config.hdc, i, 0, i, icon_rc.bottom, color); // left
+				BresenhamLine (config.hdc, i, i, icon_rc.right, i, color); // top
+				BresenhamLine (config.hdc, (icon_rc.right - 1) - i, 0, (icon_rc.right - 1) - i, icon_rc.bottom, color); // right
+				BresenhamLine (config.hdc, 0, (icon_rc.bottom - 1) - i, icon_rc.right, (icon_rc.bottom - 1) - i, color); // bottom
 			}
 		}
 	}
 
-	// draw text
-	SetTextColor (config.cdc1, color);
-	SetBkMode (config.cdc1, TRANSPARENT);
-
 	WCHAR buffer[8] = {0};
-	StringCchPrintf (buffer, _countof (buffer), L"%ld", meminfo.percent_phys);
+	StringCchPrintf (buffer, _countof (buffer), L"%" PRIu64, meminfo.percent_phys);
 
-	SelectObject (config.cdc1, config.font);
-	DrawTextEx (config.cdc1, buffer, static_cast<int>(wcslen (buffer)), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+	// draw text
+	{
+		SetBkMode (config.hdc, TRANSPARENT);
+		SetTextColor (config.hdc, color);
+
+		SelectObject (config.hdc, config.font);
+		DrawTextEx (config.hdc, buffer, (int)wcslen (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+	}
 
 	// draw transparent mask
-	HGDIOBJ old_mask = SelectObject (config.cdc2, config.bitmap_mask);
+	{
+		HGDIOBJ old_mask = SelectObject (config.hdc_buffer, config.hbitmap_mask);
 
-	SetBkColor (config.cdc1, TRAY_COLOR_MASK);
-	BitBlt (config.cdc2, 0, 0, icon_rc.right, icon_rc.bottom, config.cdc1, 0, 0, SRCCOPY);
+		SetBkMode (config.hdc, TRANSPARENT);
+		SetTextColor (config.hdc, color);
 
-	SelectObject (config.cdc2, old_mask);
-	SelectObject (config.cdc1, old_bitmap);
+		DrawTextEx (config.hdc_buffer, buffer, (int)wcslen (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+
+		SetBkColor (config.hdc, TRAY_COLOR_MASK);
+		BitBlt (config.hdc_buffer, 0, 0, icon_rc.right, icon_rc.bottom, config.hdc, 0, 0, SRCCOPY);
+
+		SelectObject (config.hdc_buffer, old_mask);
+	}
+
+	SelectObject (config.hdc, prev_bmp);
 
 	// finalize icon
 	ICONINFO ii = {0};
 
 	ii.fIcon = TRUE;
-	ii.hbmColor = config.bitmap;
-	ii.hbmMask = config.bitmap_mask;
+	ii.hbmColor = config.hbitmap;
+	ii.hbmMask = config.hbitmap_mask;
 
 	if (config.htrayicon)
 	{
@@ -435,8 +440,10 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 
 			if (i < 3)
 				percent = meminfo.percent_phys;
+
 			else if (i < 6)
 				percent = meminfo.percent_page;
+
 			else if (i < 9)
 				percent = meminfo.percent_ws;
 
@@ -481,28 +488,28 @@ void _app_iconinit (HWND hwnd)
 		config.bg_brush_danger = nullptr;
 	}
 
-	if (config.bitmap)
+	if (config.hbitmap)
 	{
-		DeleteObject (config.bitmap);
-		config.bitmap = nullptr;
+		DeleteObject (config.hbitmap);
+		config.hbitmap = nullptr;
 	}
 
-	if (config.bitmap_mask)
+	if (config.hbitmap_mask)
 	{
-		DeleteObject (config.bitmap_mask);
-		config.bitmap_mask = nullptr;
+		DeleteObject (config.hbitmap_mask);
+		config.hbitmap_mask = nullptr;
 	}
 
-	if (config.cdc1)
+	if (config.hdc)
 	{
-		DeleteDC (config.cdc1);
-		config.cdc1 = nullptr;
+		DeleteDC (config.hdc);
+		config.hdc = nullptr;
 	}
 
-	if (config.cdc2)
+	if (config.hdc_buffer)
 	{
-		DeleteDC (config.cdc2);
-		config.cdc2 = nullptr;
+		DeleteDC (config.hdc_buffer);
+		config.hdc_buffer = nullptr;
 	}
 
 	// common init
@@ -519,25 +526,26 @@ void _app_iconinit (HWND hwnd)
 	icon_rc.bottom = GetSystemMetrics (SM_CYSMICON) * config.scale;
 
 	// init dc
-	const HDC hdc = GetWindowDC (nullptr);
+	const HDC hdc = GetDC (nullptr);
 
 	if (hdc)
 	{
-		config.cdc1 = CreateCompatibleDC (hdc);
-		config.cdc2 = CreateCompatibleDC (hdc);
+		config.hdc = CreateCompatibleDC (hdc);
+		config.hdc_buffer = CreateCompatibleDC (hdc);
 
 		// init bitmap
 		BITMAPINFO bmi = {0};
 
-		bmi.bmiHeader.biSize = sizeof (bmi.bmiHeader);
+		bmi.bmiHeader.biSize = sizeof (BITMAPINFOHEADER);
 		bmi.bmiHeader.biWidth = icon_rc.right;
 		bmi.bmiHeader.biHeight = icon_rc.bottom;
 		bmi.bmiHeader.biPlanes = 1;
-		bmi.bmiHeader.biBitCount = 32;
 		bmi.bmiHeader.biCompression = BI_RGB;
+		bmi.bmiHeader.biBitCount = 32; // four 8-bit components
+		bmi.bmiHeader.biSizeImage = (icon_rc.right * icon_rc.bottom) * 4; // rgba
 
-		config.bitmap = CreateDIBSection (hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-		config.bitmap_mask = CreateBitmap (icon_rc.right, icon_rc.bottom, 1, 1, nullptr);
+		config.hbitmap = CreateDIBSection (hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
+		config.hbitmap_mask = CreateBitmap (icon_rc.right, icon_rc.bottom, 1, 1, nullptr);
 
 		// init brush
 		config.bg_brush = CreateSolidBrush (app.ConfigGet (L"TrayColorBg", TRAY_COLOR_BG).AsUlong ());
@@ -760,8 +768,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					SetDlgItemText (hwnd, IDC_TRAYSHOWBORDER_CHK, app.LocaleString (IDS_TRAYSHOWBORDER_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_TRAYROUNDCORNERS_CHK, app.LocaleString (IDS_TRAYROUNDCORNERS_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_TRAYCHANGEBG_CHK, app.LocaleString (IDS_TRAYCHANGEBG_CHK, nullptr));
-					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.LocaleString (IDS_TRAYUSEANTIALIASING_CHK, L" [BETA]"));
-
+					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.LocaleString (IDS_TRAYUSEANTIALIASING_CHK, L" [BETA]"));
 					SetDlgItemText (hwnd, IDC_FONT_HINT, app.LocaleString (IDS_FONT_HINT, nullptr));
 					SetDlgItemText (hwnd, IDC_COLOR_TEXT_HINT, app.LocaleString (IDS_COLOR_TEXT_HINT, nullptr));
 					SetDlgItemText (hwnd, IDC_COLOR_BACKGROUND_HINT, app.LocaleString (IDS_COLOR_BACKGROUND_HINT, nullptr));
@@ -873,7 +880,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 			if (is_stylechanged)
 			{
-				_app_iconredraw (nullptr);
+				_app_iconredraw (app.GetHWND ());
 				_r_listview_redraw (app.GetHWND (), IDC_LISTVIEW);
 			}
 
@@ -915,7 +922,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 					if (is_stylechanged)
 					{
-						_app_iconredraw (nullptr);
+						_app_iconredraw (app.GetHWND ());
 						_r_listview_redraw (app.GetHWND (), IDC_LISTVIEW);
 					}
 
@@ -1107,7 +1114,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 
 					if (is_stylechanged)
-						_app_iconinit (nullptr);
+						_app_iconinit (app.GetHWND ());
 
 					break;
 				}
@@ -1146,7 +1153,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 						SetWindowLongPtr (hctrl, GWLP_USERDATA, (LONG_PTR)clr);
 
-						_app_iconinit (nullptr);
+						_app_iconinit (app.GetHWND ());
 					}
 
 					break;
@@ -1174,7 +1181,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, size);
 
-						_app_iconinit (nullptr);
+						_app_iconinit (app.GetHWND ());
 					}
 
 					break;
@@ -1569,7 +1576,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			{
 				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_1);
 
-				app.ConfigSet (L"AutoreductEnable", false);
+				app.ConfigSet (L"AutoreductEnable", true);
 				app.ConfigSet (L"AutoreductValue", (DWORD)limit_vec.at (idx));
 
 				return FALSE;

@@ -59,11 +59,11 @@ struct STATIC_DATA
 
 	DWORD ms_prev = 0;
 
-	HDC cdc1 = nullptr;
-	HDC cdc2 = nullptr;
+	HDC hdc = nullptr;
+	HDC hdc_buffer = nullptr;
 
-	HBITMAP bitmap = nullptr;
-	HBITMAP bitmap_mask = nullptr;
+	HBITMAP hbitmap = nullptr;
+	HBITMAP hbitmap_mask = nullptr;
 
 	HFONT font = nullptr;
 

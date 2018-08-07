@@ -1,3 +1,9 @@
+v3.3.3 (x August 2018)
+- updated project sdk
+- fixed saving autoreduct option in tray menu
+- fixed windows xp support
+- fixed bugs
+
 v3.3.2 (9 February 2018)
 - revert "start minimized" option (issue #39)
 - updated project sdk
@@ -10,9 +16,9 @@ v3.3.1 (5 January 2018)
 - cosmetic fixes
 
 v3.3 (20 October 2017)
-+ new settings dialog
-+ added "combine memory lists" area (win10 and above)
-+ added warning message for "standby list" & "modified page list" about freezes (issue #17)
+- new settings dialog
+- added "combine memory lists" area (win10 and above)
+- added warning message for "standby list" & "modified page list" about freezes (issue #17)
 - updated translations
 - updated project sdk
 - fixed freezes after auto-reduct
@@ -20,14 +26,14 @@ v3.3 (20 October 2017)
 - fixed bugs
 
 v3.2.2 (9 September 2017)
-+ added set default language as in system
-+ more precise cleaning result
+- added set default language as in system
+- more precise cleaning result
 - fixed cleaning result crash
 - updated translations
 - updated project sdk
 
 v3.2.1 (9 May 2017)
-+ show clean result even if it's empty
+- show clean result even if it's empty
 - fixed settings window tabstop
 - updated project sdk
 
@@ -41,7 +47,7 @@ v3.1.1454 (19 August 2016)
 - updated project sdk
 
 v3.1.1453 (26 February 2016)
-+ now locale applied without restart
+- now locale applied without restart
 - fixed critical bug in locale engine
 - fixed muted messagebox
 
@@ -53,30 +59,30 @@ v3.1.1451 (11 February 2016)
 - fixed transparent background with antialiased font
 
 v3.1.1450 (10 February 2016)
-+ added windows xp (64-bit) support
+- added windows xp (64-bit) support
 - small ui fixes
 - fixed bugs
 
 v3.1.1310 (20 November 2015)
-+ added tray menu for configure clean areas
+- added tray menu for configure clean areas
 - fixed tray menu incorrect range calculation bug
 - returned the "reductconfirmation" config [issue #9]
 
 v3.1.1262 (31 October 2015)
-+ added option to disable balloon tips
+- added option to disable balloon tips
 - fixed hotkey settings
 - fixed windows xp support
 
 v3.1.1201 (28 October 2015)
-+ added french localization
-+ added hungarian localization
+- added french localization
+- added hungarian localization
 - fixed cleaning by timeout doesn't triggered due optimizations
 
 v3.1.1186 (27 October 2015)
-+ added antialiasing
-+ added memory cleaning by timeout
-+ added middle click tray icon action customization
-+ new localization model (plain text)
+- added antialiasing
+- added memory cleaning by timeout
+- added middle click tray icon action customization
+- new localization model (plain text)
 - changed default tray icon style
 - improved settings window
 - skip uac sometimes doesn't work
@@ -93,40 +99,40 @@ v3.0.436 (1 May 2015)
 - fixed bugs
 
 v3.0.377 (26 April 2015)
-+ added spanish (argentina) localization
+- added spanish (argentina) localization
 - updated french localization
 - updated korean localization
 - updated russian localization
 - fixed bugs
 
 v3.0.305 (21 April 2015)
-+ added french localization
-+ added german localization
-+ added cleaning confirmation switch
-+ added cleaning on tray icon double click feature
+- added french localization
+- added german localization
+- added cleaning confirmation switch
+- added cleaning on tray icon double click feature
 - fixed transparency & color indication compatibility
 - fixed bugs
 
 v3.0.277 (19 April 2015)
-+ added icon animation
-+ added greek localization
-+ added slovak localization
-+ added spanish localization
+- added icon animation
+- added greek localization
+- added slovak localization
+- added spanish localization
 - fixed critical bug in korean localization
 - fixed bug when application prevent restart (windows xp)
 
 v3.0.206 (17 April 2015)
-+ added russian localization
-+ added korean localization
+- added russian localization
+- added korean localization
 - fixed auto-reduct doesn't clean normally
 - fixed bugs
 
 v3.0.187 (14 April 2015)
-+ windows 10 support
-+ x64 support
-+ added "standby list without priority" cleaning
-+ added icon transparency
-+ skip uac prompt feature
+- windows 10 support
+- x64 support
+- added "standby list without priority" cleaning
+- added icon transparency
+- skip uac prompt feature
 - improved uac/uipi/dpi compatibility
 - fixed tray icon disappear when explorer restart
 - now process priority set to "high"
@@ -134,45 +140,45 @@ v3.0.187 (14 April 2015)
 - fixed ui & bugs
 
 v2.4 (17 September 2013)
-+ added tray icon customization
+- added tray icon customization
 - uac compatibility improved
 - x64 compatibility improved
 - changed application icon
 - fixed ui & bugs
 
 v2.3 (14 July 2012)
-+ windows 8 support
-+ added "bulgarian" localization (by nahalnik)
-+ added "chinese (simplified)" localization (by hsxz)
-+ added "chinese (traditional)" translation (by hsxz)
-+ listview color indication
+- windows 8 support
+- added "bulgarian" localization (by nahalnik)
+- added "chinese (simplified)" localization (by hsxz)
+- added "chinese (traditional)" translation (by hsxz)
+- listview color indication
 - removed admin rights requirement (shown only if necessary)
 - fixed ui & bugs
 
 v2.2 (24 May 2012)
-+ added on double-click option "start memory reduction (silently)"
+- added on double-click option "start memory reduction (silently)"
 - fixed auto cleaning configuration
 
 v2.1 (23 May 2012)
-+ added "portuguese" localization (by lucas macedo)
-+ added auto cleaning configuration
-+ added balloon tips
-+ added "system working set" usage
+- added "portuguese" localization (by lucas macedo)
+- added auto cleaning configuration
+- added balloon tips
+- added "system working set" usage
 - fixed percentage calculation
 - fixed memory leak
 - fixed ui & bugs
 
 v2.0 (2 April 2012)
-+ program worked in the background now
-+ windows xp partial support
-+ localization support
-+ more new settings
+- program worked in the background now
+- windows xp partial support
+- localization support
+- more new settings
 - fixed ui & bugs
 
 v1.1 (10 November 2011)
-+ memory clening region configuration
-+ added "working set" cleaning
-+ added "page list" information
+- memory clening region configuration
+- added "working set" cleaning
+- added "page list" information
 - fixed ui & bugs
 
 v1.0 (27 October 2011)
