@@ -1,5 +1,6 @@
-v3.3.3 (x August 2018)
+v3.3.3 (19 October 2018)
 - updated project sdk
+- stability improvements
 - fixed saving autoreduct option in tray menu
 - fixed windows xp support
 - fixed bugs
