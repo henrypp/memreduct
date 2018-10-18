@@ -21,7 +21,7 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{7FB76828-A353-4113-82D7-CD728EED81DF}</ProjectGuid>
     <RootNamespace>memreduct</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
     <ProjectName>memreduct</ProjectName>
     <TargetFrameworkVersion>
     </TargetFrameworkVersion>
