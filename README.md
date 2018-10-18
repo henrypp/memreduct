@@ -1,4 +1,5 @@
-## Mem Reduct
+Mem Reduct [![Github All Releases](https://img.shields.io/github/downloads/henrypp/memreduct/total.svg)](https://github.com/henrypp/memreduct/releases) [![Licence](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
+=======
 
 ![Mem Reduct](https://www.henrypp.org/images/memreduct.png?cachefix2)
 
