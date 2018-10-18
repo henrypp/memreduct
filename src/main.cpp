@@ -1,8 +1,6 @@
 // Mem Reduct
 // Copyright (c) 2011-2018 Henry++
 
-#define WINVER 0x0501
-
 #include <windows.h>
 #include <subauth.h>
 #include <algorithm>
@@ -40,7 +38,7 @@ void generate_menu_array (size_t val, std::vector<size_t>& pvc)
 	pvc.erase (std::unique (pvc.begin (), pvc.end ()), pvc.end ()); // remove duplicates
 }
 
-VOID BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
+void BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
 {
 	LONG cx = 0, cy = radius, d = 2 - 2 * radius;
 
@@ -77,7 +75,7 @@ VOID BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
 	}
 }
 
-VOID BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
+void BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 {
 	INT dx = abs (x1 - x0), sx = x0 < x1 ? 1 : -1;
 	INT dy = abs (y1 - y0), sy = y0 < y1 ? 1 : -1;
@@ -105,7 +103,7 @@ VOID BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 	}
 }
 
-DWORD _app_memorystatus (MEMORYINFO* m)
+DWORD _app_memorystatus (MEMORYINFO* ptr_info)
 {
 	MEMORYSTATUSEX msex = {0};
 	SYSTEM_CACHE_INFORMATION sci = {0};
@@ -114,24 +112,24 @@ DWORD _app_memorystatus (MEMORYINFO* m)
 
 	GlobalMemoryStatusEx (&msex);
 
-	if (m)
+	if (ptr_info)
 	{
-		m->percent_phys = msex.dwMemoryLoad;
+		ptr_info->percent_phys = msex.dwMemoryLoad;
 
-		m->free_phys = msex.ullAvailPhys;
-		m->total_phys = msex.ullTotalPhys;
+		ptr_info->free_phys = msex.ullAvailPhys;
+		ptr_info->total_phys = msex.ullTotalPhys;
 
-		m->percent_page = _R_PERCENT_OF (msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
+		ptr_info->percent_page = _R_PERCENT_OF (msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
 
-		m->free_page = msex.ullAvailPageFile;
-		m->total_page = msex.ullTotalPageFile;
+		ptr_info->free_page = msex.ullAvailPageFile;
+		ptr_info->total_page = msex.ullTotalPageFile;
 
 		if (NT_SUCCESS (NtQuerySystemInformation (SystemFileCacheInformation, &sci, sizeof (sci), nullptr)))
 		{
-			m->percent_ws = _R_PERCENT_OF (sci.CurrentSize, sci.PeakSize);
+			ptr_info->percent_ws = _R_PERCENT_OF (sci.CurrentSize, sci.PeakSize);
 
-			m->free_ws = (sci.PeakSize - sci.CurrentSize);
-			m->total_ws = sci.PeakSize;
+			ptr_info->free_ws = (sci.PeakSize - sci.CurrentSize);
+			ptr_info->total_ws = sci.PeakSize;
 		}
 	}
 
@@ -143,7 +141,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	if (!app.IsAdmin ())
 		return 0;
 
-	MEMORYINFO mem;
+	MEMORYINFO info = {0};
 
 	UINT command = 0;
 	DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
@@ -157,8 +155,8 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	SetCursor (LoadCursor (nullptr, IDC_WAIT));
 
 	// difference (before)
-	_app_memorystatus (&mem);
-	const DWORD reduct_before = DWORD (mem.total_phys - mem.free_phys);
+	_app_memorystatus (&info);
+	const DWORD reduct_before = DWORD (info.total_phys - info.free_phys);
 
 	// System working set
 	if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
@@ -216,8 +214,8 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	SetCursor (LoadCursor (nullptr, IDC_ARROW));
 
 	// difference (after)
-	_app_memorystatus (&mem);
-	const DWORD reduct_result = max (0, reduct_before - DWORD (mem.total_phys - mem.free_phys));
+	_app_memorystatus (&info);
+	const DWORD reduct_result = max (0, reduct_before - DWORD (info.total_phys - info.free_phys));
 
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
@@ -299,7 +297,7 @@ HICON _app_iconcreate ()
 	}
 
 	// select bitmap
-	HGDIOBJ prev_bmp = SelectObject (config.hdc, config.hbitmap);
+	const HGDIOBJ prev_bmp = SelectObject (config.hdc, config.hbitmap);
 
 	// draw transparent mask
 	_r_dc_fillrect (config.hdc, &icon_rc, TRAY_COLOR_MASK);
@@ -326,7 +324,7 @@ HICON _app_iconcreate ()
 			pt.x = ((icon_rc.left + icon_rc.right) / 2) - 1;
 			pt.y = ((icon_rc.top + icon_rc.bottom) / 2) - 1;
 
-			INT half = pt.x + 1;
+			const INT half = pt.x + 1;
 
 			for (LONG i = 1; i < config.scale + 1; i++)
 				BresenhamCircle (config.hdc, half - (i), &pt, color);
@@ -357,7 +355,7 @@ HICON _app_iconcreate ()
 
 	// draw transparent mask
 	{
-		HGDIOBJ old_mask = SelectObject (config.hdc_buffer, config.hbitmap_mask);
+		const HGDIOBJ old_mask = SelectObject (config.hdc_buffer, config.hbitmap_mask);
 
 		SetBkMode (config.hdc, TRANSPARENT);
 		SetTextColor (config.hdc, color);
@@ -768,7 +766,8 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					SetDlgItemText (hwnd, IDC_TRAYSHOWBORDER_CHK, app.LocaleString (IDS_TRAYSHOWBORDER_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_TRAYROUNDCORNERS_CHK, app.LocaleString (IDS_TRAYROUNDCORNERS_CHK, nullptr));
 					SetDlgItemText (hwnd, IDC_TRAYCHANGEBG_CHK, app.LocaleString (IDS_TRAYCHANGEBG_CHK, nullptr));
-					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.LocaleString (IDS_TRAYUSEANTIALIASING_CHK, L" [BETA]"));
+					SetDlgItemText (hwnd, IDC_TRAYUSEANTIALIASING_CHK, app.LocaleString (IDS_TRAYUSEANTIALIASING_CHK, L" [BETA]"));
+
 					SetDlgItemText (hwnd, IDC_FONT_HINT, app.LocaleString (IDS_FONT_HINT, nullptr));
 					SetDlgItemText (hwnd, IDC_COLOR_TEXT_HINT, app.LocaleString (IDS_COLOR_TEXT_HINT, nullptr));
 					SetDlgItemText (hwnd, IDC_COLOR_BACKGROUND_HINT, app.LocaleString (IDS_COLOR_BACKGROUND_HINT, nullptr));
@@ -1168,7 +1167,6 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					cf.Flags = CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL;
 
 					LOGFONT lf = {0};
-
 					_app_fontinit (&lf, 0);
 
 					cf.lpLogFont = &lf;
@@ -1280,7 +1278,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
 			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tF2");
-			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, nullptr);
+			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, L"...\tAlt+F4");
 			app.LocaleMenu (menu, IDS_SETTINGS, 1, true, nullptr);
 			app.LocaleMenu (menu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
 			app.LocaleMenu (menu, IDS_LOADONSTARTUP_CHK, IDM_LOADONSTARTUP_CHK, false, nullptr);
