@@ -1,0 +1,3 @@
+[submodule "routine"]
+	path = ../routine
+	url = https://github.com/henrypp/routine.git
