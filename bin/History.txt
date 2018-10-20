@@ -1,3 +1,6 @@
+v3.3.4 (20 October 2018)
+- fixed tray icon bug on windows xp
+
 v3.3.3 (19 October 2018)
 - updated project sdk
 - stability improvements
