@@ -342,7 +342,7 @@ HICON _app_iconcreate ()
 	}
 
 	WCHAR buffer[8] = {0};
-	StringCchPrintf (buffer, _countof (buffer), L"%" PRIu64, meminfo.percent_phys);
+	StringCchPrintf (buffer, _countof (buffer), L"%d", meminfo.percent_phys);
 
 	// draw text
 	{
