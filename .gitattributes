@@ -5,4 +5,4 @@
 *.ini diff
 *.txt diff
 *.xml diff
-*.lng lockable
+*.lng diff

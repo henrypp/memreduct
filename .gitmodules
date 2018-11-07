@@ -1,3 +1,7 @@
 [submodule "routine"]
 	path = ../routine
 	url = https://github.com/henrypp/routine.git
+
+[submodule "builder"]
+	path = ../builder
+	url = https://github.com/henrypp/builder.git
