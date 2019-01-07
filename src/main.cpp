@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2018 Henry++
+// Copyright (c) 2011-2019 Henry++
 
 #include <windows.h>
 #include <subauth.h>
@@ -350,7 +350,7 @@ HICON _app_iconcreate ()
 		SetTextColor (config.hdc, color);
 
 		SelectObject (config.hdc, config.font);
-		DrawTextEx (config.hdc, buffer, (int)wcslen (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+		DrawTextEx (config.hdc, buffer, (int)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
 	}
 
 	// draw transparent mask
@@ -360,7 +360,7 @@ HICON _app_iconcreate ()
 		SetBkMode (config.hdc, TRANSPARENT);
 		SetTextColor (config.hdc, color);
 
-		DrawTextEx (config.hdc_buffer, buffer, (int)wcslen (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+		DrawTextEx (config.hdc_buffer, buffer, (int)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
 
 		SetBkColor (config.hdc, TRAY_COLOR_MASK);
 		BitBlt (config.hdc_buffer, 0, 0, icon_rc.right, icon_rc.bottom, config.hdc, 0, 0, SRCCOPY);
