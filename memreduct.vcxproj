@@ -131,7 +131,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_DARKTHEME;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
@@ -171,7 +171,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ControlFlowGuard>Guard</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_DARKTHEME;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>
       </MinimalRebuild>
       <OmitFramePointers>true</OmitFramePointers>
@@ -217,7 +217,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_DARKTHEME;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <OmitFramePointers>true</OmitFramePointers>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
@@ -261,7 +261,7 @@
       <MinimalRebuild>
       </MinimalRebuild>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;_APP_HAVE_DARKTHEME;_APP_HAVE_SETTINGS;_APP_HAVE_UPDATES;_APP_HAVE_NTDLL;_APP_HAVE_AUTORUN;_APP_HAVE_SKIPUAC;_APP_HAVE_TRAY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnableParallelCodeGeneration>
       </EnableParallelCodeGeneration>
       <BufferSecurityCheck>false</BufferSecurityCheck>

@@ -1199,6 +1199,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 		case WM_INITDIALOG:
 		{
+#ifdef _APP_HAVE_DARKTHEME
+			_r_wnd_setdarktheme (hwnd);
+#endif // _APP_HAVE_DARKTHEME
+
 			// set privileges
 			if (app.IsAdmin ())
 			{
