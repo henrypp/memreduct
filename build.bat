@@ -1,4 +1,4 @@
 @echo off
 
 cd ..\builder
-build "Mem Reduct" memreduct 3.3.4
+build "Mem Reduct" memreduct 3.3.5
