@@ -563,7 +563,7 @@ void _app_hotkeyinit (HWND hwnd)
 
 	UnregisterHotKey (hwnd, UID);
 
-	if (app.ConfigGet (L"HotkeyCleanEnable", true).AsBool ())
+	if (app.ConfigGet (L"HotkeyCleanEnable", false).AsBool ())
 	{
 		const UINT hk = app.ConfigGet (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)).AsUint ();
 
@@ -658,7 +658,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 5, 1440);
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (LPARAM)app.ConfigGet (L"AutoreductIntervalValue", 30).AsUint ());
 
-					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, app.ConfigGet (L"HotkeyCleanEnable", true).AsBool () ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, app.ConfigGet (L"HotkeyCleanEnable", false).AsBool () ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (LPARAM)app.ConfigGet (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)).AsUint (), 0);
 
@@ -1199,9 +1199,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 		case WM_INITDIALOG:
 		{
-#ifdef _APP_HAVE_DARKTHEME
+#ifndef _APP_NO_DARKTHEME
 			_r_wnd_setdarktheme (hwnd);
-#endif // _APP_HAVE_DARKTHEME
+#endif // _APP_NO_DARKTHEME
 
 			// set privileges
 			if (app.IsAdmin ())
@@ -1524,7 +1524,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					for (size_t i = 0; i < limit_vec.size (); i++)
 					{
-						AppendMenu (submenu2, MF_STRING, IDX_TRAY_POPUP_1 + UINT (i), _r_fmt (L"%zu%%", limit_vec.at (i)));
+						AppendMenu (submenu2, MF_STRING, IDX_TRAY_POPUP_1 + UINT (i), _r_fmt (L"%d%%", limit_vec.at (i)));
 
 						if (!app.IsAdmin ())
 							EnableMenuItem (submenu2, static_cast<UINT>(IDX_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
@@ -1541,7 +1541,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					for (size_t i = 0; i < interval_vec.size (); i++)
 					{
-						AppendMenu (submenu3, MF_STRING, IDX_TRAY_POPUP_2 + UINT (i), _r_fmt (L"%zu min.", interval_vec.at (i)));
+						AppendMenu (submenu3, MF_STRING, IDX_TRAY_POPUP_2 + UINT (i), _r_fmt (L"%d min.", interval_vec.at (i)));
 
 						if (!app.IsAdmin ())
 							EnableMenuItem (submenu3, static_cast<UINT>(IDX_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
