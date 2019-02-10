@@ -1045,7 +1045,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 					else if (ctrl_id == IDC_AUTOREDUCTENABLE_CHK && notify_code == BN_CLICKED)
 					{
-						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED);
+						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) && _r_ctrl_isenabled (hwnd, ctrl_id);
 
 						EnableWindow ((HWND)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETBUDDY, 0, 0), is_enabled);
 
@@ -1053,7 +1053,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 					else if (ctrl_id == IDC_AUTOREDUCTINTERVALENABLE_CHK && notify_code == BN_CLICKED)
 					{
-						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED);
+						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) && _r_ctrl_isenabled (hwnd, ctrl_id);
 
 						EnableWindow ((HWND)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETBUDDY, 0, 0), is_enabled);
 
@@ -1061,7 +1061,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 					else if (ctrl_id == IDC_HOTKEY_CLEAN_CHK && notify_code == BN_CLICKED)
 					{
-						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED);
+						const bool is_enabled = (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED) && _r_ctrl_isenabled (hwnd, ctrl_id);
 
 						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, is_enabled);
 
@@ -1452,15 +1452,15 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					SetForegroundWindow (hwnd); // don't touch
 
 #define SUBMENU1 3
-#define SUBMENU2 4
-#define SUBMENU3 5
+#define SUBMENU2 5
+#define SUBMENU3 6
 
-					HMENU menu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY));
-					HMENU submenu = GetSubMenu (menu, 0);
+					const HMENU menu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY));
+					const HMENU submenu = GetSubMenu (menu, 0);
 
-					HMENU submenu1 = GetSubMenu (submenu, SUBMENU1);
-					HMENU submenu2 = GetSubMenu (submenu, SUBMENU2);
-					HMENU submenu3 = GetSubMenu (submenu, SUBMENU3);
+					const HMENU submenu1 = GetSubMenu (submenu, SUBMENU1);
+					const HMENU submenu2 = GetSubMenu (submenu, SUBMENU2);
+					const HMENU submenu3 = GetSubMenu (submenu, SUBMENU3);
 
 					// localize
 					app.LocaleMenu (submenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
