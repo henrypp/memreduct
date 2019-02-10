@@ -1,3 +1,9 @@
+v3.3.5 (10 February 2019)
+- updated project sdk
+- fixed running as admin on every startup
+- fixed cosmetics bugs
+- fixed bugs
+
 v3.3.4 (20 October 2018)
 - fixed tray icon bug on windows xp
 
