@@ -1227,8 +1227,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// configure listview
 			_r_listview_setstyle (hwnd, IDC_LISTVIEW, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP);
 
-			_r_listview_addcolumn (hwnd, IDC_LISTVIEW, 1, nullptr, 50, LVCFMT_RIGHT);
-			_r_listview_addcolumn (hwnd, IDC_LISTVIEW, 2, nullptr, 50, LVCFMT_LEFT);
+			_r_listview_addcolumn (hwnd, IDC_LISTVIEW, 1, nullptr, -50, LVCFMT_RIGHT);
+			_r_listview_addcolumn (hwnd, IDC_LISTVIEW, 2, nullptr, -50, LVCFMT_LEFT);
 
 			// configure listview
 			for (size_t i = 0, k = 0; i < 3; i++)
