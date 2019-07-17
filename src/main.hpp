@@ -18,6 +18,12 @@
 // libs
 #pragma comment(lib, "ntdll.lib")
 
+#define DEFAULT_AUTOREDUCT_VAL UINT (90)
+#define DEFAULT_AUTOREDUCTINTERVAL_VAL UINT (30)
+
+#define DEFAULT_DANGER_LEVEL UINT (90)
+#define DEFAULT_WARNING_LEVEL UINT (60)
+
 // memory cleaning area (mask)
 #define REDUCT_WORKING_SET 0x01
 #define REDUCT_SYSTEM_WORKING_SET 0x02
