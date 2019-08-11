@@ -143,7 +143,6 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	MEMORYINFO info = {0};
 
-	UINT command = 0;
 	DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
 
 	if (is_preventfrezes)
@@ -171,6 +170,8 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	if (app.IsVistaOrLater ())
 	{
+		UINT command = 0;
+
 		// Working set (vista+)
 		if ((mask & REDUCT_WORKING_SET) != 0)
 		{
@@ -432,7 +433,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, _r_fmt_size64 (meminfo.total_ws));
 
 		// set item lparam information
-		for (size_t i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
+		for (INT i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
 		{
 			DWORD percent = 0;
 
@@ -445,7 +446,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			else if (i < 9)
 				percent = meminfo.percent_ws;
 
-			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, LAST_VALUE, LAST_VALUE, (LPARAM)percent);
+			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, INVALID_INT, INVALID_INT, (LPARAM)percent);
 		}
 
 		_r_listview_redraw (hwnd, IDC_LISTVIEW);
@@ -1231,12 +1232,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_listview_addcolumn (hwnd, IDC_LISTVIEW, 2, nullptr, -50, LVCFMT_LEFT);
 
 			// configure listview
-			for (size_t i = 0, k = 0; i < 3; i++)
+			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + UINT (i), nullptr), 0, 0);
+				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
 
-				for (size_t j = 0; j < 3; j++)
-					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + UINT (j), nullptr), LAST_VALUE, i);
+				for (INT j = 0; j < 3; j++)
+					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr), INVALID_INT, i);
 			}
 
 			// settings
@@ -1296,12 +1297,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
 
 			// configure listview
-			for (size_t i = 0, k = 0; i < 3; i++)
+			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + UINT (i), nullptr), 0, 0);
+				_r_listview_setgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
 
-				for (size_t j = 0; j < 3; j++)
-					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + UINT (j), nullptr));
+				for (INT j = 0; j < 3; j++)
+					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr));
 			}
 
 			// configure button
