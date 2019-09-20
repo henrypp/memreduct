@@ -221,7 +221,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
 	if (app.ConfigGet (L"BalloonCleanResults", true).AsBool ())
-		app.TrayPopup (app.GetHWND (), UID, nullptr, NIIF_USER, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_CLEANED, nullptr), _r_fmt_size64 ((DWORDLONG)reduct_result).GetString ()));
+		_r_tray_popup (app.GetHWND (), UID, NIIF_INFO, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_CLEANED, nullptr), _r_fmt_size64 ((ULONG64)reduct_result).GetString ()));
 
 	return reduct_result;
 }
@@ -235,23 +235,26 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 
 	if (buffer)
 	{
-		rstring::rvector vc = buffer.AsVector (L";");
+		rstringvec rvc;
+		_r_str_split (buffer, buffer.GetLength (), L';', rvc);
 
-		for (size_t i = 0; i < vc.size (); i++)
+		for (size_t i = 0; i < rvc.size (); i++)
 		{
-			const rstring font = vc.at (i).Trim (L" \r\n");
+			rstring& rlink = rvc.at (i);
 
-			if (font.IsEmpty ())
+			_r_str_trim (rlink, L" \r\n");
+
+			if (rlink.IsEmpty ())
 				continue;
 
 			if (i == 0)
-				StringCchCopy (plf->lfFaceName, LF_FACESIZE, vc.at (i));
+				_r_str_copy (plf->lfFaceName, LF_FACESIZE, rlink);
 
 			else if (i == 1)
-				plf->lfHeight = _r_dc_fontsizetoheight (vc.at (i).AsInt ());
+				plf->lfHeight = _r_dc_fontsizetoheight (rlink.AsInt ());
 
 			else if (i == 2)
-				plf->lfWeight = vc.at (i).AsInt ();
+				plf->lfWeight = rlink.AsInt ();
 
 			else
 				break;
@@ -259,7 +262,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 	}
 
 	if (!plf->lfFaceName[0])
-		StringCchCopy (plf->lfFaceName, LF_FACESIZE, L"Tahoma");
+		_r_str_copy (plf->lfFaceName, LF_FACESIZE, L"Tahoma");
 
 	if (!plf->lfHeight)
 		plf->lfHeight = _r_dc_fontsizetoheight (8);
@@ -343,7 +346,7 @@ HICON _app_iconcreate ()
 	}
 
 	WCHAR buffer[8] = {0};
-	StringCchPrintf (buffer, _countof (buffer), L"%d", meminfo.percent_phys);
+	_r_str_printf (buffer, _countof (buffer), L"%d", meminfo.percent_phys);
 
 	// draw text
 	{
@@ -397,7 +400,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 	if (app.IsAdmin ())
 	{
 		if ((app.ConfigGet (L"AutoreductEnable", false).AsBool () && meminfo.percent_phys >= app.ConfigGet (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL).AsUint ()) ||
-			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", time_t (0)).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL).AsUint () * 60)))
+			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0LL).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL).AsUint () * 60)))
 		{
 			_app_memoryclean (nullptr, true);
 		}
@@ -414,24 +417,12 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			config.ms_prev = meminfo.percent_phys; // store last percentage value (required!)
 		}
 
-		app.TraySetInfo (hwnd, UID, nullptr, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString (), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
+		_r_tray_setinfo (hwnd, UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString (), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
 	}
 
 	// refresh listview information
 	if (IsWindowVisible (hwnd))
 	{
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, _r_fmt (L"%d%%", meminfo.percent_phys));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, _r_fmt_size64 (meminfo.free_phys));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, _r_fmt_size64 (meminfo.total_phys));
-
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, _r_fmt (L"%d%%", meminfo.percent_page));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, _r_fmt_size64 (meminfo.free_page));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, _r_fmt_size64 (meminfo.total_page));
-
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, _r_fmt (L"%d%%", meminfo.percent_ws));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, _r_fmt_size64 (meminfo.free_ws));
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, _r_fmt_size64 (meminfo.total_ws));
-
 		// set item lparam information
 		for (INT i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
 		{
@@ -448,6 +439,18 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 
 			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, INVALID_INT, INVALID_INT, (LPARAM)percent);
 		}
+
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, _r_fmt (L"%d%%", meminfo.percent_phys));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, _r_fmt_size64 (meminfo.free_phys));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, _r_fmt_size64 (meminfo.total_phys));
+
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, _r_fmt (L"%d%%", meminfo.percent_page));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, _r_fmt_size64 (meminfo.free_page));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, _r_fmt_size64 (meminfo.total_page));
+
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, _r_fmt (L"%d%%", meminfo.percent_ws));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, _r_fmt_size64 (meminfo.free_ws));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, _r_fmt_size64 (meminfo.total_ws));
 
 		_r_listview_redraw (hwnd, IDC_LISTVIEW);
 	}
@@ -587,7 +590,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 		case RM_INITIALIZE:
 		{
-			const UINT dialog_id = (UINT)wparam;
+			const INT dialog_id = (INT)wparam;
 
 			switch (dialog_id)
 			{
@@ -715,7 +718,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 		case RM_LOCALIZE:
 		{
-			const UINT dialog_id = (UINT)wparam;
+			const INT dialog_id = (INT)wparam;
 
 			// localize titles
 			SetDlgItemText (hwnd, IDC_TITLE_1, app.LocaleString (IDS_TITLE_1, L":"));
@@ -827,7 +830,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 				{
 					LPNMCUSTOMDRAW lpnmcd = (LPNMCUSTOMDRAW)lparam;
 
-					const UINT ctrl_id = (UINT)nmlp->idFrom;
+					const INT ctrl_id = (INT)nmlp->idFrom;
 
 					if (ctrl_id == IDC_COLOR_TEXT ||
 						ctrl_id == IDC_COLOR_BACKGROUND ||
@@ -835,10 +838,12 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						ctrl_id == IDC_COLOR_DANGER
 						)
 					{
-						lpnmcd->rc.left += app.GetDPI (3);
-						lpnmcd->rc.top += app.GetDPI (3);
-						lpnmcd->rc.right -= app.GetDPI (3);
-						lpnmcd->rc.bottom -= app.GetDPI (3);
+						static INT padding = _r_dc_getdpi (3);
+
+						lpnmcd->rc.left += padding;
+						lpnmcd->rc.top += padding;
+						lpnmcd->rc.right -= padding;
+						lpnmcd->rc.bottom -= padding;
 
 						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, (COLORREF)GetWindowLongPtr (nmlp->hwndFrom, GWLP_USERDATA));
 
@@ -856,7 +861,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 		case WM_VSCROLL:
 		case WM_HSCROLL:
 		{
-			const UINT ctrl_id = GetDlgCtrlID ((HWND)lparam);
+			const INT ctrl_id = GetDlgCtrlID ((HWND)lparam);
 			bool is_stylechanged = false;
 
 			if (ctrl_id == IDC_AUTOREDUCTVALUE)
@@ -889,10 +894,10 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 		case WM_COMMAND:
 		{
-			const UINT ctrl_id = LOWORD (wparam);
-			const UINT notify_code = HIWORD (wparam);
+			const INT ctrl_id = LOWORD (wparam);
+			const INT notify_code = HIWORD (wparam);
 
-			switch (LOWORD (wparam))
+			switch (ctrl_id)
 			{
 				case IDC_AUTOREDUCTVALUE_CTRL:
 				case IDC_AUTOREDUCTINTERVALVALUE_CTRL:
@@ -1218,10 +1223,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// uac indicator (vista+)
 			if (_r_sys_uacstate ())
 			{
-				RECT rc = {0};
-				rc.left = rc.right = app.GetDPI (4);
+				_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN);
 
-				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETTEXTMARGIN, 0, (LPARAM)& rc);
 				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
 			}
 
@@ -1260,7 +1263,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_app_hotkeyinit (hwnd);
 			_app_iconinit (nullptr);
 
-			app.TrayCreate (hwnd, UID, nullptr, WM_TRAYICON, _app_iconcreate (), false);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, _app_iconcreate (), APP_NAME, false);
 
 			_app_iconredraw (hwnd);
 
@@ -1279,22 +1282,22 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case RM_LOCALIZE:
 		{
 			// localize menu
-			const HMENU menu = GetMenu (hwnd);
+			const HMENU hmenu = GetMenu (hwnd);
 
-			app.LocaleMenu (menu, IDS_FILE, 0, true, nullptr);
-			app.LocaleMenu (menu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tF2");
-			app.LocaleMenu (menu, IDS_EXIT, IDM_EXIT, false, L"...\tAlt+F4");
-			app.LocaleMenu (menu, IDS_SETTINGS, 1, true, nullptr);
-			app.LocaleMenu (menu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
-			app.LocaleMenu (menu, IDS_LOADONSTARTUP_CHK, IDM_LOADONSTARTUP_CHK, false, nullptr);
-			app.LocaleMenu (menu, IDS_STARTMINIMIZED_CHK, IDM_STARTMINIMIZED_CHK, false, nullptr);
-			app.LocaleMenu (menu, IDS_REDUCTCONFIRMATION_CHK, IDM_REDUCTCONFIRMATION_CHK, false, nullptr);
-			app.LocaleMenu (menu, IDS_CHECKUPDATES_CHK, IDM_CHECKUPDATES_CHK, false, nullptr);
-			app.LocaleMenu (GetSubMenu (menu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
-			app.LocaleMenu (menu, IDS_HELP, 2, true, nullptr);
-			app.LocaleMenu (menu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
-			app.LocaleMenu (menu, IDS_CHECKUPDATES, IDM_CHECKUPDATES, false, nullptr);
-			app.LocaleMenu (menu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
+			app.LocaleMenu (hmenu, IDS_FILE, 0, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_SETTINGS, IDM_SETTINGS, false, L"...\tF2");
+			app.LocaleMenu (hmenu, IDS_EXIT, IDM_EXIT, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_SETTINGS, 1, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_ALWAYSONTOP_CHK, IDM_ALWAYSONTOP_CHK, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_LOADONSTARTUP_CHK, IDM_LOADONSTARTUP_CHK, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_STARTMINIMIZED_CHK, IDM_STARTMINIMIZED_CHK, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_REDUCTCONFIRMATION_CHK, IDM_REDUCTCONFIRMATION_CHK, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_CHECKUPDATES_CHK, IDM_CHECKUPDATES_CHK, false, nullptr);
+			app.LocaleMenu (GetSubMenu (hmenu, 1), IDS_LANGUAGE, LANG_MENU, true, L" (Language)");
+			app.LocaleMenu (hmenu, IDS_HELP, 2, true, nullptr);
+			app.LocaleMenu (hmenu, IDS_WEBSITE, IDM_WEBSITE, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_CHECKUPDATES, IDM_CHECKUPDATES, false, nullptr);
+			app.LocaleMenu (hmenu, IDS_ABOUT, IDM_ABOUT, false, L"\tF1");
 
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
@@ -1310,14 +1313,14 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			_r_wnd_addstyle (hwnd, IDC_CLEAN, app.IsClassicUI () ? WS_EX_STATICEDGE : 0, WS_EX_STATICEDGE, GWL_EXSTYLE);
 
-			app.LocaleEnum ((HWND)GetSubMenu (menu, 1), LANG_MENU, true, IDX_LANGUAGE); // enum localizations
+			app.LocaleEnum ((HWND)GetSubMenu (hmenu, 1), LANG_MENU, true, IDX_LANGUAGE); // enum localizations
 
 			break;
 		}
 
 		case RM_UNINITIALIZE:
 		{
-			app.TrayDestroy (hwnd, UID, nullptr);
+			_r_tray_destroy (hwnd, UID);
 			KillTimer (hwnd, UID);
 
 			break;
@@ -1331,7 +1334,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			RECT rc = {0};
 			GetClientRect (hwnd, &rc);
 
-			static INT height = app.GetDPI (48);
+			static INT height = _r_dc_getdpi (48);
 
 			rc.top = rc.bottom - height;
 			rc.bottom = rc.top + height;
@@ -1452,73 +1455,73 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					SetForegroundWindow (hwnd); // don't touch
 
-#define SUBMENU1 3
+#define SUBMENU1 4
 #define SUBMENU2 5
 #define SUBMENU3 6
 
-					const HMENU menu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY));
-					const HMENU submenu = GetSubMenu (menu, 0);
+					const HMENU hmenu = LoadMenu (nullptr, MAKEINTRESOURCE (IDM_TRAY));
+					const HMENU hsubmenu = GetSubMenu (hmenu, 0);
 
-					const HMENU submenu1 = GetSubMenu (submenu, SUBMENU1);
-					const HMENU submenu2 = GetSubMenu (submenu, SUBMENU2);
-					const HMENU submenu3 = GetSubMenu (submenu, SUBMENU3);
+					const HMENU hsubmenu1 = GetSubMenu (hsubmenu, SUBMENU1);
+					const HMENU hsubmenu2 = GetSubMenu (hsubmenu, SUBMENU2);
+					const HMENU hsubmenu3 = GetSubMenu (hsubmenu, SUBMENU3);
 
 					// localize
-					app.LocaleMenu (submenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
-					app.LocaleMenu (submenu, IDS_CLEAN, IDM_TRAY_CLEAN, false, nullptr);
-					app.LocaleMenu (submenu, IDS_TRAY_POPUP_1, SUBMENU1, true, nullptr);
-					app.LocaleMenu (submenu, IDS_TRAY_POPUP_2, SUBMENU2, true, nullptr);
-					app.LocaleMenu (submenu, IDS_TRAY_POPUP_3, SUBMENU3, true, nullptr);
-					app.LocaleMenu (submenu, IDS_SETTINGS, IDM_TRAY_SETTINGS, false, L"...");
-					app.LocaleMenu (submenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
-					app.LocaleMenu (submenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
-					app.LocaleMenu (submenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_TRAY_SHOW, IDM_TRAY_SHOW, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_CLEAN, IDM_TRAY_CLEAN, false, L"...");
+					app.LocaleMenu (hsubmenu, IDS_TRAY_POPUP_1, SUBMENU1, true, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_TRAY_POPUP_2, SUBMENU2, true, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_TRAY_POPUP_3, SUBMENU3, true, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_SETTINGS, IDM_TRAY_SETTINGS, false, L"...");
+					app.LocaleMenu (hsubmenu, IDS_WEBSITE, IDM_TRAY_WEBSITE, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_ABOUT, IDM_TRAY_ABOUT, false, nullptr);
+					app.LocaleMenu (hsubmenu, IDS_EXIT, IDM_TRAY_EXIT, false, nullptr);
 
-					app.LocaleMenu (submenu1, IDS_WORKINGSET_CHK, IDM_WORKINGSET_CHK, false, L" (vista+)");
-					app.LocaleMenu (submenu1, IDS_SYSTEMWORKINGSET_CHK, IDM_SYSTEMWORKINGSET_CHK, false, nullptr);
-					app.LocaleMenu (submenu1, IDS_STANDBYLISTPRIORITY0_CHK, IDM_STANDBYLISTPRIORITY0_CHK, false, L" (vista+)");
-					app.LocaleMenu (submenu1, IDS_STANDBYLIST_CHK, IDM_STANDBYLIST_CHK, false, L"* (vista+)");
-					app.LocaleMenu (submenu1, IDS_MODIFIEDLIST_CHK, IDM_MODIFIEDLIST_CHK, false, L"* (vista+)");
-					app.LocaleMenu (submenu1, IDS_COMBINEMEMORYLISTS_CHK, IDM_COMBINEMEMORYLISTS_CHK, false, L" (win10+)");
+					app.LocaleMenu (hsubmenu1, IDS_WORKINGSET_CHK, IDM_WORKINGSET_CHK, false, L" (vista+)");
+					app.LocaleMenu (hsubmenu1, IDS_SYSTEMWORKINGSET_CHK, IDM_SYSTEMWORKINGSET_CHK, false, nullptr);
+					app.LocaleMenu (hsubmenu1, IDS_STANDBYLISTPRIORITY0_CHK, IDM_STANDBYLISTPRIORITY0_CHK, false, L" (vista+)");
+					app.LocaleMenu (hsubmenu1, IDS_STANDBYLIST_CHK, IDM_STANDBYLIST_CHK, false, L"* (vista+)");
+					app.LocaleMenu (hsubmenu1, IDS_MODIFIEDLIST_CHK, IDM_MODIFIEDLIST_CHK, false, L"* (vista+)");
+					app.LocaleMenu (hsubmenu1, IDS_COMBINEMEMORYLISTS_CHK, IDM_COMBINEMEMORYLISTS_CHK, false, L" (win10+)");
 
-					app.LocaleMenu (submenu2, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_1, false, nullptr);
-					app.LocaleMenu (submenu3, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_2, false, nullptr);
+					app.LocaleMenu (hsubmenu2, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_1, false, nullptr);
+					app.LocaleMenu (hsubmenu3, IDS_TRAY_DISABLE, IDM_TRAY_DISABLE_2, false, nullptr);
 
 					// configure submenu #1
 					const DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
 
 					if ((mask & REDUCT_WORKING_SET) != 0)
-						CheckMenuItem (submenu1, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
-						CheckMenuItem (submenu1, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if ((mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0)
-						CheckMenuItem (submenu1, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if ((mask & REDUCT_STANDBY_LIST) != 0)
-						CheckMenuItem (submenu1, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if ((mask & REDUCT_MODIFIED_LIST) != 0)
-						CheckMenuItem (submenu1, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
-						CheckMenuItem (submenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_CHECKED);
+						CheckMenuItem (hsubmenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 					if (!app.IsVistaOrLater () || !app.IsAdmin ())
 					{
-						EnableMenuItem (submenu1, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-						EnableMenuItem (submenu1, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-						EnableMenuItem (submenu1, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
-						EnableMenuItem (submenu1, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						EnableMenuItem (hsubmenu1, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						EnableMenuItem (hsubmenu1, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						EnableMenuItem (hsubmenu1, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						EnableMenuItem (hsubmenu1, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 						if (!app.IsAdmin ())
-							EnableMenuItem (submenu1, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+							EnableMenuItem (hsubmenu1, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 					}
 
 					// Combine memory lists (win10+)
 					if (!app.IsAdmin () || !_r_sys_validversion (10, 0))
-						EnableMenuItem (submenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+						EnableMenuItem (hsubmenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 					// configure submenu #2
 					{
@@ -1527,17 +1530,17 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 						for (size_t i = 0; i < limit_vec.size (); i++)
 						{
-							AppendMenu (submenu2, MF_STRING, IDX_TRAY_POPUP_1 + UINT (i), _r_fmt (L"%d%%", limit_vec.at (i)));
+							AppendMenu (hsubmenu2, MF_STRING, IDX_TRAY_POPUP_1 + UINT (i), _r_fmt (L"%" PRIu32 L"%%", limit_vec.at (i)));
 
 							if (!app.IsAdmin ())
-								EnableMenuItem (submenu2, static_cast<UINT>(IDX_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+								EnableMenuItem (hsubmenu2, static_cast<UINT>(IDX_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 							if (val == limit_vec.at (i))
-								CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
+								CheckMenuRadioItem (hsubmenu2, 0, static_cast<UINT>(limit_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
 						}
 
 						if (!app.ConfigGet (L"AutoreductEnable", false).AsBool ())
-							CheckMenuRadioItem (submenu2, 0, static_cast<UINT>(limit_vec.size ()), 0, MF_BYPOSITION);
+							CheckMenuRadioItem (hsubmenu2, 0, static_cast<UINT>(limit_vec.size ()), 0, MF_BYPOSITION);
 					}
 
 					// configure submenu #3
@@ -1547,25 +1550,25 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 						for (size_t i = 0; i < interval_vec.size (); i++)
 						{
-							AppendMenu (submenu3, MF_STRING, IDX_TRAY_POPUP_2 + UINT (i), _r_fmt (L"%d min.", interval_vec.at (i)));
+							AppendMenu (hsubmenu3, MF_STRING, IDX_TRAY_POPUP_2 + UINT (i), _r_fmt (L"%" PRIu32" min.", interval_vec.at (i)));
 
 							if (!app.IsAdmin ())
-								EnableMenuItem (submenu3, static_cast<UINT>(IDX_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
+								EnableMenuItem (hsubmenu3, static_cast<UINT>(IDX_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 							if (val == interval_vec.at (i))
-								CheckMenuRadioItem (submenu3, 0, static_cast<UINT>(interval_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
+								CheckMenuRadioItem (hsubmenu3, 0, static_cast<UINT>(interval_vec.size ()), static_cast<UINT>(i) + 2, MF_BYPOSITION);
 						}
 
 						if (!app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool ())
-							CheckMenuRadioItem (submenu3, 0, static_cast<UINT>(interval_vec.size ()), 0, MF_BYPOSITION);
+							CheckMenuRadioItem (hsubmenu3, 0, static_cast<UINT>(interval_vec.size ()), 0, MF_BYPOSITION);
 					}
 
 					POINT pt = {0};
 					GetCursorPos (&pt);
 
-					TrackPopupMenuEx (submenu, TPM_RIGHTBUTTON | TPM_LEFTBUTTON, pt.x, pt.y, hwnd, nullptr);
+					TrackPopupMenuEx (hsubmenu, TPM_RIGHTBUTTON | TPM_LEFTBUTTON, pt.x, pt.y, hwnd, nullptr);
 
-					DestroyMenu (menu);
+					DestroyMenu (hmenu);
 
 					break;
 				}
@@ -1661,7 +1664,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_MODIFIEDLIST_CHK:
 				case IDM_COMBINEMEMORYLISTS_CHK:
 				{
-					const UINT ctrl_id = LOWORD (wparam);
+					const INT ctrl_id = LOWORD (wparam);
+
 					const DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
 					DWORD new_mask = 0;
 
@@ -1734,21 +1738,27 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDC_CLEAN:
 				case IDM_TRAY_CLEAN:
 				{
-					SetProp (hwnd, L"is_reduct_opened", (HANDLE)TRUE);
+					const HANDLE hmutex = CreateMutex (nullptr, FALSE, _r_fmt (L"%s_%d_%d", APP_NAME_SHORT, GetCurrentProcessId (), __LINE__));
 
-					if (!app.IsAdmin ())
+					if (GetLastError () != ERROR_ALREADY_EXISTS)
 					{
-						if (app.RunAsAdmin ())
-							DestroyWindow (hwnd);
+						if (!app.IsAdmin ())
+						{
+							if (app.RunAsAdmin ())
+								DestroyWindow (hwnd);
 
-						app.TrayPopup (hwnd, UID, nullptr, NIIF_ERROR, APP_NAME, app.LocaleString (IDS_STATUS_NOPRIVILEGES, nullptr));
-					}
-					else
-					{
-						_app_memoryclean (hwnd, false);
+							_r_tray_popup (hwnd, UID, NIIF_ERROR, APP_NAME, app.LocaleString (IDS_STATUS_NOPRIVILEGES, nullptr));
+						}
+						else
+						{
+							_app_memoryclean (hwnd, false);
+						}
+
+						ReleaseMutex (hmutex);
 					}
 
-					SetProp (hwnd, L"is_reduct_opened", FALSE);
+					if (hmutex)
+						CloseHandle (hmutex);
 
 					break;
 				}
