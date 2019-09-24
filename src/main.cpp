@@ -170,7 +170,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	if (app.IsVistaOrLater ())
 	{
-		UINT command = 0;
+		UINT command;
 
 		// Working set (vista+)
 		if ((mask & REDUCT_WORKING_SET) != 0)
