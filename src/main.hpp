@@ -1,11 +1,12 @@
 // Mem Reduct
 // Copyright (c) 2011-2019 Henry++
 
-#ifndef __MAIN_H__
-#define __MAIN_H__
+#pragma once
 
 #include <windows.h>
 #include <commctrl.h>
+
+#include "routine.hpp"
 #include "resource.hpp"
 #include "app.hpp"
 
@@ -14,9 +15,6 @@
 #define TIMER 1000
 #define UID 1337
 #define LANG_MENU 6
-
-// libs
-#pragma comment(lib, "ntdll.lib")
 
 #define DEFAULT_AUTOREDUCT_VAL UINT (90)
 #define DEFAULT_AUTOREDUCTINTERVAL_VAL UINT (30)
@@ -79,5 +77,3 @@ struct STATIC_DATA
 
 	HICON htrayicon = nullptr;
 };
-
-#endif // __MAIN_H__
