@@ -1237,10 +1237,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			// configure listview
 			for (INT i = 0, k = 0; i < 3; i++)
 			{
-				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
+				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, L"", 0, 0);
 
 				for (INT j = 0; j < 3; j++)
-					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr), INVALID_INT, i);
+					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, L"", INVALID_INT, i);
 			}
 
 			// settings
