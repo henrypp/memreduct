@@ -261,7 +261,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 		}
 	}
 
-	if (!plf->lfFaceName[0])
+	if (_r_str_isempty (plf->lfFaceName))
 		_r_str_copy (plf->lfFaceName, LF_FACESIZE, L"Tahoma");
 
 	if (!plf->lfHeight)
@@ -273,7 +273,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 	plf->lfQuality = app.ConfigGet (L"TrayUseTransparency", false).AsBool () || app.ConfigGet (L"TrayUseAntialiasing", false).AsBool () ? NONANTIALIASED_QUALITY : DEFAULT_QUALITY;
 	plf->lfCharSet = DEFAULT_CHARSET;
 
-	if (scale)
+	if (scale > 1)
 		plf->lfHeight *= scale;
 }
 
@@ -353,8 +353,10 @@ HICON _app_iconcreate ()
 		SetBkMode (config.hdc, TRANSPARENT);
 		SetTextColor (config.hdc, color);
 
-		SelectObject (config.hdc, config.font);
-		DrawTextEx (config.hdc, buffer, (int)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+		const HGDIOBJ prev_font = SelectObject (config.hdc, config.hfont);
+		DrawTextEx (config.hdc, buffer, (INT)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+
+		SelectObject (config.hdc, prev_font);
 	}
 
 	// draw transparent mask
@@ -364,7 +366,7 @@ HICON _app_iconcreate ()
 		SetBkMode (config.hdc, TRANSPARENT);
 		SetTextColor (config.hdc, color);
 
-		DrawTextEx (config.hdc_buffer, buffer, (int)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
+		DrawTextEx (config.hdc_buffer, buffer, (INT)_r_str_length (buffer), &icon_rc, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP, nullptr);
 
 		SetBkColor (config.hdc, TRAY_COLOR_MASK);
 		BitBlt (config.hdc_buffer, 0, 0, icon_rc.right, icon_rc.bottom, config.hdc, 0, 0, SRCCOPY);
@@ -466,10 +468,10 @@ void _app_iconredraw (HWND hwnd)
 
 void _app_iconinit (HWND hwnd)
 {
-	if (config.font)
+	if (config.hfont)
 	{
-		DeleteObject (config.font);
-		config.font = nullptr;
+		DeleteObject (config.hfont);
+		config.hfont = nullptr;
 	}
 
 	if (config.bg_brush)
@@ -521,11 +523,10 @@ void _app_iconinit (HWND hwnd)
 	LOGFONT lf = {0};
 	_app_fontinit (&lf, config.scale);
 
-	config.font = CreateFontIndirect (&lf);
+	config.hfont = CreateFontIndirect (&lf);
 
 	// init rect
-	icon_rc.right = GetSystemMetrics (SM_CXSMICON) * config.scale;
-	icon_rc.bottom = GetSystemMetrics (SM_CYSMICON) * config.scale;
+	icon_rc.right = icon_rc.bottom = _r_dc_getdpi (_R_SIZE_ICON16) * config.scale;
 
 	// init dc
 	const HDC hdc = GetDC (nullptr);
@@ -838,7 +839,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						ctrl_id == IDC_COLOR_DANGER
 						)
 					{
-						static INT padding = _r_dc_getdpi (3);
+						const INT padding = _r_dc_getdpi (3);
 
 						lpnmcd->rc.left += padding;
 						lpnmcd->rc.top += padding;
@@ -1179,7 +1180,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 					if (ChooseFont (&cf))
 					{
-						const DWORD size = _r_dc_fontheighttosize (lf.lfHeight);
+						INT size = _r_dc_fontheighttosize (lf.lfHeight);
 
 						app.ConfigSet (L"TrayFont", _r_fmt (L"%s;%d;%d", lf.lfFaceName, size, lf.lfWeight));
 
@@ -1318,10 +1319,25 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			break;
 		}
 
+		case RM_DPICHANGED:
+		{
+			_app_iconinit (hwnd);
+			_app_iconredraw (hwnd);
+
+			_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 0, nullptr, -50);
+			_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 1, nullptr, -50);
+
+			if (_r_sys_uacstate ())
+				_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN);
+
+			break;
+		}
+
 		case RM_UNINITIALIZE:
 		{
-			_r_tray_destroy (hwnd, UID);
 			KillTimer (hwnd, UID);
+
+			_r_tray_destroy (hwnd, UID);
 
 			break;
 		}
@@ -1329,20 +1345,20 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case WM_PAINT:
 		{
 			PAINTSTRUCT ps = {0};
-			HDC dc = BeginPaint (hwnd, &ps);
+			HDC hdc = BeginPaint (hwnd, &ps);
 
 			RECT rc = {0};
 			GetClientRect (hwnd, &rc);
 
-			static INT height = _r_dc_getdpi (48);
+			const INT height = _r_dc_getdpi (_R_SIZE_FOOTERHEIGHT);
 
 			rc.top = rc.bottom - height;
 			rc.bottom = rc.top + height;
 
-			_r_dc_fillrect (dc, &rc, GetSysColor (COLOR_3DFACE));
+			_r_dc_fillrect (hdc, &rc, GetSysColor (COLOR_3DFACE));
 
 			for (INT i = 0; i < rc.right; i++)
-				SetPixel (dc, i, rc.top, GetSysColor (COLOR_APPWORKSPACE));
+				SetPixel (hdc, i, rc.top, GetSysColor (COLOR_APPWORKSPACE));
 
 			EndPaint (hwnd, &ps);
 

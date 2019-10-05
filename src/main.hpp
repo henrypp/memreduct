@@ -69,7 +69,7 @@ struct STATIC_DATA
 	HBITMAP hbitmap = nullptr;
 	HBITMAP hbitmap_mask = nullptr;
 
-	HFONT font = nullptr;
+	HFONT hfont = nullptr;
 
 	HBRUSH bg_brush = nullptr;
 	HBRUSH bg_brush_warning = nullptr;
