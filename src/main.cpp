@@ -226,7 +226,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	return reduct_result;
 }
 
-void _app_fontinit (LOGFONT* plf, UINT scale)
+void _app_fontinit (HWND hwnd, LOGFONT* plf, UINT scale)
 {
 	if (!plf)
 		return;
@@ -251,7 +251,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 				_r_str_copy (plf->lfFaceName, LF_FACESIZE, rlink);
 
 			else if (i == 1)
-				plf->lfHeight = _r_dc_fontsizetoheight (rlink.AsInt ());
+				plf->lfHeight = _r_dc_fontsizetoheight (hwnd, rlink.AsInt ());
 
 			else if (i == 2)
 				plf->lfWeight = rlink.AsInt ();
@@ -265,7 +265,7 @@ void _app_fontinit (LOGFONT* plf, UINT scale)
 		_r_str_copy (plf->lfFaceName, LF_FACESIZE, L"Tahoma");
 
 	if (!plf->lfHeight)
-		plf->lfHeight = _r_dc_fontsizetoheight (8);
+		plf->lfHeight = _r_dc_fontsizetoheight (hwnd, 8);
 
 	if (!plf->lfWeight)
 		plf->lfWeight = FW_NORMAL;
@@ -521,12 +521,12 @@ void _app_iconinit (HWND hwnd)
 
 	// init font
 	LOGFONT lf = {0};
-	_app_fontinit (&lf, config.scale);
+	_app_fontinit (hwnd, &lf, config.scale);
 
 	config.hfont = CreateFontIndirect (&lf);
 
 	// init rect
-	icon_rc.right = icon_rc.bottom = _r_dc_getdpi (_R_SIZE_ICON16) * config.scale;
+	icon_rc.right = icon_rc.bottom = _r_dc_getdpi (hwnd, _R_SIZE_ICON16) * config.scale;
 
 	// init dc
 	const HDC hdc = GetDC (nullptr);
@@ -684,9 +684,9 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 					{
 						LOGFONT lf = {0};
-						_app_fontinit (&lf, 0);
+						_app_fontinit (hwnd, &lf, 0);
 
-						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, _r_dc_fontheighttosize (lf.lfHeight));
+						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, _r_dc_fontheighttosize (hwnd, lf.lfHeight));
 					}
 
 					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)app.ConfigGet (L"TrayColorText", TRAY_COLOR_TEXT).AsUlong ());
@@ -839,7 +839,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						ctrl_id == IDC_COLOR_DANGER
 						)
 					{
-						const INT padding = _r_dc_getdpi (3);
+						const INT padding = _r_dc_getdpi (hwnd, 3);
 
 						lpnmcd->rc.left += padding;
 						lpnmcd->rc.top += padding;
@@ -1174,13 +1174,13 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					cf.Flags = CF_INITTOLOGFONTSTRUCT | CF_FORCEFONTEXIST | CF_SCREENFONTS;
 
 					LOGFONT lf = {0};
-					_app_fontinit (&lf, 0);
+					_app_fontinit (hwnd, &lf, 0);
 
 					cf.lpLogFont = &lf;
 
 					if (ChooseFont (&cf))
 					{
-						INT size = _r_dc_fontheighttosize (lf.lfHeight);
+						INT size = _r_dc_fontheighttosize (hwnd, lf.lfHeight);
 
 						app.ConfigSet (L"TrayFont", _r_fmt (L"%s;%d;%d", lf.lfFaceName, size, lf.lfWeight));
 
@@ -1350,7 +1350,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			RECT rc = {0};
 			GetClientRect (hwnd, &rc);
 
-			const INT height = _r_dc_getdpi (_R_SIZE_FOOTERHEIGHT);
+			const INT height = _r_dc_getdpi (hwnd, _R_SIZE_FOOTERHEIGHT);
 
 			rc.top = rc.bottom - height;
 			rc.bottom = rc.top + height;
