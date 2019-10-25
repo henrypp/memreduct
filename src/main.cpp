@@ -1253,6 +1253,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			break;
 		}
 
+		case WM_NCCREATE:
+		{
+			_r_dc_enablenonclientscaling (hwnd);
+			break;
+		}
+
 		case WM_DESTROY:
 		{
 			PostQuitMessage (0);
@@ -1276,6 +1282,18 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			CheckMenuItem (GetMenu (hwnd), IDM_STARTMINIMIZED_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsStartMinimized", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
 			CheckMenuItem (GetMenu (hwnd), IDM_REDUCTCONFIRMATION_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsShowReductConfirmation", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
 			CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (app.ConfigGet (L"CheckUpdates", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+
+			break;
+		}
+
+		case RM_TASKBARCREATED:
+		{
+			_app_iconinit (nullptr);
+
+			_r_tray_destroy (hwnd, UID);
+			_r_tray_create (hwnd, UID, WM_TRAYICON, _app_iconcreate (), APP_NAME, false);
+
+			_app_iconredraw (hwnd);
 
 			break;
 		}
@@ -1595,23 +1613,25 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_COMMAND:
 		{
-			if (HIWORD (wparam) == 0 && LOWORD (wparam) >= IDX_LANGUAGE && LOWORD (wparam) <= IDX_LANGUAGE + app.LocaleGetCount ())
+			const INT ctrl_id = LOWORD (wparam);
+
+			if (HIWORD (wparam) == 0 && ctrl_id >= IDX_LANGUAGE && ctrl_id <= static_cast<INT>(IDX_LANGUAGE + app.LocaleGetCount ()))
 			{
-				app.LocaleApplyFromMenu (GetSubMenu (GetSubMenu (GetMenu (hwnd), 1), LANG_MENU), LOWORD (wparam), IDX_LANGUAGE);
+				app.LocaleApplyFromMenu (GetSubMenu (GetSubMenu (GetMenu (hwnd), 1), LANG_MENU), ctrl_id, IDX_LANGUAGE);
 				return FALSE;
 			}
-			else if ((LOWORD (wparam) >= IDX_TRAY_POPUP_1 && LOWORD (wparam) <= IDX_TRAY_POPUP_1 + limit_vec.size ()))
+			else if ((ctrl_id >= IDX_TRAY_POPUP_1 && ctrl_id <= static_cast<INT>(IDX_TRAY_POPUP_1 + limit_vec.size ())))
 			{
-				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_1);
+				const size_t idx = (ctrl_id - IDX_TRAY_POPUP_1);
 
 				app.ConfigSet (L"AutoreductEnable", true);
 				app.ConfigSet (L"AutoreductValue", limit_vec.at (idx));
 
 				return FALSE;
 			}
-			else if ((LOWORD (wparam) >= IDX_TRAY_POPUP_2 && LOWORD (wparam) <= IDX_TRAY_POPUP_2 + interval_vec.size ()))
+			else if ((ctrl_id >= IDX_TRAY_POPUP_2 && ctrl_id <= static_cast<INT>(IDX_TRAY_POPUP_2 + interval_vec.size ())))
 			{
-				const size_t idx = (LOWORD (wparam) - IDX_TRAY_POPUP_2);
+				const size_t idx = (ctrl_id - IDX_TRAY_POPUP_2);
 
 				app.ConfigSet (L"AutoreductIntervalEnable", true);
 				app.ConfigSet (L"AutoreductIntervalValue", interval_vec.at (idx));
@@ -1619,13 +1639,13 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				return FALSE;
 			}
 
-			switch (LOWORD (wparam))
+			switch (ctrl_id)
 			{
 				case IDM_ALWAYSONTOP_CHK:
 				{
 					const bool new_val = !app.ConfigGet (L"AlwaysOnTop", false).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), ctrl_id, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"AlwaysOnTop", new_val);
 
 					_r_wnd_top (hwnd, new_val);
@@ -1637,7 +1657,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					const bool new_val = !app.ConfigGet (L"IsStartMinimized", false).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), ctrl_id, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"IsStartMinimized", new_val);
 
 					break;
@@ -1647,7 +1667,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					const bool new_val = !app.ConfigGet (L"IsShowReductConfirmation", true).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), ctrl_id, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"IsShowReductConfirmation", new_val);
 
 					break;
@@ -1658,7 +1678,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					const bool new_val = !app.AutorunIsEnabled ();
 
 					app.AutorunEnable (new_val);
-					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), ctrl_id, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 
 					break;
 				}
@@ -1667,7 +1687,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				{
 					const bool new_val = !app.ConfigGet (L"CheckUpdates", true).AsBool ();
 
-					CheckMenuItem (GetMenu (hwnd), LOWORD (wparam), MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
+					CheckMenuItem (GetMenu (hwnd), ctrl_id, MF_BYCOMMAND | (new_val ? MF_CHECKED : MF_UNCHECKED));
 					app.ConfigSet (L"CheckUpdates", new_val);
 
 					break;
@@ -1680,8 +1700,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_MODIFIEDLIST_CHK:
 				case IDM_COMBINEMEMORYLISTS_CHK:
 				{
-					const INT ctrl_id = LOWORD (wparam);
-
 					const DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
 					DWORD new_mask = 0;
 
@@ -1754,7 +1772,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDC_CLEAN:
 				case IDM_TRAY_CLEAN:
 				{
-					const HANDLE hmutex = CreateMutex (nullptr, FALSE, _r_fmt (L"%s_%d_%d", APP_NAME_SHORT, GetCurrentProcessId (), __LINE__));
+					HANDLE hmutex = CreateMutex (nullptr, FALSE, _r_fmt (L"%s_%d_%d", APP_NAME_SHORT, GetCurrentProcessId (), __LINE__));
 
 					if (GetLastError () != ERROR_ALREADY_EXISTS)
 					{
@@ -1773,8 +1791,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						ReleaseMutex (hmutex);
 					}
 
-					if (hmutex)
-						CloseHandle (hmutex);
+					SAFE_DELETE_HANDLE (hmutex);
 
 					break;
 				}
@@ -1788,7 +1805,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				case IDM_CHECKUPDATES:
 				{
-					app.UpdateCheck (true);
+					app.UpdateCheck (hwnd);
 					break;
 				}
 
