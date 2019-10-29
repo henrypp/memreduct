@@ -468,53 +468,15 @@ void _app_iconredraw (HWND hwnd)
 
 void _app_iconinit (HWND hwnd)
 {
-	if (config.hfont)
-	{
-		DeleteObject (config.hfont);
-		config.hfont = nullptr;
-	}
+	SAFE_DELETE_OBJECT (config.hfont);
+	SAFE_DELETE_OBJECT (config.bg_brush);
+	SAFE_DELETE_OBJECT (config.bg_brush_warning);
+	SAFE_DELETE_OBJECT (config.bg_brush_danger);
+	SAFE_DELETE_OBJECT (config.hbitmap_mask);
+	SAFE_DELETE_OBJECT (config.hbitmap);
 
-	if (config.bg_brush)
-	{
-		DeleteObject (config.bg_brush);
-		config.bg_brush = nullptr;
-	}
-
-	if (config.bg_brush_warning)
-	{
-		DeleteObject (config.bg_brush_warning);
-		config.bg_brush_warning = nullptr;
-	}
-
-	if (config.bg_brush_danger)
-	{
-		DeleteObject (config.bg_brush_danger);
-		config.bg_brush_danger = nullptr;
-	}
-
-	if (config.hbitmap)
-	{
-		DeleteObject (config.hbitmap);
-		config.hbitmap = nullptr;
-	}
-
-	if (config.hbitmap_mask)
-	{
-		DeleteObject (config.hbitmap_mask);
-		config.hbitmap_mask = nullptr;
-	}
-
-	if (config.hdc)
-	{
-		DeleteDC (config.hdc);
-		config.hdc = nullptr;
-	}
-
-	if (config.hdc_buffer)
-	{
-		DeleteDC (config.hdc_buffer);
-		config.hdc_buffer = nullptr;
-	}
+	SAFE_DELETE_DC (config.hdc);
+	SAFE_DELETE_DC (config.hdc_buffer);
 
 	// common init
 	config.scale = app.ConfigGet (L"TrayUseAntialiasing", false).AsBool () ? 16 : 1;
@@ -540,15 +502,15 @@ void _app_iconinit (HWND hwnd)
 		BITMAPINFO bmi = {0};
 
 		bmi.bmiHeader.biSize = sizeof (BITMAPINFOHEADER);
-		bmi.bmiHeader.biWidth = icon_rc.right;
-		bmi.bmiHeader.biHeight = icon_rc.bottom;
+		bmi.bmiHeader.biWidth = _R_RECT_WIDTH (&icon_rc);
+		bmi.bmiHeader.biHeight = _R_RECT_HEIGHT (&icon_rc);
 		bmi.bmiHeader.biPlanes = 1;
 		bmi.bmiHeader.biCompression = BI_RGB;
 		bmi.bmiHeader.biBitCount = 32; // four 8-bit components
 		bmi.bmiHeader.biSizeImage = (icon_rc.right * icon_rc.bottom) * 4; // rgba
 
 		config.hbitmap = CreateDIBSection (hdc, &bmi, DIB_RGB_COLORS, nullptr, nullptr, 0);
-		config.hbitmap_mask = CreateBitmap (icon_rc.right, icon_rc.bottom, 1, 1, nullptr);
+		config.hbitmap_mask = CreateBitmap (_R_RECT_WIDTH (&icon_rc), _R_RECT_HEIGHT (&icon_rc), 1, 1, nullptr);
 
 		// init brush
 		config.bg_brush = CreateSolidBrush (app.ConfigGet (L"TrayColorBg", TRAY_COLOR_BG).AsUlong ());
@@ -557,8 +519,6 @@ void _app_iconinit (HWND hwnd)
 
 		ReleaseDC (nullptr, hdc);
 	}
-
-	_app_iconredraw (hwnd);
 }
 
 void _app_hotkeyinit (HWND hwnd)
@@ -1120,7 +1080,10 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 
 					if (is_stylechanged)
+					{
 						_app_iconinit (app.GetHWND ());
+						_app_iconredraw (app.GetHWND ());
+					}
 
 					break;
 				}
@@ -1160,6 +1123,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						SetWindowLongPtr (hctrl, GWLP_USERDATA, (LONG_PTR)clr);
 
 						_app_iconinit (app.GetHWND ());
+						_app_iconredraw (app.GetHWND ());
 					}
 
 					break;
@@ -1187,6 +1151,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, size);
 
 						_app_iconinit (app.GetHWND ());
+						_app_iconredraw (app.GetHWND ());
 					}
 
 					break;
@@ -1255,7 +1220,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_NCCREATE:
 		{
-			_r_dc_enablenonclientscaling (hwnd);
+			_r_wnd_enablenonclientscaling (hwnd);
 			break;
 		}
 
@@ -1268,7 +1233,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		case RM_INITIALIZE:
 		{
 			_app_hotkeyinit (hwnd);
-			_app_iconinit (nullptr);
+			_app_iconinit (hwnd);
 
 			_r_tray_create (hwnd, UID, WM_TRAYICON, _app_iconcreate (), APP_NAME, false);
 
@@ -1277,18 +1242,20 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			SetTimer (hwnd, UID, TIMER, &_app_timercallback);
 
 			// configure menu
-			CheckMenuItem (GetMenu (hwnd), IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (app.ConfigGet (L"AlwaysOnTop", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem (GetMenu (hwnd), IDM_LOADONSTARTUP_CHK, MF_BYCOMMAND | (app.AutorunIsEnabled () ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem (GetMenu (hwnd), IDM_STARTMINIMIZED_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsStartMinimized", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem (GetMenu (hwnd), IDM_REDUCTCONFIRMATION_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsShowReductConfirmation", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
-			CheckMenuItem (GetMenu (hwnd), IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (app.ConfigGet (L"CheckUpdates", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			const HMENU hmenu = GetMenu (hwnd);
+
+			CheckMenuItem (hmenu, IDM_ALWAYSONTOP_CHK, MF_BYCOMMAND | (app.ConfigGet (L"AlwaysOnTop", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (hmenu, IDM_LOADONSTARTUP_CHK, MF_BYCOMMAND | (app.AutorunIsEnabled () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (hmenu, IDM_STARTMINIMIZED_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsStartMinimized", false).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (hmenu, IDM_REDUCTCONFIRMATION_CHK, MF_BYCOMMAND | (app.ConfigGet (L"IsShowReductConfirmation", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
+			CheckMenuItem (hmenu, IDM_CHECKUPDATES_CHK, MF_BYCOMMAND | (app.ConfigGet (L"CheckUpdates", true).AsBool () ? MF_CHECKED : MF_UNCHECKED));
 
 			break;
 		}
 
 		case RM_TASKBARCREATED:
 		{
-			_app_iconinit (nullptr);
+			_app_iconinit (hwnd);
 
 			_r_tray_destroy (hwnd, UID);
 			_r_tray_create (hwnd, UID, WM_TRAYICON, _app_iconcreate (), APP_NAME, false);
