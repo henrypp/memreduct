@@ -488,7 +488,7 @@ void _app_iconinit (HWND hwnd)
 	config.hfont = CreateFontIndirect (&lf);
 
 	// init rect
-	icon_rc.right = icon_rc.bottom = _r_dc_getdpi (hwnd, _R_SIZE_ICON16) * config.scale;
+	icon_rc.right = icon_rc.bottom = _r_dc_getsystemmetrics (hwnd, SM_CXSMICON) * config.scale;
 
 	// init dc
 	const HDC hdc = GetDC (nullptr);
@@ -1187,7 +1187,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			}
 
 			// uac indicator (vista+)
-			if (_r_sys_uacstate ())
+			if (!_r_sys_iselevated ())
 			{
 				_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN);
 
@@ -1312,7 +1312,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 0, nullptr, -50);
 			_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 1, nullptr, -50);
 
-			if (_r_sys_uacstate ())
+			if (!_r_sys_iselevated ())
 				_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN);
 
 			break;
