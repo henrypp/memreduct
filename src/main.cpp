@@ -138,7 +138,7 @@ DWORD _app_memorystatus (MEMORYINFO* ptr_info)
 
 DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 {
-	if (!app.IsAdmin ())
+	if (!_r_sys_iselevated ())
 		return 0;
 
 	MEMORYINFO info = {0};
@@ -399,7 +399,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 	_app_memorystatus (&meminfo);
 
 	// autoreduct functional
-	if (app.IsAdmin ())
+	if (_r_sys_iselevated ())
 	{
 		if ((app.ConfigGet (L"AutoreductEnable", false).AsBool () && meminfo.percent_phys >= app.ConfigGet (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL).AsUint ()) ||
 			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0LL).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL).AsUint () * 60)))
@@ -523,7 +523,7 @@ void _app_iconinit (HWND hwnd)
 
 void _app_hotkeyinit (HWND hwnd)
 {
-	if (!app.IsAdmin ())
+	if (!_r_sys_iselevated ())
 		return;
 
 	UnregisterHotKey (hwnd, UID);
@@ -558,7 +558,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 				case IDD_SETTINGS_GENERAL:
 				{
 #ifdef _APP_HAVE_SKIPUAC
-					if (!app.IsVistaOrLater () || !app.IsAdmin ())
+					if (!_r_sys_iselevated () || !app.IsVistaOrLater ())
 						_r_ctrl_enable (hwnd, IDC_SKIPUACWARNING_CHK, false);
 #endif // _APP_HAVE_SKIPUAC
 
@@ -584,14 +584,14 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 				case IDD_SETTINGS_MEMORY:
 				{
-					if (!app.IsVistaOrLater () || !app.IsAdmin ())
+					if (!_r_sys_iselevated () || !app.IsVistaOrLater ())
 					{
 						_r_ctrl_enable (hwnd, IDC_WORKINGSET_CHK, false);
 						_r_ctrl_enable (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, false);
 						_r_ctrl_enable (hwnd, IDC_STANDBYLIST_CHK, false);
 						_r_ctrl_enable (hwnd, IDC_MODIFIEDLIST_CHK, false);
 
-						if (!app.IsAdmin ())
+						if (!_r_sys_iselevated ())
 						{
 							_r_ctrl_enable (hwnd, IDC_SYSTEMWORKINGSET_CHK, false);
 							_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, false);
@@ -601,7 +601,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					}
 
 					// Combine memory lists (win10+)
-					if (!app.IsAdmin () || !_r_sys_validversion (10, 0))
+					if (!_r_sys_iselevated () || !_r_sys_validversion (10, 0))
 						_r_ctrl_enable (hwnd, IDC_COMBINEMEMORYLISTS_CHK, false);
 
 					const DWORD mask = app.ConfigGet (L"ReductMask2", REDUCT_MASK_DEFAULT).AsUlong ();
@@ -1175,9 +1175,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			_r_wnd_setdarktheme (hwnd);
 #endif // _APP_NO_DARKTHEME
 
-			// set privileges
-			if (app.IsAdmin ())
+			if (_r_sys_iselevated ())
 			{
+				// set privileges
 				LPCWSTR privileges[] = {
 					SE_INCREASE_QUOTA_NAME,
 					SE_PROF_SINGLE_PROCESS_NAME,
@@ -1185,10 +1185,9 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 				_r_sys_setprivilege (privileges, _countof (privileges), true);
 			}
-
-			// uac indicator (vista+)
-			if (!_r_sys_iselevated ())
+			else
 			{
+				// uac indicator (vista+)
 				_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN);
 
 				SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
@@ -1509,19 +1508,19 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 					if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
 						CheckMenuItem (hsubmenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-					if (!app.IsVistaOrLater () || !app.IsAdmin ())
+					if (!_r_sys_iselevated () || !app.IsVistaOrLater ())
 					{
 						EnableMenuItem (hsubmenu1, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 						EnableMenuItem (hsubmenu1, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 						EnableMenuItem (hsubmenu1, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 						EnableMenuItem (hsubmenu1, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
-						if (!app.IsAdmin ())
+						if (!_r_sys_iselevated ())
 							EnableMenuItem (hsubmenu1, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 					}
 
 					// Combine memory lists (win10+)
-					if (!app.IsAdmin () || !_r_sys_validversion (10, 0))
+					if (!_r_sys_iselevated () || !_r_sys_validversion (10, 0))
 						EnableMenuItem (hsubmenu1, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 					// configure submenu #2
@@ -1533,7 +1532,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						{
 							AppendMenu (hsubmenu2, MF_STRING, IDX_TRAY_POPUP_1 + UINT (i), _r_fmt (L"%" PRIu32 L"%%", limit_vec.at (i)));
 
-							if (!app.IsAdmin ())
+							if (!_r_sys_iselevated ())
 								EnableMenuItem (hsubmenu2, static_cast<UINT>(IDX_TRAY_POPUP_1 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 							if (val == limit_vec.at (i))
@@ -1553,7 +1552,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 						{
 							AppendMenu (hsubmenu3, MF_STRING, IDX_TRAY_POPUP_2 + UINT (i), _r_fmt (L"%" PRIu32" min.", interval_vec.at (i)));
 
-							if (!app.IsAdmin ())
+							if (!_r_sys_iselevated ())
 								EnableMenuItem (hsubmenu3, static_cast<UINT>(IDX_TRAY_POPUP_2 + i), MF_BYCOMMAND | MF_DISABLED | MF_GRAYED);
 
 							if (val == interval_vec.at (i))
@@ -1743,12 +1742,12 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 					if (GetLastError () != ERROR_ALREADY_EXISTS)
 					{
-						if (!app.IsAdmin ())
+						if (!_r_sys_iselevated ())
 						{
 							if (app.RunAsAdmin ())
 								DestroyWindow (hwnd);
-
-							_r_tray_popup (hwnd, UID, NIIF_ERROR, APP_NAME, app.LocaleString (IDS_STATUS_NOPRIVILEGES, nullptr));
+							else
+								_r_tray_popup (hwnd, UID, NIIF_ERROR, APP_NAME, app.LocaleString (IDS_STATUS_NOPRIVILEGES, nullptr));
 						}
 						else
 						{
