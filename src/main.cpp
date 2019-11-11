@@ -106,7 +106,7 @@ void BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 DWORD _app_memorystatus (MEMORYINFO* ptr_info)
 {
 	MEMORYSTATUSEX msex = {0};
-	SYSTEM_CACHE_INFORMATION sci = {0};
+	RtlSecureZeroMemory (&msex, sizeof (msex));
 
 	msex.dwLength = sizeof (msex);
 
@@ -119,14 +119,17 @@ DWORD _app_memorystatus (MEMORYINFO* ptr_info)
 		ptr_info->free_phys = msex.ullAvailPhys;
 		ptr_info->total_phys = msex.ullTotalPhys;
 
-		ptr_info->percent_page = _R_PERCENT_OF (msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
+		ptr_info->percent_page = (DWORD)_R_PERCENT_OF (msex.ullTotalPageFile - msex.ullAvailPageFile, msex.ullTotalPageFile);
 
 		ptr_info->free_page = msex.ullAvailPageFile;
 		ptr_info->total_page = msex.ullTotalPageFile;
 
+		SYSTEM_CACHE_INFORMATION sci = {0};
+		RtlSecureZeroMemory (&sci, sizeof (sci));
+
 		if (NT_SUCCESS (NtQuerySystemInformation (SystemFileCacheInformation, &sci, sizeof (sci), nullptr)))
 		{
-			ptr_info->percent_ws = _R_PERCENT_OF (sci.CurrentSize, sci.PeakSize);
+			ptr_info->percent_ws = (DWORD)_R_PERCENT_OF (sci.CurrentSize, sci.PeakSize);
 
 			ptr_info->free_ws = (sci.PeakSize - sci.CurrentSize);
 			ptr_info->total_ws = sci.PeakSize;
