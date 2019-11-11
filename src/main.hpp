@@ -10,7 +10,6 @@
 #include "resource.hpp"
 #include "app.hpp"
 
-#define WM_TRAYICON WM_APP + 1
 #define FONT_DEFAULT L"Tahoma;8;400"
 #define TIMER 1000
 #define UID 1337
