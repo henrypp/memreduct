@@ -136,7 +136,7 @@ DWORD _app_memorystatus (MEMORYINFO* ptr_info)
 	return msex.dwMemoryLoad;
 }
 
-DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
+ULONG64 _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 {
 	if (!_r_sys_iselevated ())
 		return 0;
@@ -155,12 +155,13 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	// difference (before)
 	_app_memorystatus (&info);
-	const DWORD reduct_before = DWORD (info.total_phys - info.free_phys);
+	const ULONG64 reduct_before = (info.total_phys - info.free_phys);
 
 	// System working set
 	if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
 	{
 		SYSTEM_CACHE_INFORMATION sci = {0};
+		RtlSecureZeroMemory (&sci, sizeof (sci));
 
 		sci.MinimumWorkingSet = (ULONG_PTR)-1;
 		sci.MaximumWorkingSet = (ULONG_PTR)-1;
@@ -170,7 +171,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	if (app.IsVistaOrLater ())
 	{
-		UINT command;
+		SYSTEM_MEMORY_LIST_COMMAND command;
 
 		// Working set (vista+)
 		if ((mask & REDUCT_WORKING_SET) != 0)
@@ -206,6 +207,7 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 			if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
 			{
 				MEMORY_COMBINE_INFORMATION_EX combineInfo = {0};
+				RtlSecureZeroMemory (&combineInfo, sizeof (combineInfo));
 
 				NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combineInfo, sizeof (combineInfo));
 			}
@@ -216,14 +218,21 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 
 	// difference (after)
 	_app_memorystatus (&info);
-	const DWORD reduct_result = max (0, reduct_before - DWORD (info.total_phys - info.free_phys));
+
+	ULONG64 reduct_after = (info.total_phys - info.free_phys);
+
+	if (reduct_after < reduct_before)
+		reduct_after = (reduct_before - reduct_after);
+
+	else
+		reduct_after = 0;
 
 	app.ConfigSet (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
 	if (app.ConfigGet (L"BalloonCleanResults", true).AsBool ())
-		_r_tray_popup (app.GetHWND (), UID, NIIF_INFO, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_CLEANED, nullptr), _r_fmt_size64 ((ULONG64)reduct_result).GetString ()));
+		_r_tray_popup (app.GetHWND (), UID, NIIF_INFO, APP_NAME, _r_fmt (app.LocaleString (IDS_STATUS_CLEANED, nullptr), _r_fmt_size64 (reduct_after).GetString ()));
 
-	return reduct_result;
+	return reduct_after;
 }
 
 void _app_fontinit (HWND hwnd, LOGFONT* plf, UINT scale)
@@ -383,11 +392,7 @@ HICON _app_iconcreate ()
 	ii.hbmColor = config.hbitmap;
 	ii.hbmMask = config.hbitmap_mask;
 
-	if (config.htrayicon)
-	{
-		DestroyIcon (config.htrayicon);
-		config.htrayicon = nullptr;
-	}
+	SAFE_DELETE_ICON (config.htrayicon);
 
 	config.htrayicon = CreateIconIndirect (&ii);
 
