@@ -1,7 +1,7 @@
 Mem Reduct [![Github All Releases](https://img.shields.io/github/downloads/henrypp/memreduct/total.svg)](https://github.com/henrypp/memreduct/releases) [![GitHub issues](https://img.shields.io/github/issues-raw/henrypp/memreduct.svg)](https://github.com/henrypp/memreduct/issues) [![Donate via PayPal](https://img.shields.io/badge/donate-paypal-red.svg)](https://www.paypal.me/henrypp/15) [![Donate via Bitcoin](https://img.shields.io/badge/donate-bitcoin-red.svg)](https://blockchain.info/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) [![Licence](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
 =======
 
-![Mem Reduct](https://www.henrypp.org/images/memreduct.png?cachefix2)
+![Mem Reduct](https://www.henrypp.org/images/memreduct.png?cachefix)
 
 ### Description:
 Lightweight real-time memory management application to monitor and clean system memory on your computer.
