@@ -1724,7 +1724,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_SETTINGS:
 				case IDM_TRAY_SETTINGS:
 				{
-					app.CreateSettingsWindow (&SettingsProc);
+					app.CreateSettingsWindow (hwnd, &SettingsProc);
 					break;
 				}
 
