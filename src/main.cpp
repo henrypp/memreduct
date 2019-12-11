@@ -496,6 +496,7 @@ void _app_iconinit (HWND hwnd)
 	config.hfont = CreateFontIndirect (&lf);
 
 	// init rect
+	icon_rc.left = icon_rc.top = 0;
 	icon_rc.right = icon_rc.bottom = _r_dc_getsystemmetrics (hwnd, SM_CXSMICON) * config.scale;
 
 	// init dc
