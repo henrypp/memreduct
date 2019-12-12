@@ -862,33 +862,32 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 			switch (ctrl_id)
 			{
 				case IDC_AUTOREDUCTVALUE_CTRL:
+				{
+					if (notify_code == EN_CHANGE)
+						app.ConfigSet (L"AutoreductValue", (UINT)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0));
+
+					break;
+				}
+
 				case IDC_AUTOREDUCTINTERVALVALUE_CTRL:
+				{
+					if (notify_code == EN_CHANGE)
+						app.ConfigSet (L"AutoreductIntervalValue", (UINT)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0));
+
+					break;
+				}
+
 				case IDC_TRAYLEVELWARNING_CTRL:
 				case IDC_TRAYLEVELDANGER_CTRL:
 				{
-					bool is_stylechanged = false;
+					if (notify_code == EN_CHANGE)
+					{
+						if (ctrl_id == IDC_TRAYLEVELWARNING_CTRL)
+							app.ConfigSet (L"TrayLevelWarning", (UINT)SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0));
 
-					if (ctrl_id == IDC_AUTOREDUCTVALUE_CTRL && notify_code == EN_CHANGE)
-					{
-						app.ConfigSet (L"AutoreductValue", (UINT)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0));
-					}
-					else if (ctrl_id == IDC_AUTOREDUCTINTERVALVALUE_CTRL && notify_code == EN_CHANGE)
-					{
-						app.ConfigSet (L"AutoreductIntervalValue", (UINT)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0));
-					}
-					else if (ctrl_id == IDC_TRAYLEVELWARNING_CTRL && notify_code == EN_CHANGE)
-					{
-						is_stylechanged = true;
-						app.ConfigSet (L"TrayLevelWarning", (UINT)SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0));
-					}
-					else if (ctrl_id == IDC_TRAYLEVELDANGER_CTRL && notify_code == EN_CHANGE)
-					{
-						is_stylechanged = true;
-						app.ConfigSet (L"TrayLevelDanger", (UINT)SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0));
-					}
+						else if (ctrl_id == IDC_TRAYLEVELDANGER_CTRL)
+							app.ConfigSet (L"TrayLevelDanger", (UINT)SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0));
 
-					if (is_stylechanged)
-					{
 						_app_iconredraw (app.GetHWND ());
 						_r_listview_redraw (app.GetHWND (), IDC_LISTVIEW);
 					}
