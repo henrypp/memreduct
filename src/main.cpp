@@ -550,6 +550,15 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 {
 	switch (msg)
 	{
+		case WM_INITDIALOG:
+		{
+#ifndef _APP_NO_DARKTHEME
+			_r_wnd_setdarktheme (hwnd);
+#endif // _APP_NO_DARKTHEME
+
+			break;
+		}
+
 		case RM_INITIALIZE:
 		{
 			const INT dialog_id = (INT)wparam;
