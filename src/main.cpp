@@ -447,7 +447,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			else if (i < 9)
 				percent = meminfo.percent_ws;
 
-			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, INVALID_INT, INVALID_INT, (LPARAM)percent);
+			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
 		}
 
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, _r_fmt (L"%d%%", meminfo.percent_phys));
@@ -1228,7 +1228,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				_r_listview_addgroup (hwnd, IDC_LISTVIEW, i, app.LocaleString (IDS_GROUP_1 + i, nullptr), 0, 0);
 
 				for (INT j = 0; j < 3; j++)
-					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr), INVALID_INT, i);
+					_r_listview_additem (hwnd, IDC_LISTVIEW, k++, 0, app.LocaleString (IDS_ITEM_1 + j, nullptr), I_IMAGENONE, i);
 			}
 
 			// settings
