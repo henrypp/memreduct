@@ -410,7 +410,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 	if (_r_sys_iselevated ())
 	{
 		if ((app.ConfigGet (L"AutoreductEnable", false).AsBool () && meminfo.percent_phys >= app.ConfigGet (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL).AsUint ()) ||
-			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", 0LL).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL).AsUint () * 60)))
+			(app.ConfigGet (L"AutoreductIntervalEnable", false).AsBool () && (_r_unixtime_now () - app.ConfigGet (L"StatisticLastReduct", time (0)).AsLonglong ()) >= (app.ConfigGet (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL).AsUint () * 60)))
 		{
 			_app_memoryclean (nullptr, true);
 		}
