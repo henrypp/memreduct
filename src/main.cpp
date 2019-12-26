@@ -40,7 +40,7 @@ void generate_menu_array (UINT val, std::vector<UINT>& pvc)
 
 void BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
 {
-	LONG cx = 0, cy = radius, d = 2 - 2 * radius;
+	INT cx = 0, cy = radius, d = 2 - 2 * radius;
 
 	// let's start drawing the circle:
 	SetPixel (dc, cx + pt->x, cy + pt->y, clr); // point (0, R);
@@ -62,12 +62,11 @@ void BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
 			d += 1 + 2 * cx;
 		}
 
+		// cy is 0, but these points are already drawn;
 		if (!cy)
-		{
 			break;
-		} // cy is 0, but these points are already drawn;
 
-		  // the actual drawing:
+		// the actual drawing:
 		SetPixel (dc, cx + pt->x, cy + pt->y, clr); // 0-90 degrees
 		SetPixel (dc, -cx + pt->x, cy + pt->y, clr); // 90-180 degrees
 		SetPixel (dc, -cx + pt->x, -cy + pt->y, clr); // 180-270 degrees
@@ -77,8 +76,8 @@ void BresenhamCircle (HDC dc, LONG radius, LPPOINT pt, COLORREF clr)
 
 void BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 {
-	INT dx = abs (x1 - x0), sx = x0 < x1 ? 1 : -1;
-	INT dy = abs (y1 - y0), sy = y0 < y1 ? 1 : -1;
+	const INT dx = abs (x1 - x0), sx = x0 < x1 ? 1 : -1;
+	const INT dy = abs (y1 - y0), sy = y0 < y1 ? 1 : -1;
 	INT err = (dx > dy ? dx : -dy) / 2;
 
 	while (true)
@@ -86,19 +85,20 @@ void BresenhamLine (HDC dc, INT x0, INT y0, INT x1, INT y1, COLORREF clr)
 		SetPixel (dc, x0, y0, clr);
 
 		if (x0 == x1 && y0 == y1)
-		{
 			break;
-		}
 
 		INT e2 = err;
 
 		if (e2 > -dx)
 		{
-			err -= dy; x0 += sx;
+			err -= dy;
+			x0 += sx;
 		}
+
 		if (e2 < dy)
 		{
-			err += dx; y0 += sy;
+			err += dx;
+			y0 += sy;
 		}
 	}
 }
@@ -154,7 +154,7 @@ ULONG64 _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	if (hwnd && !app.ConfirmMessage (hwnd, nullptr, app.LocaleString (IDS_QUESTION, nullptr), L"IsShowReductConfirmation"))
 		return 0;
 
-	SetCursor (LoadCursor (nullptr, IDC_WAIT));
+	HCURSOR hprev_cursor = SetCursor (LoadCursor (nullptr, IDC_WAIT));
 
 	// difference (before)
 	_app_memorystatus (&info);
@@ -217,7 +217,7 @@ ULONG64 _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 		}
 	}
 
-	SetCursor (LoadCursor (nullptr, IDC_ARROW));
+	SetCursor (hprev_cursor);
 
 	// difference (after)
 	_app_memorystatus (&info);
