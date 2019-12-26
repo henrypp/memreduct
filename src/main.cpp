@@ -238,7 +238,7 @@ ULONG64 _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	return reduct_after;
 }
 
-void _app_fontinit (HWND hwnd, LOGFONT* plf, UINT scale)
+void _app_fontinit (HWND hwnd, LOGFONT* plf, INT scale)
 {
 	if (!plf)
 		return;
@@ -342,12 +342,12 @@ HICON _app_iconcreate ()
 
 			const INT half = pt.x + 1;
 
-			for (LONG i = 1; i < config.scale + 1; i++)
+			for (INT i = 1; i < config.scale + 1; i++)
 				BresenhamCircle (config.hdc, half - (i), &pt, color);
 		}
 		else
 		{
-			for (LONG i = 0; i < config.scale; i++)
+			for (INT i = 0; i < config.scale; i++)
 			{
 				BresenhamLine (config.hdc, i, 0, i, icon_rc.bottom, color); // left
 				BresenhamLine (config.hdc, i, i, icon_rc.right, i, color); // top

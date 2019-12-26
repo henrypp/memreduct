@@ -58,7 +58,7 @@ struct MEMORYINFO
 
 struct STATIC_DATA
 {
-	LONG scale = 0;
+	INT scale = 0;
 
 	DWORD ms_prev = 0;
 
