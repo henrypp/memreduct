@@ -358,7 +358,7 @@ HICON _app_iconcreate ()
 	}
 
 	WCHAR buffer[8] = {0};
-	_r_str_printf (buffer, _countof (buffer), L"%d", meminfo.percent_phys);
+	_r_str_printf (buffer, _countof (buffer), L"%" PRIu32, meminfo.percent_phys);
 
 	// draw text
 	{
@@ -427,7 +427,7 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			config.ms_prev = meminfo.percent_phys; // store last percentage value (required!)
 		}
 
-		_r_tray_setinfo (hwnd, UID, hicon, _r_fmt (L"%s: %d%%\r\n%s: %d%%\r\n%s: %d%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString (), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
+		_r_tray_setinfo (hwnd, UID, hicon, _r_fmt (L"%s: %" PRIu32 L"%%\r\n%s: %" PRIu32 L"%%\r\n%s: %" PRIu32 L"%%", app.LocaleString (IDS_GROUP_1, nullptr).GetString (), meminfo.percent_phys, app.LocaleString (IDS_GROUP_2, nullptr).GetString (), meminfo.percent_page, app.LocaleString (IDS_GROUP_3, nullptr).GetString (), meminfo.percent_ws));
 	}
 
 	// refresh listview information
@@ -450,15 +450,15 @@ void CALLBACK _app_timercallback (HWND hwnd, UINT, UINT_PTR, DWORD)
 			_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, nullptr, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
 		}
 
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, _r_fmt (L"%d%%", meminfo.percent_phys));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, _r_fmt (L"%" PRIu32 L"%%", meminfo.percent_phys));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, _r_fmt_size64 (meminfo.free_phys));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, _r_fmt_size64 (meminfo.total_phys));
 
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, _r_fmt (L"%d%%", meminfo.percent_page));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, _r_fmt (L"%" PRIu32 L"%%", meminfo.percent_page));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, _r_fmt_size64 (meminfo.free_page));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, _r_fmt_size64 (meminfo.total_page));
 
-		_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, _r_fmt (L"%d%%", meminfo.percent_ws));
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, _r_fmt (L"%" PRIu32 L"%%", meminfo.percent_ws));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, _r_fmt_size64 (meminfo.free_ws));
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, _r_fmt_size64 (meminfo.total_ws));
 
@@ -656,7 +656,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 						LOGFONT lf = {0};
 						_app_fontinit (hwnd, &lf, 0);
 
-						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, _r_dc_fontheighttosize (hwnd, lf.lfHeight));
+						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %" PRIi32 L"px", lf.lfFaceName, _r_dc_fontheighttosize (hwnd, lf.lfHeight));
 					}
 
 					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)app.ConfigGet (L"TrayColorText", TRAY_COLOR_TEXT).AsUlong ());
@@ -1169,9 +1169,9 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					{
 						INT size = _r_dc_fontheighttosize (hwnd, lf.lfHeight);
 
-						app.ConfigSet (L"TrayFont", _r_fmt (L"%s;%d;%d", lf.lfFaceName, size, lf.lfWeight));
+						app.ConfigSet (L"TrayFont", _r_fmt (L"%s;%" PRIi32 L";%" PRIi32 L"", lf.lfFaceName, size, lf.lfWeight));
 
-						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %dpx", lf.lfFaceName, size);
+						_r_ctrl_settext (hwnd, IDC_FONT, L"%s, %" PRIi32 L"px", lf.lfFaceName, size);
 
 						_app_iconinit (app.GetHWND ());
 						_app_iconredraw (app.GetHWND ());
@@ -1762,7 +1762,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDC_CLEAN:
 				case IDM_TRAY_CLEAN:
 				{
-					HANDLE hmutex = CreateMutex (nullptr, FALSE, _r_fmt (L"%s_%d_%d", APP_NAME_SHORT, GetCurrentProcessId (), __LINE__));
+					HANDLE hmutex = CreateMutex (nullptr, FALSE, _r_fmt (L"%s_%" PRIu32 L"_%" PRIu32, APP_NAME_SHORT, GetCurrentProcessId (), __LINE__));
 
 					if (GetLastError () != ERROR_ALREADY_EXISTS)
 					{
