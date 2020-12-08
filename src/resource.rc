@@ -2,9 +2,9 @@
 #include <commctrl.h>
 #include <richedit.h>
 
-#include "resource.hpp"
-#include "rconfig.hpp"
-#include "app.hpp"
+#include "resource.h"
+#include "rconfig.h"
+#include "app.h"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
 
@@ -347,8 +347,8 @@ FILEFLAGS		VS_FF_PATCHED | VS_FF_PRERELEASE
 	{
 		BLOCK "040904E4"
 		{
-			VALUE "Comments", _APP_WEBSITE_URL
-			VALUE "CompanyName", _APP_AUTHOR
+			VALUE "Comments", APP_WEBSITE_URL
+			VALUE "CompanyName", APP_AUTHOR
 			VALUE "FileDescription", APP_NAME
 			VALUE "FileVersion", APP_VERSION
 			VALUE "InternalName", APP_NAME_SHORT

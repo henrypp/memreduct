@@ -1,16 +1,16 @@
 // Mem Reduct
-// Copyright (c) 2011-2019 Henry++
+// Copyright (c) 2011-2021 Henry++
 
 #pragma once
 
-#include <windows.h>
-#include <commctrl.h>
+#include "routine.h"
 
-#include "routine.hpp"
-#include "resource.hpp"
-#include "app.hpp"
+#include "resource.h"
+#include "app.h"
 
-#define FONT_DEFAULT L"Tahoma;8;400"
+// libs
+#pragma comment(lib, "msimg32.lib")
+
 #define TIMER 1000
 #define UID 1337
 #define LANG_MENU 6
@@ -40,39 +40,27 @@
 #define REDUCT_MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST)
 #define REDUCT_MASK_FREEZES (REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 
-struct MEMORYINFO
+typedef struct _STATIC_DATA
 {
-	DWORD percent_phys = 0;
-	DWORD percent_page = 0;
-	DWORD percent_ws = 0;
+	HDC hdc;
+	HDC hdc_mask;
+	HBITMAP hbitmap;
+	HBITMAP hbitmap_mask;
+	HFONT hfont;
+	HICON htrayicon;
+	DWORD ms_prev;
+	INT scale;
+} STATIC_DATA, *PSTATIC_DATA;
 
-	DWORDLONG total_phys = 0;
-	DWORDLONG free_phys = 0;
-
-	DWORDLONG total_page = 0;
-	DWORDLONG free_page = 0;
-
-	DWORDLONG total_ws = 0;
-	DWORDLONG free_ws = 0;
-};
-
-struct STATIC_DATA
+typedef struct _MEMORYINFO
 {
-	INT scale = 0;
-
-	DWORD ms_prev = 0;
-
-	HDC hdc = nullptr;
-	HDC hdc_buffer = nullptr;
-
-	HBITMAP hbitmap = nullptr;
-	HBITMAP hbitmap_mask = nullptr;
-
-	HFONT hfont = nullptr;
-
-	HBRUSH bg_brush = nullptr;
-	HBRUSH bg_brush_warning = nullptr;
-	HBRUSH bg_brush_danger = nullptr;
-
-	HICON htrayicon = nullptr;
-};
+	DWORD percent_phys;
+	DWORD percent_page;
+	DWORD percent_ws;
+	DWORD64 total_phys;
+	DWORD64 free_phys;
+	DWORD64 total_page;
+	DWORD64 free_page;
+	DWORD64 total_ws;
+	DWORD64 free_ws;
+} MEMORYINFO, *PMEMORYINFO;
