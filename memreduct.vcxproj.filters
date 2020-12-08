@@ -15,42 +15,36 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\routine\routine.cpp">
+    <ClCompile Include="src\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\main.cpp">
+    <ClCompile Include="..\routine\rapp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\routine\rstring.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\routine\rapp.cpp">
+    <ClCompile Include="..\routine\routine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\routine\routine.hpp">
+    <ClInclude Include="..\routine\routine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\main.hpp">
+    <ClInclude Include="src\main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\app.hpp">
+    <ClInclude Include="src\app.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\resource.hpp">
+    <ClInclude Include="src\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rconfig.hpp">
+    <ClInclude Include="..\routine\rconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rapp.hpp">
+    <ClInclude Include="..\routine\rapp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rstring.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\routine\ntapi.hpp">
+    <ClInclude Include="..\routine\ntapi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
