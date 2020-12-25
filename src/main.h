@@ -54,13 +54,14 @@ typedef struct _STATIC_DATA
 
 typedef struct _MEMORYINFO
 {
-	DWORD percent_phys;
-	DWORD percent_page;
-	DWORD percent_ws;
-	DWORD64 total_phys;
-	DWORD64 free_phys;
-	DWORD64 total_page;
-	DWORD64 free_page;
-	DWORD64 total_ws;
-	DWORD64 free_ws;
+	ULONG64 total_phys;
+	ULONG64 free_phys;
+	ULONG64 total_page;
+	ULONG64 free_page;
+	ULONG64 total_ws;
+	ULONG64 free_ws;
+	ULONG percent_phys;
+	ULONG percent_page;
+	ULONG percent_ws;
+
 } MEMORYINFO, *PMEMORYINFO;

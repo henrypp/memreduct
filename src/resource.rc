@@ -347,7 +347,7 @@ FILEFLAGS		VS_FF_PATCHED | VS_FF_PRERELEASE
 	{
 		BLOCK "040904E4"
 		{
-			VALUE "Comments", APP_WEBSITE_URL
+			VALUE "Comments", APP_COMMENT
 			VALUE "CompanyName", APP_AUTHOR
 			VALUE "FileDescription", APP_NAME
 			VALUE "FileVersion", APP_VERSION
