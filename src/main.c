@@ -1023,10 +1023,13 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 				case IDC_HOTKEY_CLEAN:
 				{
-					if (notify_code == EN_CHANGE)
+					if (IsDlgButtonChecked (hwnd, IDC_HOTKEY_CLEAN_CHK) == BST_CHECKED)
 					{
-						_r_config_setuinteger (L"HotkeyClean", (UINT)SendDlgItemMessage (hwnd, ctrl_id, HKM_GETHOTKEY, 0, 0));
-						_app_hotkeyinit (_r_app_gethwnd ());
+						if (notify_code == EN_CHANGE)
+						{
+							_r_config_setuinteger (L"HotkeyClean", (UINT)SendDlgItemMessage (hwnd, ctrl_id, HKM_GETHOTKEY, 0, 0));
+							_app_hotkeyinit (_r_app_gethwnd ());
+						}
 					}
 
 					break;
