@@ -586,16 +586,16 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 10, 99);
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (LPARAM)_r_config_getuinteger (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL));
+					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_r_config_getuinteger (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL));
 
 					CheckDlgButton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_config_getboolean (L"AutoreductIntervalEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 5, 1440);
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (LPARAM)_r_config_getuinteger (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL));
+					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_r_config_getuinteger (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL));
 
 					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, _r_config_getboolean (L"HotkeyCleanEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
-					SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (LPARAM)_r_config_getuinteger (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)), 0);
+					SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (WPARAM)_r_config_getuinteger (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)), 0);
 
 					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTENABLE_CHK, 0), 0);
 					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTINTERVALENABLE_CHK, 0), 0);
@@ -631,10 +631,10 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 				case IDD_SETTINGS_TRAY:
 				{
 					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETRANGE32, 10, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (LPARAM)_r_config_getuinteger (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL));
+					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_r_config_getuinteger (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL));
 
 					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETRANGE32, 10, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (LPARAM)_r_config_getuinteger (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL));
+					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_r_config_getuinteger (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL));
 
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getinteger (L"TrayActionDc", 0), 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getinteger (L"TrayActionMc", 1), 0);
