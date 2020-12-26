@@ -84,13 +84,23 @@ ULONG _app_memorystatus (PMEMORYINFO pinfo)
 
 ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 {
+	MEMORYINFO info;
+	MEMORY_COMBINE_INFORMATION_EX combine_info;
+	SYSTEM_CACHE_INFORMATION sci;
+	SYSTEM_MEMORY_LIST_COMMAND command;
+	WCHAR result_string[128];
+	HCURSOR hprev_cursor;
+	ULONG64 reduct_before;
+	ULONG64 reduct_after;
+	ULONG mask;
+
 	if (!_r_sys_iselevated ())
 	{
 		_r_tray_popup (_r_app_gethwnd (), UID, NIIF_ERROR | (_r_config_getboolean (L"IsNotificationsSound", TRUE) ? 0 : NIIF_NOSOUND), APP_NAME, _r_locale_getstring (IDS_STATUS_NOPRIVILEGES));
 		return 0;
 	}
 
-	ULONG mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+	mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
 	if (is_preventfreezes)
 		mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
@@ -98,21 +108,22 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 	if (hwnd && !_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION), L"IsShowReductConfirmation"))
 		return 0;
 
-	MEMORYINFO info = {0};
 
-	HCURSOR hprev_cursor = SetCursor (LoadCursor (NULL, IDC_WAIT));
+	hprev_cursor = SetCursor (LoadCursor (NULL, IDC_WAIT));
+
+	memset (&info, 0, sizeof (info));
 
 	// difference (before)
 	_app_memorystatus (&info);
 
-	ULONG64 reduct_before = (info.total_phys - info.free_phys);
+	reduct_before = (info.total_phys - info.free_phys);
 
 	// Combine memory lists (win81+)
 	if (_r_sys_isosversiongreaterorequal (WINDOWS_8_1))
 	{
 		if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
 		{
-			MEMORY_COMBINE_INFORMATION_EX combine_info = {0};
+			memset (&combine_info, 0, sizeof (combine_info));
 
 			NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combine_info, sizeof (combine_info));
 		}
@@ -121,7 +132,7 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 	// System working set
 	if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
 	{
-		SYSTEM_CACHE_INFORMATION sci = {0};
+		memset (&sci, 0, sizeof (sci));
 
 		sci.MinimumWorkingSet = (ULONG_PTR)-1;
 		sci.MaximumWorkingSet = (ULONG_PTR)-1;
@@ -131,8 +142,6 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 
 	if (_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
 	{
-		SYSTEM_MEMORY_LIST_COMMAND command;
-
 		// Working set (vista+)
 		if ((mask & REDUCT_WORKING_SET) != 0)
 		{
@@ -168,7 +177,7 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 	// difference (after)
 	_app_memorystatus (&info);
 
-	ULONG64 reduct_after = (info.total_phys - info.free_phys);
+	reduct_after = (info.total_phys - info.free_phys);
 
 	if (reduct_after < reduct_before)
 	{
@@ -181,12 +190,16 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 
 	_r_config_setlong64 (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
+	_r_format_bytesize64 (result_string, RTL_NUMBER_OF (result_string), reduct_after);
+
 	if (_r_config_getboolean (L"BalloonCleanResults", TRUE))
 	{
-		WCHAR result_string[128];
-		_r_format_bytesize64 (result_string, RTL_NUMBER_OF (result_string), reduct_after);
-
 		_r_tray_popupformat (_r_app_gethwnd (), UID, NIIF_INFO | (_r_config_getboolean (L"IsNotificationsSound", TRUE) ? 0 : NIIF_NOSOUND), APP_NAME, _r_locale_getstring (IDS_STATUS_CLEANED), result_string);
+	}
+
+	if (_r_config_getboolean (L"LogCleanResults", FALSE))
+	{
+		_r_log_v (Information, 0, L"Memory cleaning result", 0, result_string);
 	}
 
 	return reduct_after;
