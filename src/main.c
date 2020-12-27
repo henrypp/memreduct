@@ -639,6 +639,8 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getinteger (L"TrayActionDc", 0), 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getinteger (L"TrayActionMc", 1), 0);
 
+					CheckDlgButton (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_config_getboolean (L"IsTrayIconSingleClick", TRUE) ? BST_CHECKED : BST_UNCHECKED);
+
 					CheckDlgButton (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_config_getboolean (L"BalloonCleanResults", TRUE) ? BST_CHECKED : BST_UNCHECKED);
 
 					break;
@@ -729,6 +731,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 					_r_ctrl_settext (hwnd, IDC_TRAYACTIONDC_HINT, _r_locale_getstring (IDS_TRAYACTIONDC_HINT));
 					_r_ctrl_settext (hwnd, IDC_TRAYACTIONMC_HINT, _r_locale_getstring (IDS_TRAYACTIONMC_HINT));
+					_r_ctrl_settext (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_locale_getstring (IDS_TRAYICONSINGLECLICK_CHK));
 
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_RESETCONTENT, 0, 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_RESETCONTENT, 0, 0);
@@ -1077,6 +1080,12 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 					if (notify_code == CBN_SELCHANGE)
 						_r_config_setinteger (L"TrayActionMc", (INT)SendDlgItemMessage (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
 
+					break;
+				}
+
+				case IDC_TRAYICONSINGLECLICK_CHK:
+				{
+					_r_config_setboolean (L"IsTrayIconSingleClick", (IsDlgButtonChecked (hwnd, ctrl_id) == BST_CHECKED));
 					break;
 				}
 
@@ -1436,15 +1445,24 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			switch (LOWORD (lparam))
 			{
 				case WM_LBUTTONUP:
-				{
-					SetForegroundWindow (hwnd);
-					break;
-				}
-
 				case WM_LBUTTONDBLCLK:
 				case WM_MBUTTONUP:
 				{
-					INT action = (LOWORD (lparam) == WM_LBUTTONDBLCLK) ? _r_config_getinteger (L"TrayActionDc", 0) : _r_config_getinteger (L"TrayActionMc", 1);
+					INT action;
+					BOOLEAN is_singleclick;
+
+					is_singleclick = _r_config_getboolean (L"IsTrayIconSingleClick", TRUE);
+
+					if (LOWORD (lparam) == WM_LBUTTONUP && !is_singleclick)
+					{
+						SetForegroundWindow (hwnd);
+						break;
+					}
+
+					if (LOWORD (lparam) == WM_LBUTTONDBLCLK && is_singleclick)
+						break;
+
+					action = (LOWORD (lparam) == WM_MBUTTONUP) ? _r_config_getinteger (L"TrayActionMc", 1) : _r_config_getinteger (L"TrayActionDc", 0);
 
 					switch (action)
 					{
