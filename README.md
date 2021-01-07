@@ -1,7 +1,18 @@
-Mem Reduct [![Github All Releases](https://img.shields.io/github/downloads/henrypp/memreduct/total.svg)](https://github.com/henrypp/memreduct/releases) [![GitHub issues](https://img.shields.io/github/issues-raw/henrypp/memreduct.svg)](https://github.com/henrypp/memreduct/issues) [![Donate via PayPal](https://img.shields.io/badge/donate-paypal-red.svg)](https://www.paypal.me/henrypp/15) [![Donate via Bitcoin](https://img.shields.io/badge/donate-bitcoin-red.svg)](https://blockchain.info/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) [![Licence](https://img.shields.io/badge/license-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0.en.html)
-=======
+<h1 align="center">Mem Reduct</h1>
 
-![Mem Reduct](https://www.henrypp.org/images/memreduct.png?pika)
+<p align="center">
+	<a href="https://github.com/henrypp/memreduct/releases"><img src="https://img.shields.io/github/v/release/henrypp/memreduct?style=flat-square&include_prereleases&label=version" /></a>
+	<a href="https://github.com/henrypp/memreduct/releases"><img src="https://img.shields.io/github/downloads/henrypp/memreduct/total.svg?style=flat-square" /></a>
+	<a href="https://github.com/henrypp/memreduct/issues"><img src="https://img.shields.io/github/issues-raw/henrypp/memreduct.svg?style=flat-square&label=issues" /></a>
+	<a href="https://github.com/henrypp/memreduct/graphs/contributors"><img src="https://img.shields.io/github/contributors/henrypp/memreduct?style=flat-square" /></a>
+	<a href="https://github.com/henrypp/memreduct/blob/master/LICENSE"><img src="https://img.shields.io/github/license/henrypp/memreduct?style=flat-square" /></a>
+</p>
+
+-------
+
+<p align="center">
+	<img src="https://www.henrypp.org/images/memreduct.png" />
+</p>
 
 ### Description:
 Lightweight real-time memory management application to monitor and clean system memory on your computer.
