@@ -299,7 +299,7 @@ HICON _app_iconcreate ()
 	// draw text
 	{
 		WCHAR buffer[8] = {0};
-		_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG), mem_info.percent_phys);
+		_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" PR_ULONG, mem_info.percent_phys);
 
 		_app_drawtext (config.hdc, buffer, &icon_rc, text_color, FALSE);
 
@@ -367,7 +367,7 @@ VOID CALLBACK _app_timercallback (HWND hwnd, UINT uMsg, UINT_PTR idEvent, ULONG 
 			hicon = _app_iconcreate ();
 		}
 
-		_r_tray_setinfoformat (hwnd, UID, hicon, L"%s: %" TEXT (PR_ULONG) L"%%\r\n%s: %" TEXT (PR_ULONG) L"%%\r\n%s: %" TEXT (PR_ULONG) L"%%",
+		_r_tray_setinfoformat (hwnd, UID, hicon, L"%s: %" PR_ULONG L"%%\r\n%s: %" PR_ULONG L"%%\r\n%s: %" PR_ULONG L"%%",
 							   _r_locale_getstring (IDS_GROUP_1),
 							   mem_info.percent_phys,
 							   _r_locale_getstring (IDS_GROUP_2),
@@ -399,7 +399,7 @@ VOID CALLBACK _app_timercallback (HWND hwnd, UINT uMsg, UINT_PTR idEvent, ULONG 
 
 		WCHAR format_string[256];
 
-		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" TEXT (PR_ULONG) L"%%", mem_info.percent_phys);
+		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" PR_ULONG L"%%", mem_info.percent_phys);
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, format_string);
 
 		_r_format_bytesize64 (format_string, RTL_NUMBER_OF (format_string), mem_info.free_phys);
@@ -408,7 +408,7 @@ VOID CALLBACK _app_timercallback (HWND hwnd, UINT uMsg, UINT_PTR idEvent, ULONG 
 		_r_format_bytesize64 (format_string, RTL_NUMBER_OF (format_string), mem_info.total_phys);
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, format_string);
 
-		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" TEXT (PR_ULONG) L"%%", mem_info.percent_page);
+		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" PR_ULONG L"%%", mem_info.percent_page);
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, format_string);
 
 		_r_format_bytesize64 (format_string, RTL_NUMBER_OF (format_string), mem_info.free_page);
@@ -417,7 +417,7 @@ VOID CALLBACK _app_timercallback (HWND hwnd, UINT uMsg, UINT_PTR idEvent, ULONG 
 		_r_format_bytesize64 (format_string, RTL_NUMBER_OF (format_string), mem_info.total_page);
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, format_string);
 
-		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" TEXT (PR_ULONG) L"%%", mem_info.percent_ws);
+		_r_str_printf (format_string, RTL_NUMBER_OF (format_string), L"%" PR_ULONG L"%%", mem_info.percent_ws);
 		_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, format_string);
 
 		_r_format_bytesize64 (format_string, RTL_NUMBER_OF (format_string), mem_info.free_ws);
@@ -617,7 +617,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 						_app_fontinit (hwnd, &lf, 0);
 
-						_r_ctrl_settextformat (hwnd, IDC_FONT, L"%s, %" TEXT (PRIi32) L"px", lf.lfFaceName, _r_dc_fontheighttosize (hwnd, lf.lfHeight));
+						_r_ctrl_settextformat (hwnd, IDC_FONT, L"%s, %" PRIi32 L"px", lf.lfFaceName, _r_dc_fontheighttosize (hwnd, lf.lfHeight));
 					}
 
 					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT));
@@ -1156,7 +1156,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 						_r_config_setfont (L"TrayFont", _r_app_gethwnd (), &lf, NULL);
 
-						_r_ctrl_settextformat (hwnd, IDC_FONT, L"%s, %" TEXT (PRIi32) L"px", lf.lfFaceName, size);
+						_r_ctrl_settextformat (hwnd, IDC_FONT, L"%s, %" PRIi32 L"px", lf.lfFaceName, size);
 
 						_app_iconinit (_r_app_gethwnd ());
 						_app_iconredraw (_r_app_gethwnd ());
@@ -1582,7 +1582,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							{
 								menu_id = IDX_TRAY_POPUP_1 + (UINT)i;
 
-								_r_str_printf (number_string, RTL_NUMBER_OF (number_string), L"%" TEXT (PRIu32) L"%%", limits[i]);
+								_r_str_printf (number_string, RTL_NUMBER_OF (number_string), L"%" PRIu32 L"%%", limits[i]);
 
 								AppendMenu (hsubmenu2, MF_STRING, menu_id, number_string);
 
@@ -1606,7 +1606,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 							{
 								menu_id = IDX_TRAY_POPUP_2 + (UINT)i;
 
-								_r_str_printf (number_string, RTL_NUMBER_OF (number_string), L"%" TEXT (PRIu32) L" min.", intervals[i]);
+								_r_str_printf (number_string, RTL_NUMBER_OF (number_string), L"%" PRIu32 L" min.", intervals[i]);
 
 								AppendMenu (hsubmenu3, MF_STRING, menu_id, number_string);
 
