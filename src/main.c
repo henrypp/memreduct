@@ -1834,8 +1834,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
-					//DoPropertySheet (hwnd);
-
 					_r_show_aboutmessage (hwnd);
 					break;
 				}
