@@ -51,7 +51,8 @@ ULONG _app_memorystatus (PMEMORYINFO pinfo)
 	MEMORYSTATUSEX msex = {0};
 	msex.dwLength = sizeof (msex);
 
-	GlobalMemoryStatusEx (&msex);
+	if (!GlobalMemoryStatusEx (&msex))
+		return 0;
 
 	if (pinfo)
 	{
@@ -111,9 +112,8 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 
 	hprev_cursor = SetCursor (LoadCursor (NULL, IDC_WAIT));
 
-	memset (&info, 0, sizeof (info));
-
 	// difference (before)
+	memset (&info, 0, sizeof (info));
 	_app_memorystatus (&info);
 
 	reduct_before = (info.total_phys - info.free_phys);
@@ -175,6 +175,7 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 		SetCursor (hprev_cursor);
 
 	// difference (after)
+	memset (&info, 0, sizeof (info));
 	_app_memorystatus (&info);
 
 	reduct_after = (info.total_phys - info.free_phys);
@@ -213,7 +214,7 @@ VOID _app_fontinit (HWND hwnd, LPLOGFONT plf, INT scale)
 		plf->lfHeight *= scale;
 }
 
-VOID _app_drawbackground (HDC hdc, COLORREF pen_clr, COLORREF brush_clr, LPRECT lprect, BOOLEAN is_round)
+VOID _app_drawbackground (HDC hdc, COLORREF pen_clr, COLORREF brush_clr, PRECT rect, BOOLEAN is_round)
 {
 	INT prev_mode = SetBkMode (hdc, TRANSPARENT);
 	COLORREF prev_clr = SetBkColor (hdc, brush_clr);
@@ -226,11 +227,11 @@ VOID _app_drawbackground (HDC hdc, COLORREF pen_clr, COLORREF brush_clr, LPRECT 
 
 	if (is_round)
 	{
-		Ellipse (hdc, lprect->left, lprect->top, lprect->right, lprect->bottom);
+		Ellipse (hdc, rect->left, rect->top, rect->right, rect->bottom);
 	}
 	else
 	{
-		Rectangle (hdc, lprect->left, lprect->top, lprect->right, lprect->bottom);
+		Rectangle (hdc, rect->left, rect->top, rect->right, rect->bottom);
 	}
 
 	SelectObject (hdc, prev_brush);
@@ -240,7 +241,7 @@ VOID _app_drawbackground (HDC hdc, COLORREF pen_clr, COLORREF brush_clr, LPRECT 
 	SetBkMode (hdc, prev_mode);
 }
 
-VOID _app_drawtext (HDC hdc, LPWSTR text, LPRECT lprect, COLORREF clr, BOOLEAN is_aa)
+VOID _app_drawtext (HDC hdc, LPWSTR text, PRECT lprect, COLORREF clr, BOOLEAN is_aa)
 {
 	COLORREF prev_clr = SetTextColor (hdc, clr);
 	INT prev_mode = SetBkMode (hdc, TRANSPARENT);
@@ -458,9 +459,12 @@ VOID _app_iconinit (HWND hwnd)
 	config.hfont = CreateFontIndirect (&lf);
 
 	// init rect
-	icon_rc.left = icon_rc.top = 0;
-	icon_rc.right = _r_dc_getsystemmetrics (hwnd, SM_CXSMICON) * config.scale;
-	icon_rc.bottom = _r_dc_getsystemmetrics (hwnd, SM_CYSMICON) * config.scale;
+	SetRect (&icon_rc,
+			 0,
+			 0,
+			 _r_dc_getsystemmetrics (hwnd, SM_CXSMICON) * config.scale,
+			 _r_dc_getsystemmetrics (hwnd, SM_CYSMICON) * config.scale
+	);
 
 	// init dc
 	HDC hdc = GetDC (NULL);
@@ -516,15 +520,6 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 {
 	switch (msg)
 	{
-		case WM_INITDIALOG:
-		{
-#if defined(APP_HAVE_DARKTHEME)
-			_r_wnd_setdarktheme (hwnd);
-#endif // APP_HAVE_DARKTHEME
-
-			break;
-		}
-
 		case RM_INITIALIZE:
 		{
 			INT dialog_id = (INT)wparam;
@@ -1168,7 +1163,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 			break;
 		}
-	}
+}
 
 	return FALSE;
 }
@@ -1179,10 +1174,6 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 	{
 		case WM_INITDIALOG:
 		{
-#if defined(APP_HAVE_DARKTHEME)
-			_r_wnd_setdarktheme (hwnd);
-#endif // APP_HAVE_DARKTHEME
-
 			if (_r_sys_iselevated ())
 			{
 				// set privileges
@@ -1238,7 +1229,10 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_DESTROY:
 		{
+			_r_tray_destroy (hwnd, UID);
+
 			PostQuitMessage (0);
+
 			break;
 		}
 
@@ -1355,23 +1349,24 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 		case WM_PAINT:
 		{
-			PAINTSTRUCT ps = {0};
+			PAINTSTRUCT ps;
+			RECT rect;
 			HDC hdc = BeginPaint (hwnd, &ps);
 
 			if (hdc)
 			{
-				RECT rect = {0};
-				GetClientRect (hwnd, &rect);
+				if (GetClientRect (hwnd, &rect))
+				{
+					INT height = _r_dc_getdpi (hwnd, PR_SIZE_FOOTERHEIGHT);
 
-				INT height = _r_dc_getdpi (hwnd, PR_SIZE_FOOTERHEIGHT);
+					rect.top = rect.bottom - height;
+					rect.bottom = rect.top + height;
 
-				rect.top = rect.bottom - height;
-				rect.bottom = rect.top + height;
+					_r_dc_fillrect (hdc, &rect, GetSysColor (COLOR_3DFACE));
 
-				_r_dc_fillrect (hdc, &rect, GetSysColor (COLOR_3DFACE));
-
-				for (INT i = 0; i < rect.right; i++)
-					SetPixelV (hdc, i, rect.top, GetSysColor (COLOR_APPWORKSPACE));
+					for (INT i = 0; i < rect.right; i++)
+						SetPixelV (hdc, i, rect.top, GetSysColor (COLOR_APPWORKSPACE));
+				}
 
 				EndPaint (hwnd, &ps);
 			}
@@ -1826,7 +1821,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_WEBSITE:
 				case IDM_TRAY_WEBSITE:
 				{
-					ShellExecute (hwnd, NULL, _r_app_getwebsite_url (), NULL, NULL, SW_SHOWDEFAULT);
+					_r_shell_opendefault (_r_app_getwebsite_url ());
 					break;
 				}
 
@@ -1839,6 +1834,8 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				case IDM_ABOUT:
 				case IDM_TRAY_ABOUT:
 				{
+					//DoPropertySheet (hwnd);
+
 					_r_show_aboutmessage (hwnd);
 					break;
 				}
@@ -1846,7 +1843,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			break;
 		}
-	}
+}
 
 	return FALSE;
 }
