@@ -1,6 +1,6 @@
 @echo off
 
 cd ..\builder
-call build_locale memreduct "Mem Reduct"
+call build_locale memreduct
 
 pause
