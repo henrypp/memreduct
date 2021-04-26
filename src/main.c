@@ -1163,7 +1163,7 @@ INT_PTR CALLBACK SettingsProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam
 
 			break;
 		}
-}
+	}
 
 	return FALSE;
 }
@@ -1841,7 +1841,7 @@ INT_PTR CALLBACK DlgProc (HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 
 			break;
 		}
-}
+	}
 
 	return FALSE;
 }
