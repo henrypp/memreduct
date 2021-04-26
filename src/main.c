@@ -200,7 +200,7 @@ ULONG64 _app_memoryclean (HWND hwnd, BOOLEAN is_preventfreezes)
 
 	if (_r_config_getboolean (L"LogCleanResults", FALSE))
 	{
-		_r_log_v (Information, 0, L"Memory cleaning result", 0, result_string);
+		_r_log_v (LOG_LEVEL_INFO, 0, L"Memory cleaning result", 0, result_string);
 	}
 
 	return reduct_after;
