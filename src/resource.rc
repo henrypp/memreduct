@@ -207,10 +207,10 @@ FONT 8, "Ms Shell Dlg"
 
 	AUTOCHECKBOX	"", IDC_TRAYICONSINGLECLICK_CHK, 8, 90, 244, 12, BS_MULTILINE
 
-	GROUPBOX		"", IDC_TITLE_9, 0, 112, 260, 32
+	GROUPBOX		"", IDC_TITLE_9, 0, 112, 260, 44
 
 	AUTOCHECKBOX	"", IDC_SHOW_CLEAN_RESULT_CHK, 8, 124, 244, 12, BS_MULTILINE
-
+	AUTOCHECKBOX	"", IDC_NOTIFICATIONSOUND_CHK, 8, 136, 244, 12, BS_MULTILINE
 }
 
 //
@@ -324,6 +324,8 @@ STRINGTABLE
 	IDS_STATUS_NOPRIVILEGES "Required administrator privileges, please run program as administrator!"
 
 	IDS_TRAYICONSINGLECLICK_CHK "Use single click, instead of double click"
+
+	IDS_NOTIFICATIONSOUND_CHK "Enable notifications sound"
 }
 
 //
