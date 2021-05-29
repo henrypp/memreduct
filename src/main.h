@@ -40,7 +40,7 @@
 #define REDUCT_MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST)
 #define REDUCT_MASK_FREEZES (REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 
-typedef struct _STATIC_DATA
+typedef struct tagSTATIC_DATA
 {
 	HDC hdc;
 	HDC hdc_mask;
@@ -52,7 +52,7 @@ typedef struct _STATIC_DATA
 	INT scale;
 } STATIC_DATA, *PSTATIC_DATA;
 
-typedef struct _MEMORYINFO
+typedef struct tagMEMORYINFO
 {
 	ULONG64 total_phys;
 	ULONG64 free_phys;
@@ -63,5 +63,4 @@ typedef struct _MEMORYINFO
 	ULONG percent_phys;
 	ULONG percent_page;
 	ULONG percent_ws;
-
 } MEMORYINFO, *PMEMORYINFO;
