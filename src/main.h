@@ -13,15 +13,24 @@
 
 #define TIMER 1000
 #define UID 1337
+#define UID_FORCE 8044
 #define LANG_MENU 6
 
-#define DEFAULT_AUTOREDUCT_VAL 90U
-#define DEFAULT_AUTOREDUCTINTERVAL_VAL 30U
+#define DEFAULT_AUTOREDUCT_VAL 90
+#define DEFAULT_AUTOREDUCTINTERVAL_VAL 30
 
-#define DEFAULT_DANGER_LEVEL 90U
-#define DEFAULT_WARNING_LEVEL 60U
+#define DEFAULT_DANGER_LEVEL 90
+#define DEFAULT_WARNING_LEVEL 60
 
-// memory cleaning area (mask)
+// colors
+#define TRAY_COLOR_BLACK RGB(0, 0, 0)
+#define TRAY_COLOR_WHITE RGB(255, 255, 255)
+#define TRAY_COLOR_TEXT RGB(255, 255, 255)
+#define TRAY_COLOR_BG RGB(0, 128, 64)
+#define TRAY_COLOR_WARNING RGB(255, 128, 64)
+#define TRAY_COLOR_DANGER RGB(237, 28, 36)
+
+// memory cleaning mask
 #define REDUCT_WORKING_SET 0x01
 #define REDUCT_SYSTEM_WORKING_SET 0x02
 #define REDUCT_STANDBY_PRIORITY0_LIST 0x04
@@ -29,38 +38,42 @@
 #define REDUCT_MODIFIED_LIST 0x10
 #define REDUCT_COMBINE_MEMORY_LISTS 0x20
 
-// def. colors
-#define TRAY_COLOR_MASK RGB(255, 0, 255)
-#define TRAY_COLOR_TEXT RGB(255, 255, 255)
-#define TRAY_COLOR_BG RGB(0, 128, 64)
-#define TRAY_COLOR_WARNING RGB(255, 128, 64)
-#define TRAY_COLOR_DANGER RGB(237, 28, 36)
-
-// def. memory cleaning area
+// memory cleaning values
+#define REDUCT_MASK_ALL (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST | REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 #define REDUCT_MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST)
 #define REDUCT_MASK_FREEZES (REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 
-typedef struct tagSTATIC_DATA
+typedef struct _static_data
 {
 	HDC hdc;
 	HDC hdc_mask;
 	HBITMAP hbitmap;
 	HBITMAP hbitmap_mask;
 	HFONT hfont;
-	HICON htrayicon;
-	DWORD ms_prev;
-	INT scale;
-} STATIC_DATA, *PSTATIC_DATA;
+	RECT icon_size;
+	ULONG ms_prev;
+} static_data, *static_data_ptr;
 
-typedef struct tagMEMORYINFO
+typedef struct _memory_object
 {
-	ULONG64 total_phys;
-	ULONG64 free_phys;
-	ULONG64 total_page;
-	ULONG64 free_page;
-	ULONG64 total_ws;
-	ULONG64 free_ws;
-	ULONG percent_phys;
-	ULONG percent_page;
-	ULONG percent_ws;
-} MEMORYINFO, *PMEMORYINFO;
+	ULONG64 total_bytes;
+	ULONG64 free_bytes;
+	ULONG64 used_bytes;
+	ULONG percent;
+} memory_object, *memory_object_ptr;
+
+typedef struct _memory_info
+{
+	memory_object physical_memory;
+	memory_object virtual_memory;
+	memory_object system_cache;
+} memory_info, *memory_info_ptr;
+
+typedef enum _cleanup_source
+{
+	source_auto,
+	source_manual,
+	source_tray,
+	source_hotkey,
+	source_cmdline
+} cleanup_source, *cleanup_source_ptr;
