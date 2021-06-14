@@ -213,6 +213,17 @@ FONT 8, "Ms Shell Dlg"
 	AUTOCHECKBOX	"", IDC_NOTIFICATIONSOUND_CHK, 8, 136, 244, 12, BS_MULTILINE
 }
 
+IDD_SETTINGS_ADVANCED DIALOGEX 0, 0, 260, 168
+STYLE WS_CHILD | WS_SYSMENU | WS_TABSTOP | WS_GROUP | DS_SHELLFONT | DS_CONTROL
+EXSTYLE WS_EX_CONTROLPARENT
+FONT 8, "Ms Shell Dlg"
+{
+	GROUPBOX		"", IDC_TITLE_1, 0, 0, 260, 46
+
+	AUTOCHECKBOX	"", IDC_ALLOWSTANDBYLISTCLEANUP_CHK, 8, 12, 244, 10
+	AUTOCHECKBOX	"", IDC_LOGRESULTS_CHK, 8, 24, 244, 10
+}
+
 //
 // String resources
 //
@@ -323,9 +334,11 @@ STRINGTABLE
 	IDS_STATUS_CLEANED "Memory was released with %s result."
 	IDS_STATUS_NOPRIVILEGES "Required administrator privileges, please run program as administrator!"
 
-	IDS_TRAYICONSINGLECLICK_CHK "Use single click, instead of double click"
+	IDS_TRAYICONSINGLECLICK_CHK "Single click on tray icon to open"
 
 	IDS_NOTIFICATIONSOUND_CHK "Enable notifications sound"
+
+	IDS_TITLE_ADVANCED "Advanced"
 }
 
 //
