@@ -15,6 +15,9 @@
 #define UID 1337
 #define UID_FORCE 8044
 #define LANG_MENU 6
+#define TRAY_SUBMENU_1 4
+#define TRAY_SUBMENU_2 5
+#define TRAY_SUBMENU_3 6
 
 #define DEFAULT_AUTOREDUCT_VAL 90
 #define DEFAULT_AUTOREDUCTINTERVAL_VAL 30
@@ -45,7 +48,7 @@
 
 DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
 
-typedef struct _static_data
+typedef struct STATIC_DATA
 {
 	HDC hdc;
 	HDC hdc_mask;
@@ -54,7 +57,7 @@ typedef struct _static_data
 	HFONT hfont;
 	RECT icon_size;
 	ULONG ms_prev;
-} static_data, *static_data_ptr;
+} STATIC_DATA, *PSTATIC_DATA;
 
 typedef struct _memory_object
 {
