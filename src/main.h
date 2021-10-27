@@ -48,7 +48,7 @@
 
 DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
 
-typedef struct STATIC_DATA
+typedef struct _STATIC_DATA
 {
 	HDC hdc;
 	HDC hdc_mask;
@@ -59,26 +59,26 @@ typedef struct STATIC_DATA
 	ULONG ms_prev;
 } STATIC_DATA, *PSTATIC_DATA;
 
-typedef struct _memory_object
+typedef struct _MEMORY_OBJECT
 {
 	ULONG64 total_bytes;
 	ULONG64 free_bytes;
 	ULONG64 used_bytes;
 	ULONG percent;
-} memory_object, *memory_object_ptr;
+} MEMORY_OBJECT, *PMEMORY_OBJECT;
 
-typedef struct _memory_info
+typedef struct _MEMORY_INFO
 {
-	memory_object physical_memory;
-	memory_object virtual_memory;
-	memory_object system_cache;
-} memory_info, *memory_info_ptr;
+	MEMORY_OBJECT physical_memory;
+	MEMORY_OBJECT virtual_memory;
+	MEMORY_OBJECT system_cache;
+} MEMORY_INFO, *PMEMORY_INFO;
 
-typedef enum _cleanup_source
+typedef enum _CLEANUP_SOURCE_ENUM
 {
-	source_auto,
-	source_manual,
-	source_tray,
-	source_hotkey,
-	source_cmdline
-} cleanup_source, *cleanup_source_ptr;
+	SOURCE_AUTO,
+	SOURCE_MANUAL,
+	SOURCE_TRAY,
+	SOURCE_HOTKEY,
+	SOURCE_CMDLINE
+} CLEANUP_SOURCE_ENUM, *PCLEANUP_SOURCE_ENUM;
