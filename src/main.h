@@ -14,7 +14,7 @@
 #define TIMER 1000
 #define UID 1337
 #define UID_FORCE 8044
-#define LANG_MENU 6
+#define LANG_MENU 7
 #define TRAY_SUBMENU_1 4
 #define TRAY_SUBMENU_2 5
 #define TRAY_SUBMENU_3 6
