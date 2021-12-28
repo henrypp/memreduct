@@ -29,7 +29,6 @@ desktop.ini
 *.opendb
 *.suo
 *.exp
-*.user
 *.iobj
 *.ipch
 *.ipdb
