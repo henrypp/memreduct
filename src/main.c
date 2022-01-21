@@ -164,8 +164,8 @@ VOID _app_memoryclean (
 	MEMORY_COMBINE_INFORMATION_EX combine_info_ex;
 	SYSTEM_FILECACHE_INFORMATION sfci;
 	SYSTEM_MEMORY_LIST_COMMAND command;
-	WCHAR cleanup_string[512];
-	WCHAR result_string[64];
+	WCHAR buffer1[64];
+	WCHAR buffer2[256];
 	LPCWSTR error_text;
 	ULONG64 reduct_before;
 	ULONG64 reduct_after;
@@ -351,13 +351,13 @@ VOID _app_memoryclean (
 
 	_r_config_setlong64 (L"StatisticLastReduct", _r_unixtime_now ()); // time of last cleaning
 
-	_r_format_bytesize64 (result_string, RTL_NUMBER_OF (result_string), reduct_after);
+	_r_format_bytesize64 (buffer1, RTL_NUMBER_OF (buffer1), reduct_after);
 
-	_r_str_printf (cleanup_string, RTL_NUMBER_OF (cleanup_string), _r_locale_getstring (IDS_STATUS_CLEANED), result_string);
+	_r_str_printf (buffer2, RTL_NUMBER_OF (buffer2), _r_locale_getstring (IDS_STATUS_CLEANED), buffer1);
 
 	if (src == SOURCE_CMDLINE)
 	{
-		_r_show_message (NULL, MB_OK | MB_ICONINFORMATION, NULL, cleanup_string);
+		_r_show_message (NULL, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
 	}
 	else
 	{
@@ -368,15 +368,13 @@ VOID _app_memoryclean (
 				&GUID_TrayIcon,
 				NIIF_INFO | (_r_config_getboolean (L"IsNotificationsSound", TRUE) ? 0 : NIIF_NOSOUND),
 				_r_app_getname (),
-				cleanup_string
+				buffer2
 			);
 		}
 	}
 
 	if (_r_config_getboolean (L"LogCleanResults", FALSE))
-	{
-		_r_log_v (LOG_LEVEL_INFO, 0, _app_getcleanupreason (src), 0, result_string);
-	}
+		_r_log_v (LOG_LEVEL_INFO, 0, _app_getcleanupreason (src), 0, buffer1);
 }
 
 VOID _app_fontinit (
