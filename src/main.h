@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2021 Henry++
+// Copyright (c) 2011-2022 Henry++
 
 #pragma once
 
@@ -8,13 +8,14 @@
 #include "resource.h"
 #include "app.h"
 
-// libs
-#pragma comment(lib, "msimg32.lib")
+DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
 
 #define TIMER 1000
 #define UID 1337
 #define UID_FORCE 8044
+
 #define LANG_MENU 7
+
 #define TRAY_SUBMENU_1 4
 #define TRAY_SUBMENU_2 5
 #define TRAY_SUBMENU_3 6
@@ -45,8 +46,6 @@
 #define REDUCT_MASK_ALL (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST | REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
 #define REDUCT_MASK_DEFAULT (REDUCT_WORKING_SET | REDUCT_SYSTEM_WORKING_SET | REDUCT_STANDBY_PRIORITY0_LIST)
 #define REDUCT_MASK_FREEZES (REDUCT_STANDBY_LIST | REDUCT_MODIFIED_LIST)
-
-DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
 
 typedef struct _STATIC_DATA
 {
