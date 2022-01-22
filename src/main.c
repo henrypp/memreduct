@@ -65,10 +65,6 @@ VOID generate_menu_array (
 		{
 			*(PULONG)PTR_ADD_OFFSET (integers, sizeof (ULONG) * index) = (ULONG)hash_code;
 		}
-		else
-		{
-			*(PULONG)PTR_ADD_OFFSET (integers, sizeof (ULONG) * index) = 0;
-		}
 
 		if (++index >= count)
 			break;
