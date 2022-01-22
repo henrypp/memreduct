@@ -810,7 +810,7 @@ INT_PTR CALLBACK SettingsProc (
 					CheckDlgButton (hwnd, IDC_STARTMINIMIZED_CHK, _r_config_getboolean (L"IsStartMinimized", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 					CheckDlgButton (hwnd, IDC_REDUCTCONFIRMATION_CHK, _r_config_getboolean (L"IsShowReductConfirmation", TRUE) ? BST_CHECKED : BST_UNCHECKED);
 
-					if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
+					if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
 						_r_ctrl_enable (hwnd, IDC_SKIPUACWARNING_CHK, FALSE);
 
 					CheckDlgButton (hwnd, IDC_SKIPUACWARNING_CHK, _r_skipuac_isenabled () ? BST_CHECKED : BST_UNCHECKED);
@@ -826,7 +826,7 @@ INT_PTR CALLBACK SettingsProc (
 				{
 					ULONG mask;
 
-					if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
+					if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
 					{
 						_r_ctrl_enable (hwnd, IDC_WORKINGSET_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, FALSE);
@@ -843,7 +843,7 @@ INT_PTR CALLBACK SettingsProc (
 					}
 
 					// Combine memory lists (win10+)
-					if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_10))
+					if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_10))
 						_r_ctrl_enable (hwnd, IDC_COMBINEMEMORYLISTS_CHK, FALSE);
 
 					mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
@@ -921,6 +921,9 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_ADVANCED:
 				{
+					if (_r_sys_isosversionlower (WINDOWS_VISTA))
+						_r_ctrl_enable (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, FALSE);
+
 					CheckDlgButton (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, _r_config_getboolean (L"IsAllowStandbyListCleanup", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 					CheckDlgButton (hwnd, IDC_LOGRESULTS_CHK, _r_config_getboolean (L"LogCleanResults", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
@@ -1029,8 +1032,8 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_ADVANCED:
 				{
-					_r_ctrl_setstring (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, L"Allow \"Standby lists\" cleanup on autoreduct");
-					_r_ctrl_setstring (hwnd, IDC_LOGRESULTS_CHK, L"Log cleaning results into a file");
+					_r_ctrl_setstring (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, L"Allow \"Standby lists\" and \"Modified page list\" cleanup on autoreduct");
+					_r_ctrl_setstring (hwnd, IDC_LOGRESULTS_CHK, L"Log cleaning results into a debug log");
 
 					break;
 				}
@@ -1695,7 +1698,7 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_checkitem (hmenu, IDM_SKIPUACWARNING_CHK, 0, MF_BYCOMMAND, _r_skipuac_isenabled ());
 				_r_menu_checkitem (hmenu, IDM_CHECKUPDATES_CHK, 0, MF_BYCOMMAND, _r_update_isenabled (FALSE));
 
-				if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
+				if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
 					_r_menu_enableitem (hmenu, IDM_SKIPUACWARNING_CHK, MF_BYCOMMAND, FALSE);
 			}
 
@@ -2028,7 +2031,7 @@ INT_PTR CALLBACK DlgProc (
 								if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
 									CheckMenuItem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
+								if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
 								{
 									_r_menu_enableitem (hsubmenu_region, IDM_WORKINGSET_CHK, MF_BYCOMMAND, FALSE);
 									_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND, FALSE);
@@ -2040,7 +2043,7 @@ INT_PTR CALLBACK DlgProc (
 								}
 
 								// Combine memory lists (win10+)
-								if (!_r_sys_iselevated () || !_r_sys_isosversiongreaterorequal (WINDOWS_10))
+								if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_10))
 									_r_menu_enableitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND, FALSE);
 							}
 
