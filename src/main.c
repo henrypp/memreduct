@@ -176,7 +176,7 @@ VOID _app_memoryclean (
 
 		if (src == SOURCE_CMDLINE)
 		{
-			_r_show_message (NULL, MB_OK | MB_ICONSTOP, NULL, error_text);
+			_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, error_text);
 		}
 		else
 		{
@@ -351,7 +351,7 @@ VOID _app_memoryclean (
 
 	if (src == SOURCE_CMDLINE)
 	{
-		_r_show_message (NULL, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
+		_r_show_message (hwnd, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
 	}
 	else
 	{
@@ -2402,7 +2402,7 @@ INT_PTR CALLBACK DlgProc (
 							return FALSE;
 					}
 
-					_app_memoryclean (SOURCE_TRAY, mask);
+					_app_memoryclean (SOURCE_CMDLINE, mask);
 
 					break;
 				}
