@@ -192,10 +192,8 @@ VOID _app_memoryclean (
 		return;
 	}
 
-	if (src != SOURCE_CMDLINE)
-	{
+	if (!mask)
 		mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
-	}
 
 	if (src == SOURCE_AUTO)
 	{
@@ -967,12 +965,12 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_MEMORY:
 				{
-					_r_ctrl_setstringformat (hwnd, IDC_WORKINGSET_CHK, L"%s (vista+)", _r_locale_getstring (IDS_WORKINGSET_CHK));
-					_r_ctrl_setstring (hwnd, IDC_SYSTEMWORKINGSET_CHK, _r_locale_getstring (IDS_SYSTEMWORKINGSET_CHK));
-					_r_ctrl_setstringformat (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, L"%s (vista+)", _r_locale_getstring (IDS_STANDBYLISTPRIORITY0_CHK));
-					_r_ctrl_setstringformat (hwnd, IDC_STANDBYLIST_CHK, L"%s* (vista+)", _r_locale_getstring (IDS_STANDBYLIST_CHK));
-					_r_ctrl_setstringformat (hwnd, IDC_MODIFIEDLIST_CHK, L"%s* (vista+)", _r_locale_getstring (IDS_MODIFIEDLIST_CHK));
-					_r_ctrl_setstringformat (hwnd, IDC_COMBINEMEMORYLISTS_CHK, L"%s (win10+)", _r_locale_getstring (IDS_COMBINEMEMORYLISTS_CHK));
+					_r_ctrl_setstring (hwnd, IDC_WORKINGSET_CHK, TITLE_WORKINGSET);
+					_r_ctrl_setstring (hwnd, IDC_SYSTEMWORKINGSET_CHK, TITLE_SYSTEMWORKINGSET);
+					_r_ctrl_setstring (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, TITLE_STANDBYLISTPRIORITY0);
+					_r_ctrl_setstring (hwnd, IDC_STANDBYLIST_CHK, TITLE_STANDBYLIST);
+					_r_ctrl_setstring (hwnd, IDC_MODIFIEDLIST_CHK, TITLE_MODIFIEDLIST);
+					_r_ctrl_setstring (hwnd, IDC_COMBINEMEMORYLISTS_CHK, TITLE_COMBINEMEMORYLISTS);
 
 					_r_ctrl_setstring (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_locale_getstring (IDS_AUTOREDUCTENABLE_CHK));
 					_r_ctrl_setstring (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_locale_getstring (IDS_AUTOREDUCTINTERVALENABLE_CHK));
@@ -1598,23 +1596,26 @@ VOID _app_initialize (
 			SE_PROF_SINGLE_PROCESS_PRIVILEGE,
 		};
 
+		if (hwnd)
+		{
+			if (_r_sys_isosversiongreaterorequal (WINDOWS_VISTA))
+				_r_wnd_addstyle (hwnd, IDC_CLEAN, BS_SPLITBUTTON, BS_SPLITBUTTON, GWL_STYLE);
+		}
+
 		_r_sys_setprocessprivilege (NtCurrentProcess (), privileges, RTL_NUMBER_OF (privileges), TRUE);
 	}
 	else
 	{
 		if (hwnd)
-		{
-			dpi_value = _r_dc_getwindowdpi (hwnd);
-
-			// uac indicator (vista+)
-			_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN, dpi_value);
-
 			SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
-		}
 	}
 
 	if (!hwnd)
 		return;
+
+	dpi_value = _r_dc_getwindowdpi (hwnd);
+
+	_r_ctrl_setbuttonmargins (hwnd, IDC_CLEAN, dpi_value);
 
 	// configure listview
 	_r_listview_setstyle (hwnd, IDC_LISTVIEW, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP, TRUE);
@@ -1842,11 +1843,45 @@ INT_PTR CALLBACK DlgProc (
 
 			nmlp = (LPNMHDR)lparam;
 
-			if (nmlp->idFrom != IDC_LISTVIEW)
-				break;
-
 			switch (nmlp->code)
 			{
+				case BCN_DROPDOWN:
+				{
+					RECT rect;
+					R_RECTANGLE rectangle;
+					HMENU hsubmenu;
+
+					hsubmenu = CreatePopupMenu ();
+
+					if (hsubmenu)
+					{
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_SYSTEMWORKINGSET, TITLE_SYSTEMWORKINGSET);
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
+						AppendMenu (hsubmenu, MF_STRING, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
+
+						if (_r_sys_isosversionlower (WINDOWS_10))
+							_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, MF_BYCOMMAND, FALSE);
+
+						if (GetClientRect (nmlp->hwndFrom, &rect))
+						{
+							ClientToScreen (nmlp->hwndFrom, (PPOINT)&rect);
+
+							_r_wnd_recttorectangle (&rectangle, &rect);
+							_r_wnd_adjustworkingarea (nmlp->hwndFrom, &rectangle);
+							_r_wnd_rectangletorect (&rect, &rectangle);
+
+							_r_menu_popup (hsubmenu, hwnd, (PPOINT)&rect, TRUE);
+						}
+
+						DestroyMenu (hsubmenu);
+					}
+
+					break;
+				}
+
 				case NM_CUSTOMDRAW:
 				{
 					LPNMLVCUSTOMDRAW lpnmlv;
@@ -1854,6 +1889,9 @@ INT_PTR CALLBACK DlgProc (
 
 					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 					result = CDRF_DODEFAULT;
+
+					if (nmlp->idFrom != IDC_LISTVIEW)
+						break;
 
 					switch (lpnmlv->nmcd.dwDrawStage)
 					{
@@ -2006,12 +2044,12 @@ INT_PTR CALLBACK DlgProc (
 							{
 								mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
-								_r_menu_setitemtextformat (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, L"%s (vista+)", _r_locale_getstring (IDS_WORKINGSET_CHK));
-								_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, _r_locale_getstring (IDS_SYSTEMWORKINGSET_CHK));
-								_r_menu_setitemtextformat (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, L"%s (vista+)", _r_locale_getstring (IDS_STANDBYLISTPRIORITY0_CHK));
-								_r_menu_setitemtextformat (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, L"%s* (vista+)", _r_locale_getstring (IDS_STANDBYLIST_CHK));
-								_r_menu_setitemtextformat (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, L"%s* (vista+)", _r_locale_getstring (IDS_MODIFIEDLIST_CHK));
-								_r_menu_setitemtextformat (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, L"%s (win10+)", _r_locale_getstring (IDS_COMBINEMEMORYLISTS_CHK));
+								_r_menu_setitemtext (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, TITLE_WORKINGSET);
+								_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, TITLE_SYSTEMWORKINGSET);
+								_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, TITLE_STANDBYLISTPRIORITY0);
+								_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, TITLE_STANDBYLIST);
+								_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, TITLE_MODIFIEDLIST);
+								_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, TITLE_COMBINEMEMORYLISTS);
 
 								if ((mask & REDUCT_WORKING_SET) != 0)
 									CheckMenuItem (hsubmenu_region, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
@@ -2254,29 +2292,46 @@ INT_PTR CALLBACK DlgProc (
 					mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 					new_mask = 0;
 
-					if (ctrl_id == IDM_WORKINGSET_CHK)
+					switch (ctrl_id)
 					{
-						new_mask = REDUCT_WORKING_SET;
-					}
-					else if (ctrl_id == IDM_SYSTEMWORKINGSET_CHK)
-					{
-						new_mask = REDUCT_SYSTEM_WORKING_SET;
-					}
-					else if (ctrl_id == IDM_STANDBYLISTPRIORITY0_CHK)
-					{
-						new_mask = REDUCT_STANDBY_PRIORITY0_LIST;
-					}
-					else if (ctrl_id == IDM_STANDBYLIST_CHK)
-					{
-						new_mask = REDUCT_STANDBY_LIST;
-					}
-					else if (ctrl_id == IDM_MODIFIEDLIST_CHK)
-					{
-						new_mask = REDUCT_MODIFIED_LIST;
-					}
-					else if (ctrl_id == IDM_COMBINEMEMORYLISTS_CHK)
-					{
-						new_mask = REDUCT_COMBINE_MEMORY_LISTS;
+						case IDM_WORKINGSET_CHK:
+						{
+							new_mask = REDUCT_WORKING_SET;
+							break;
+						}
+
+						case IDM_SYSTEMWORKINGSET_CHK:
+						{
+							new_mask = REDUCT_SYSTEM_WORKING_SET;
+							break;
+						}
+
+						case IDM_STANDBYLISTPRIORITY0_CHK:
+						{
+							new_mask = REDUCT_STANDBY_PRIORITY0_LIST;
+							break;
+						}
+
+						case IDM_STANDBYLIST_CHK:
+						{
+							new_mask = REDUCT_STANDBY_LIST;
+							break;
+						}
+
+						case IDM_MODIFIEDLIST_CHK:
+						{
+							new_mask = REDUCT_MODIFIED_LIST;
+							break;
+						}
+
+						case IDM_COMBINEMEMORYLISTS_CHK:
+						{
+							new_mask = REDUCT_COMBINE_MEMORY_LISTS;
+							break;
+						}
+
+						default:
+							return FALSE;
 					}
 
 					if ((ctrl_id == IDM_STANDBYLIST_CHK && !(mask & REDUCT_STANDBY_LIST)) ||
@@ -2293,6 +2348,61 @@ INT_PTR CALLBACK DlgProc (
 					}
 
 					_r_config_setlong (L"ReductMask2", (mask & new_mask) != 0 ? (mask & ~new_mask) : (mask | new_mask));
+
+					break;
+				}
+
+				case IDM_CLEAN_WORKINGSET:
+				case IDM_CLEAN_SYSTEMWORKINGSET:
+				case IDM_CLEAN_STANDBYLISTPRIORITY0:
+				case IDM_CLEAN_STANDBYLIST:
+				case IDM_CLEAN_MODIFIEDLIST:
+				case IDM_CLEAN_COMBINEMEMORYLISTS:
+				{
+					ULONG mask;
+
+					switch (ctrl_id)
+					{
+						case IDM_CLEAN_WORKINGSET:
+						{
+							mask = REDUCT_WORKING_SET;
+							break;
+						}
+
+						case IDM_CLEAN_SYSTEMWORKINGSET:
+						{
+							mask = REDUCT_SYSTEM_WORKING_SET;
+							break;
+						}
+
+						case IDM_CLEAN_STANDBYLISTPRIORITY0:
+						{
+							mask = REDUCT_STANDBY_PRIORITY0_LIST;
+							break;
+						}
+						case IDM_CLEAN_STANDBYLIST:
+						{
+							mask = REDUCT_STANDBY_LIST;
+							break;
+						}
+
+						case IDM_CLEAN_MODIFIEDLIST:
+						{
+							mask = REDUCT_MODIFIED_LIST;
+							break;
+						}
+
+						case IDM_CLEAN_COMBINEMEMORYLISTS:
+						{
+							mask = REDUCT_COMBINE_MEMORY_LISTS;
+							break;
+						}
+
+						default:
+							return FALSE;
+					}
+
+					_app_memoryclean (SOURCE_TRAY, mask);
 
 					break;
 				}
