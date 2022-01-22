@@ -197,7 +197,8 @@ VOID _app_memoryclean (
 
 	if (src == SOURCE_AUTO)
 	{
-		mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
+		if (!_r_config_getboolean (L"IsAllowStandbyListCleanup", FALSE))
+			mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
 	}
 	else if (src == SOURCE_MANUAL)
 	{
