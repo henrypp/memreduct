@@ -10,6 +10,13 @@
 
 DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
 
+#define TITLE_WORKINGSET L"Working set (vista+)"
+#define TITLE_SYSTEMWORKINGSET L"System working set"
+#define TITLE_STANDBYLISTPRIORITY0 L"Standby list (without priority) (vista+)"
+#define TITLE_STANDBYLIST L"Standby list* (vista+)"
+#define TITLE_MODIFIEDLIST L"Modified page list* (vista+)"
+#define TITLE_COMBINEMEMORYLISTS L"Combine memory lists (win10+)"
+
 #define TIMER 1000
 #define UID 1337
 #define UID_FORCE 8044
