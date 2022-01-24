@@ -2200,7 +2200,7 @@ INT_PTR CALLBACK DlgProc (
 									IDX_TRAY_POPUP_2,
 									intervals_arr,
 									RTL_NUMBER_OF (intervals_arr),
-									L"%" TEXT (PR_ULONG) L" min." L"%",
+									L"%" TEXT (PR_ULONG) L" min.",
 									_app_getintervalvalue (),
 									is_enabled
 								);
@@ -2585,9 +2585,9 @@ BOOLEAN _app_parseargs (
 	{
 		_r_show_message (
 			NULL,
-			MB_OK | MB_ICONINFORMATION,
-			L"Available options:",
-			L"\"memreduct.exe -clean:full\" - clear all memory regions\r\n\"memreduct.exe -clean:default\" - clear configured memory regions"
+			MB_OK | MB_ICONINFORMATION | MB_TOPMOST,
+			L"Available options for memreduct.exe:",
+			L"-clean - clear default memory regions\r\n-clean:full - clear all memory regions"
 		);
 
 		return TRUE;
