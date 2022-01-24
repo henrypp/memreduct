@@ -79,7 +79,7 @@ VOID generate_menu (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ SIZE_T count,
 	_In_ LPCWSTR format,
-	_In_ LONG value,
+	_In_ ULONG value,
 	_In_ BOOLEAN is_enabled
 )
 {
@@ -125,6 +125,42 @@ VOID generate_menu (
 
 	if (!is_enabled || !is_checked)
 		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
+}
+
+ULONG _app_getlimitvalue ()
+{
+	ULONG value;
+
+	value = _r_config_getulong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
+
+	return _r_calc_clamp (value, 1, 99);
+}
+
+ULONG _app_getintervalvalue ()
+{
+	ULONG value;
+
+	value = _r_config_getulong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
+
+	return _r_calc_clamp (value, 1, 1440);
+}
+
+ULONG _app_getdangervalue ()
+{
+	ULONG value;
+
+	value = _r_config_getulong (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL);
+
+	return _r_calc_clamp (value, 1, 99);
+}
+
+ULONG _app_getwarningvalue ()
+{
+	ULONG value;
+
+	value = _r_config_getulong (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL);
+
+	return _r_calc_clamp (value, 1, 99);
 }
 
 VOID _app_getmemoryinfo (
@@ -529,8 +565,8 @@ HICON _app_iconcreate (
 	is_border = _r_config_getboolean (L"TrayShowBorder", FALSE);
 	is_round = _r_config_getboolean (L"TrayRoundCorners", FALSE);
 
-	has_danger = percent >= _r_config_getulong (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL);
-	has_warning = !has_danger && percent >= _r_config_getulong (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL);
+	has_danger = percent >= _app_getdangervalue ();
+	has_warning = !has_danger && percent >= _app_getwarningvalue ();
 
 	if (has_danger || has_warning)
 	{
@@ -641,8 +677,8 @@ VOID CALLBACK _app_timercallback (
 	// autocleanup functional
 	if (_r_sys_iselevated ())
 	{
-		if ((_r_config_getboolean (L"AutoreductEnable", FALSE) && mem_info.physical_memory.percent >= _r_config_getulong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL)) ||
-			(_r_config_getboolean (L"AutoreductIntervalEnable", FALSE) && (_r_unixtime_now () - _r_config_getlong64 (L"StatisticLastReduct", 0)) >= (_r_config_getlong64 (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL) * 60)))
+		if ((_r_config_getboolean (L"AutoreductEnable", FALSE) && mem_info.physical_memory.percent >= _app_getlimitvalue ()) ||
+			(_r_config_getboolean (L"AutoreductIntervalEnable", FALSE) && (_r_unixtime_now () - _r_config_getlong64 (L"StatisticLastReduct", 0)) >= ((LONG64)_app_getintervalvalue () * 60)))
 		{
 			_app_memoryclean (SOURCE_AUTO, 0);
 		}
@@ -909,12 +945,12 @@ INT_PTR CALLBACK SettingsProc (
 					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL));
+					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getlimitvalue ());
 
 					CheckDlgButton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_config_getboolean (L"AutoreductIntervalEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
 					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 1, 1440);
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL));
+					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getintervalvalue ());
 
 					CheckDlgButton (hwnd, IDC_HOTKEY_CLEAN_CHK, _r_config_getboolean (L"HotkeyCleanEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
@@ -954,10 +990,10 @@ INT_PTR CALLBACK SettingsProc (
 				case IDD_SETTINGS_TRAY:
 				{
 					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_r_config_getlong (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL));
+					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_app_getwarningvalue ());
 
 					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_r_config_getlong (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL));
+					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_app_getdangervalue ());
 
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
 					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
@@ -1956,12 +1992,12 @@ INT_PTR CALLBACK DlgProc (
 
 						case CDDS_ITEMPREPAINT:
 						{
-							if (lpnmlv->nmcd.lItemlParam >= _r_config_getlong (L"TrayLevelDanger", DEFAULT_DANGER_LEVEL))
+							if (lpnmlv->nmcd.lItemlParam >= _app_getdangervalue ())
 							{
 								lpnmlv->clrText = _r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER);
 								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
 							}
-							else if (lpnmlv->nmcd.lItemlParam >= _r_config_getlong (L"TrayLevelWarning", DEFAULT_WARNING_LEVEL))
+							else if (lpnmlv->nmcd.lItemlParam >= _app_getwarningvalue ())
 							{
 								lpnmlv->clrText = _r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING);
 								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
@@ -2056,7 +2092,6 @@ INT_PTR CALLBACK DlgProc (
 					HMENU hsubmenu_region;
 					HMENU hsubmenu_limit;
 					HMENU hsubmenu_interval;
-					LONG value;
 					ULONG mask;
 					BOOLEAN is_enabled;
 
@@ -2138,7 +2173,6 @@ INT_PTR CALLBACK DlgProc (
 							// configure submenu #2
 							if (hsubmenu_limit)
 							{
-								value = _r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
 								is_enabled = _r_config_getboolean (L"AutoreductEnable", FALSE);
 
 								generate_menu (
@@ -2147,7 +2181,7 @@ INT_PTR CALLBACK DlgProc (
 									limits_arr,
 									RTL_NUMBER_OF (limits_arr),
 									L"%" TEXT (PR_ULONG) L"%%",
-									value,
+									_app_getlimitvalue (),
 									is_enabled
 								);
 							}
@@ -2155,7 +2189,6 @@ INT_PTR CALLBACK DlgProc (
 							// configure submenu #3
 							if (hsubmenu_interval)
 							{
-								value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
 								is_enabled = _r_config_getboolean (L"AutoreductIntervalEnable", FALSE);
 
 								generate_menu (
@@ -2164,7 +2197,7 @@ INT_PTR CALLBACK DlgProc (
 									intervals_arr,
 									RTL_NUMBER_OF (intervals_arr),
 									L"%" TEXT (PR_ULONG) L" min." L"%",
-									value,
+									_app_getintervalvalue (),
 									is_enabled
 								);
 							}
