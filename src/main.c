@@ -30,7 +30,7 @@ INT __cdecl compare_numbers (
 	return 0;
 }
 
-VOID generate_menu_array (
+VOID generate_array (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ SIZE_T count,
 	_In_ SIZE_T value
@@ -43,7 +43,7 @@ VOID generate_menu_array (
 
 	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
 
-	for (index = 1; index < 10; index++)
+	for (index = 1; index < 9; index++)
 	{
 		_r_obj_addhashtableitem (hashtable, index * 10, NULL);
 	}
@@ -61,10 +61,8 @@ VOID generate_menu_array (
 
 	while (_r_obj_enumhashtable (hashtable, NULL, &hash_code, &enum_key))
 	{
-		if (hash_code <= 100)
-		{
+		if (hash_code <= 99)
 			*(PULONG)PTR_ADD_OFFSET (integers, sizeof (ULONG) * index) = (ULONG)hash_code;
-		}
 
 		if (++index >= count)
 			break;
@@ -73,6 +71,60 @@ VOID generate_menu_array (
 	qsort (integers, count, sizeof (ULONG), &compare_numbers);
 
 	_r_obj_dereference (hashtable);
+}
+
+VOID generate_menu (
+	_In_ HMENU hsubmenu,
+	_In_ UINT menu_idx,
+	_Out_ _Writable_elements_ (count) PULONG integers,
+	_In_ SIZE_T count,
+	_In_ LPCWSTR format,
+	_In_ LONG value,
+	_In_ BOOLEAN is_enabled
+)
+{
+	WCHAR buffer[64];
+
+	ULONG menu_items;
+	ULONG menu_value;
+	ULONG menu_id;
+
+	BOOLEAN is_checked;
+
+	is_checked = FALSE;
+
+	menu_items = 0;
+
+	_r_menu_setitemtext (hsubmenu, 0, TRUE, _r_locale_getstring (IDS_TRAY_DISABLE));
+
+	generate_array (integers, count, value);
+
+	for (UINT i = 0; i < count; i++)
+	{
+		menu_value = integers[i];
+
+		if (!menu_value)
+			continue;
+
+		menu_id = menu_idx + i;
+
+		_r_str_printf (buffer, RTL_NUMBER_OF (buffer), format, menu_value);
+		AppendMenu (hsubmenu, MF_STRING, menu_id, buffer);
+
+		if (!_r_sys_iselevated ())
+			_r_menu_enableitem (hsubmenu, menu_id, MF_BYCOMMAND, FALSE);
+
+		if (value == menu_value)
+		{
+			_r_menu_checkitem (hsubmenu, menu_id, menu_id, MF_BYCOMMAND, menu_id);
+			is_checked = TRUE;
+		}
+
+		menu_items += 1;
+	}
+
+	if (!is_enabled || !is_checked)
+		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
 }
 
 VOID _app_getmemoryinfo (
@@ -847,12 +899,12 @@ INT_PTR CALLBACK SettingsProc (
 
 					mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
-					CheckDlgButton (hwnd, IDC_WORKINGSET_CHK, ((mask & REDUCT_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_SYSTEMWORKINGSET_CHK, ((mask & REDUCT_SYSTEM_WORKING_SET) != 0) ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, ((mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_STANDBYLIST_CHK, ((mask & REDUCT_STANDBY_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_MODIFIEDLIST_CHK, ((mask & REDUCT_MODIFIED_LIST) != 0) ? BST_CHECKED : BST_UNCHECKED);
-					CheckDlgButton (hwnd, IDC_COMBINEMEMORYLISTS_CHK, ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_WORKINGSET_CHK, (mask & REDUCT_WORKING_SET) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_SYSTEMWORKINGSET_CHK, (mask & REDUCT_SYSTEM_WORKING_SET) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, (mask & REDUCT_STANDBY_PRIORITY0_LIST) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_STANDBYLIST_CHK, (mask & REDUCT_STANDBY_LIST) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_MODIFIEDLIST_CHK, (mask & REDUCT_MODIFIED_LIST) ? BST_CHECKED : BST_UNCHECKED);
+					CheckDlgButton (hwnd, IDC_COMBINEMEMORYLISTS_CHK, (mask & REDUCT_COMBINE_MEMORY_LISTS) ? BST_CHECKED : BST_UNCHECKED);
 
 					CheckDlgButton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE) ? BST_CHECKED : BST_UNCHECKED);
 
@@ -1999,16 +2051,13 @@ INT_PTR CALLBACK DlgProc (
 
 				case WM_CONTEXTMENU:
 				{
-					WCHAR buffer[128];
-					LONG value;
-					UINT menu_id;
 					HMENU hmenu;
 					HMENU hsubmenu;
 					HMENU hsubmenu_region;
 					HMENU hsubmenu_limit;
 					HMENU hsubmenu_interval;
+					LONG value;
 					ULONG mask;
-					BOOLEAN is_checked;
 					BOOLEAN is_enabled;
 
 					SetForegroundWindow (hwnd); // don't touch
@@ -2052,22 +2101,22 @@ INT_PTR CALLBACK DlgProc (
 								_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, TITLE_MODIFIEDLIST);
 								_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, TITLE_COMBINEMEMORYLISTS);
 
-								if ((mask & REDUCT_WORKING_SET) != 0)
+								if (mask & REDUCT_WORKING_SET)
 									CheckMenuItem (hsubmenu_region, IDM_WORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if ((mask & REDUCT_SYSTEM_WORKING_SET) != 0)
+								if (mask & REDUCT_SYSTEM_WORKING_SET)
 									CheckMenuItem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if ((mask & REDUCT_STANDBY_PRIORITY0_LIST) != 0)
+								if (mask & REDUCT_STANDBY_PRIORITY0_LIST)
 									CheckMenuItem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if ((mask & REDUCT_STANDBY_LIST) != 0)
+								if (mask & REDUCT_STANDBY_LIST)
 									CheckMenuItem (hsubmenu_region, IDM_STANDBYLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if ((mask & REDUCT_MODIFIED_LIST) != 0)
+								if (mask & REDUCT_MODIFIED_LIST)
 									CheckMenuItem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND | MF_CHECKED);
 
-								if ((mask & REDUCT_COMBINE_MEMORY_LISTS) != 0)
+								if (mask & REDUCT_COMBINE_MEMORY_LISTS)
 									CheckMenuItem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND | MF_CHECKED);
 
 								if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
@@ -2089,73 +2138,35 @@ INT_PTR CALLBACK DlgProc (
 							// configure submenu #2
 							if (hsubmenu_limit)
 							{
-								is_checked = FALSE;
+								value = _r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
 								is_enabled = _r_config_getboolean (L"AutoreductEnable", FALSE);
 
-								value = _r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
-
-								_r_menu_setitemtext (hsubmenu_limit, IDM_TRAY_DISABLE_1, FALSE, _r_locale_getstring (IDS_TRAY_DISABLE));
-
-								generate_menu_array (limits_arr, RTL_NUMBER_OF (limits_arr), value);
-
-								for (UINT i = 0; i < RTL_NUMBER_OF (limits_arr); i++)
-								{
-									if (!limits_arr[i])
-										continue;
-
-									menu_id = IDX_TRAY_POPUP_1 + i;
-
-									_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PRIu32) L"%%", limits_arr[i]);
-									AppendMenu (hsubmenu_limit, MF_STRING, menu_id, buffer);
-
-									if (!_r_sys_iselevated ())
-										_r_menu_enableitem (hsubmenu_limit, menu_id, MF_BYCOMMAND, FALSE);
-
-									if (value == limits_arr[i])
-									{
-										_r_menu_checkitem (hsubmenu_limit, 0, RTL_NUMBER_OF (limits_arr) + 2, MF_BYPOSITION, i + 2);
-										is_checked = TRUE;
-									}
-								}
-
-								if (!is_enabled || !is_checked)
-									_r_menu_checkitem (hsubmenu_limit, 0, RTL_NUMBER_OF (limits_arr) + 2, MF_BYPOSITION, 0);
+								generate_menu (
+									hsubmenu_limit,
+									IDX_TRAY_POPUP_1,
+									limits_arr,
+									RTL_NUMBER_OF (limits_arr),
+									L"%" TEXT (PR_ULONG) L"%%",
+									value,
+									is_enabled
+								);
 							}
 
 							// configure submenu #3
 							if (hsubmenu_interval)
 							{
-								is_checked = FALSE;
+								value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
 								is_enabled = _r_config_getboolean (L"AutoreductIntervalEnable", FALSE);
 
-								value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
-
-								_r_menu_setitemtext (hsubmenu_interval, IDM_TRAY_DISABLE_2, FALSE, _r_locale_getstring (IDS_TRAY_DISABLE));
-
-								generate_menu_array (intervals_arr, RTL_NUMBER_OF (intervals_arr), value);
-
-								for (UINT i = 0; i < RTL_NUMBER_OF (intervals_arr); i++)
-								{
-									if (!intervals_arr[i])
-										continue;
-
-									menu_id = IDX_TRAY_POPUP_2 + i;
-
-									_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PRIu32) L" min.", intervals_arr[i]);
-									AppendMenu (hsubmenu_interval, MF_STRING, menu_id, buffer);
-
-									if (!_r_sys_iselevated ())
-										_r_menu_enableitem (hsubmenu_interval, menu_id, MF_BYCOMMAND, FALSE);
-
-									if (value == intervals_arr[i])
-									{
-										_r_menu_checkitem (hsubmenu_interval, 0, RTL_NUMBER_OF (intervals_arr) + 2, MF_BYPOSITION, i + 2);
-										is_checked = TRUE;
-									}
-								}
-
-								if (!is_enabled || !is_checked)
-									_r_menu_checkitem (hsubmenu_interval, 0, RTL_NUMBER_OF (intervals_arr) + 2, MF_BYPOSITION, 0);
+								generate_menu (
+									hsubmenu_interval,
+									IDX_TRAY_POPUP_2,
+									intervals_arr,
+									RTL_NUMBER_OF (intervals_arr),
+									L"%" TEXT (PR_ULONG) L" min." L"%",
+									value,
+									is_enabled
+								);
 							}
 
 							_r_menu_popup (hsubmenu, hwnd, NULL, TRUE);
@@ -2520,10 +2531,12 @@ BOOLEAN _app_parseargs (
 		{
 			if (_r_str_isequal2 (&clean_args->sr, L"full", TRUE))
 				mask = REDUCT_MASK_ALL;
+
+			_r_obj_dereference (clean_args);
 		}
 
-		if (!mask)
-			mask = REDUCT_MASK_DEFAULT;
+		//if (!mask)
+		//	mask = REDUCT_MASK_DEFAULT;
 
 		_app_initialize (NULL);
 
