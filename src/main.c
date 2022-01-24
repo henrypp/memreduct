@@ -30,7 +30,7 @@ INT __cdecl compare_numbers (
 	return 0;
 }
 
-VOID generate_array (
+VOID _app_generate_array (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ SIZE_T count,
 	_In_ SIZE_T value
@@ -73,7 +73,7 @@ VOID generate_array (
 	_r_obj_dereference (hashtable);
 }
 
-VOID generate_menu (
+VOID _app_generate_menu (
 	_In_ HMENU hsubmenu,
 	_In_ UINT menu_idx,
 	_Out_ _Writable_elements_ (count) PULONG integers,
@@ -97,7 +97,7 @@ VOID generate_menu (
 
 	_r_menu_setitemtext (hsubmenu, 0, TRUE, _r_locale_getstring (IDS_TRAY_DISABLE));
 
-	generate_array (integers, count, value);
+	_app_generate_array (integers, count, value);
 
 	for (UINT i = 0; i < count; i++)
 	{
@@ -856,7 +856,7 @@ VOID _app_hotkeyinit (
 	}
 }
 
-FORCEINLINE VOID _app_setfontcontrol (
+VOID _app_setfontcontrol (
 	_In_ HWND hwnd,
 	_In_ INT ctrl_id,
 	_In_ PLOGFONT logfont,
@@ -965,7 +965,7 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_APPEARANCE:
 				{
-					LOGFONT lf;
+					LOGFONT logfont;
 					LONG dpi_value;
 
 					CheckDlgButton (hwnd, IDC_TRAYUSETRANSPARENCY_CHK, _r_config_getboolean (L"TrayUseTransparency", FALSE) ? BST_CHECKED : BST_UNCHECKED);
@@ -976,8 +976,8 @@ INT_PTR CALLBACK SettingsProc (
 
 					dpi_value = _r_dc_gettaskbardpi ();
 
-					_app_fontinit (&lf, dpi_value);
-					_app_setfontcontrol (hwnd, IDC_FONT, &lf, dpi_value);
+					_app_fontinit (&logfont, dpi_value);
+					_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
 					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT));
 					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG));
@@ -1606,7 +1606,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_FONT:
 				{
 					CHOOSEFONT cf = {0};
-					LOGFONT lf;
+					LOGFONT logfont;
 					LONG dpi_value;
 
 					cf.lStructSize = sizeof (cf);
@@ -1615,15 +1615,15 @@ INT_PTR CALLBACK SettingsProc (
 
 					dpi_value = _r_dc_gettaskbardpi ();
 
-					_app_fontinit (&lf, dpi_value);
+					_app_fontinit (&logfont, dpi_value);
 
-					cf.lpLogFont = &lf;
+					cf.lpLogFont = &logfont;
 
 					if (ChooseFont (&cf))
 					{
-						_r_config_setfont (L"TrayFont", &lf, dpi_value);
+						_r_config_setfont (L"TrayFont", &logfont, dpi_value);
 
-						_app_setfontcontrol (hwnd, IDC_FONT, &lf, dpi_value);
+						_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
 						_app_iconinit (dpi_value);
 						_app_iconredraw (_r_app_gethwnd (), FALSE);
@@ -2179,7 +2179,7 @@ INT_PTR CALLBACK DlgProc (
 							{
 								is_enabled = _r_config_getboolean (L"AutoreductEnable", FALSE);
 
-								generate_menu (
+								_app_generate_menu (
 									hsubmenu_limit,
 									IDX_TRAY_POPUP_1,
 									limits_arr,
@@ -2195,7 +2195,7 @@ INT_PTR CALLBACK DlgProc (
 							{
 								is_enabled = _r_config_getboolean (L"AutoreductIntervalEnable", FALSE);
 
-								generate_menu (
+								_app_generate_menu (
 									hsubmenu_interval,
 									IDX_TRAY_POPUP_2,
 									intervals_arr,
