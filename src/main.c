@@ -1975,6 +1975,7 @@ INT_PTR CALLBACK DlgProc (
 				{
 					LPNMLVCUSTOMDRAW lpnmlv;
 					LONG_PTR result;
+					ULONG value;
 
 					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 					result = CDRF_DODEFAULT;
@@ -1992,15 +1993,18 @@ INT_PTR CALLBACK DlgProc (
 
 						case CDDS_ITEMPREPAINT:
 						{
-							if (lpnmlv->nmcd.lItemlParam >= _app_getdangervalue ())
+							if (LongPtrToULong (lpnmlv->nmcd.lItemlParam, &value) == S_OK)
 							{
-								lpnmlv->clrText = _r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER);
-								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
-							}
-							else if (lpnmlv->nmcd.lItemlParam >= _app_getwarningvalue ())
-							{
-								lpnmlv->clrText = _r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING);
-								result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
+								if (value >= _app_getdangervalue ())
+								{
+									lpnmlv->clrText = _r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER);
+									result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
+								}
+								else if (value >= _app_getwarningvalue ())
+								{
+									lpnmlv->clrText = _r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING);
+									result = (CDRF_NOTIFYPOSTPAINT | CDRF_NEWFONT);
+								}
 							}
 
 							break;
