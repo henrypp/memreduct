@@ -1959,7 +1959,7 @@ INT_PTR CALLBACK DlgProc (
 							ClientToScreen (nmlp->hwndFrom, (PPOINT)&rect);
 
 							_r_wnd_recttorectangle (&rectangle, &rect);
-							_r_wnd_adjustworkingarea (nmlp->hwndFrom, &rectangle);
+							_r_wnd_adjustrectangletoworkingarea (&rectangle, nmlp->hwndFrom);
 							_r_wnd_rectangletorect (&rect, &rectangle);
 
 							_r_menu_popup (hsubmenu, hwnd, (PPOINT)&rect, TRUE);
