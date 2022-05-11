@@ -99,7 +99,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)bin\$(PlatformArchitecture)\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -107,7 +107,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)bin\$(PlatformArchitecture)\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -115,14 +115,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>$(SolutionDir)bin\$(PlatformArchitecture)\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -131,14 +131,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)bin\$(PlatformArchitecture)\</OutDir>
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
     <TargetName>$(ProjectName)</TargetName>
-    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\;.\src\include\;.\src\;</IncludePath>
+    <IncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);.\..\routine\src\;.\src\include\;.\src\</IncludePath>
     <GenerateManifest>false</GenerateManifest>
     <IntDir>$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <CodeAnalysisRuleSet>MixedRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -346,16 +346,17 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\routine\rapp.c" />
-    <ClCompile Include="..\routine\routine.c" />
+    <ClCompile Include="..\routine\src\rapp.c" />
+    <ClCompile Include="..\routine\src\routine.c" />
     <ClCompile Include="src\main.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\routine\ntapi.h" />
-    <ClInclude Include="..\routine\rapp.h" />
-    <ClInclude Include="..\routine\rconfig.h" />
-    <ClInclude Include="..\routine\routine.h" />
-    <ClInclude Include="..\routine\rtypes.h" />
+    <ClInclude Include="..\routine\src\ntapi.h" />
+    <ClInclude Include="..\routine\src\ntrtl.h" />
+    <ClInclude Include="..\routine\src\rapp.h" />
+    <ClInclude Include="..\routine\src\rconfig.h" />
+    <ClInclude Include="..\routine\src\routine.h" />
+    <ClInclude Include="..\routine\src\rtypes.h" />
     <ClInclude Include="src\app.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\resource.h" />

@@ -18,17 +18,14 @@
     <ClCompile Include="src\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\routine\rapp.c">
+    <ClCompile Include="..\routine\src\routine.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\routine\routine.c">
+    <ClCompile Include="..\routine\src\rapp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\routine\routine.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\main.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -38,16 +35,22 @@
     <ClInclude Include="src\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rconfig.h">
+    <ClInclude Include="..\routine\src\rconfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rapp.h">
+    <ClInclude Include="..\routine\src\routine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\ntapi.h">
+    <ClInclude Include="..\routine\src\rtypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\routine\rtypes.h">
+    <ClInclude Include="..\routine\src\ntapi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\routine\src\ntrtl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\routine\src\rapp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
