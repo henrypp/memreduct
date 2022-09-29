@@ -1,0 +1,66 @@
+name: Bug report
+title: "[Bug]"
+description: Let me know about crash or existing functionality not working like it should.
+labels: [ "bug" ]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to fill out this bug report!
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have used the search function to see if someone else has already submitted the same bug report.
+          required: true
+        - label: I will describe the problem with as much detail as possible.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: What the application version do you use.
+      placeholder: x.y.z
+    validations:
+      required: true
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows version
+      description: What Windows version do you use.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '…'
+        2. Click on '…'
+        3. Scroll down to '…'
+        4. etc.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: After following the steps, what did you think application would do?
+    validations:
+      required: false
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: What did application do instead? Screenshots might help.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: |
+        - If application have debug log insert it here.
+        - If application have crash dump please attach it here.
+
+        Tip: You can attach images, log files or crash dumps by clicking this area to highlight it and then dragging files in.
