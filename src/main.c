@@ -527,7 +527,15 @@ VOID _app_fontinit (
 	_r_config_getfont (L"TrayFont", logfont, dpi_value);
 
 	logfont->lfCharSet = DEFAULT_CHARSET;
-	logfont->lfQuality = _r_config_getboolean (L"TrayUseAntialiasing", FALSE) ? CLEARTYPE_QUALITY : DEFAULT_QUALITY;
+
+	if (_r_config_getboolean (L"TrayUseAntialiasing", FALSE))
+	{
+		logfont->lfQuality = CLEARTYPE_QUALITY;
+	}
+	else
+	{
+		logfont->lfQuality = NONANTIALIASED_QUALITY;
+	}
 }
 
 VOID _app_drawbackground (
