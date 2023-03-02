@@ -14,12 +14,16 @@ ULONG limits_arr[13] = {0};
 ULONG intervals_arr[13] = {0};
 
 INT __cdecl compare_numbers (
-	const void *ptr1,
-	const void *ptr2
+	_In_opt_ PVOID context,
+	_In_ VOID CONST* ptr1,
+	_In_ VOID CONST* ptr2
 )
 {
-	const ULONG *val1 = ptr1;
-	const ULONG *val2 = ptr2;
+	ULONG CONST* val1;
+	ULONG CONST* val2;
+
+	val1 = ptr1;
+	val2 = ptr2;
 
 	if (*val1 < *val2)
 		return -1;
@@ -68,7 +72,7 @@ VOID _app_generate_array (
 			break;
 	}
 
-	qsort (integers, count, sizeof (ULONG), &compare_numbers);
+	qsort_s (integers, count, sizeof (ULONG), &compare_numbers, NULL);
 
 	_r_obj_dereference (hashtable);
 }
@@ -1721,7 +1725,7 @@ INT_PTR CALLBACK SettingsProc (
 			BOOLEAN is_stylechanged;
 
 			ctrl_id = GetDlgCtrlID ((HWND)lparam);
-			is_stylechanged = FALSE;;
+			is_stylechanged = FALSE;
 
 			if (ctrl_id == IDC_AUTOREDUCTVALUE)
 			{
