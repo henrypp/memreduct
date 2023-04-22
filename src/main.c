@@ -88,11 +88,9 @@ VOID _app_generate_menu (
 )
 {
 	WCHAR buffer[64];
-
 	ULONG menu_items;
 	ULONG menu_value;
 	ULONG menu_id;
-
 	BOOLEAN is_checked;
 
 	is_checked = FALSE;
@@ -187,20 +185,14 @@ VOID _app_getmemoryinfo (
 		mem_info->physical_memory.free_bytes = msex.ullAvailPhys;
 		mem_info->physical_memory.used_bytes = msex.ullTotalPhys - msex.ullAvailPhys;
 
-		mem_info->physical_memory.percent = (ULONG)_r_calc_percentof64 (
-			mem_info->physical_memory.used_bytes,
-			mem_info->physical_memory.total_bytes
-		);
+		mem_info->physical_memory.percent = (ULONG)_r_calc_percentof64 (mem_info->physical_memory.used_bytes, mem_info->physical_memory.total_bytes);
 
 		// virtual memory information
 		mem_info->virtual_memory.total_bytes = msex.ullTotalPageFile;
 		mem_info->virtual_memory.free_bytes = msex.ullAvailPageFile;
 		mem_info->virtual_memory.used_bytes = msex.ullTotalPageFile - msex.ullAvailPageFile;
 
-		mem_info->virtual_memory.percent = _r_calc_percentof64 (
-			mem_info->virtual_memory.used_bytes,
-			mem_info->virtual_memory.total_bytes
-		);
+		mem_info->virtual_memory.percent = _r_calc_percentof64 (mem_info->virtual_memory.used_bytes, mem_info->virtual_memory.total_bytes);
 	}
 
 	// system cache information
@@ -212,10 +204,7 @@ VOID _app_getmemoryinfo (
 		mem_info->system_cache.free_bytes = sfci.PeakSize - sfci.CurrentSize;
 		mem_info->system_cache.used_bytes = sfci.CurrentSize;
 
-		mem_info->system_cache.percent = _r_calc_percentof64 (
-			mem_info->system_cache.used_bytes,
-			mem_info->system_cache.total_bytes
-		);
+		mem_info->system_cache.percent = _r_calc_percentof64 (mem_info->system_cache.used_bytes, mem_info->system_cache.total_bytes);
 	}
 }
 
@@ -256,7 +245,7 @@ FORCEINLINE LPCWSTR _app_getcleanupreason (
 
 VOID _app_memoryclean (
 	_In_ CLEANUP_SOURCE_ENUM src,
-	_In_ ULONG mask
+	_In_opt_ ULONG mask
 )
 {
 	MEMORY_INFO mem_info;
@@ -946,44 +935,16 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				case IDD_SETTINGS_GENERAL:
 				{
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_ALWAYSONTOP_CHK,
-						_r_config_getboolean (L"AlwaysOnTop", FALSE)
-					);
-
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_LOADONSTARTUP_CHK,
-						_r_autorun_isenabled ()
-					);
-
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_STARTMINIMIZED_CHK,
-						_r_config_getboolean (L"IsStartMinimized", FALSE)
-					);
-
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_REDUCTCONFIRMATION_CHK,
-						_r_config_getboolean (L"IsShowReductConfirmation", TRUE)
-					);
+					_r_ctrl_checkbutton (hwnd, IDC_ALWAYSONTOP_CHK, _r_config_getboolean (L"AlwaysOnTop", FALSE));
+					_r_ctrl_checkbutton (hwnd, IDC_LOADONSTARTUP_CHK, _r_autorun_isenabled ());
+					_r_ctrl_checkbutton (hwnd, IDC_STARTMINIMIZED_CHK, _r_config_getboolean (L"IsStartMinimized", FALSE));
+					_r_ctrl_checkbutton (hwnd, IDC_REDUCTCONFIRMATION_CHK, _r_config_getboolean (L"IsShowReductConfirmation", TRUE));
 
 					if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_VISTA))
 						_r_ctrl_enable (hwnd, IDC_SKIPUACWARNING_CHK, FALSE);
 
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_SKIPUACWARNING_CHK,
-						_r_skipuac_isenabled ()
-					);
-
-					_r_ctrl_checkbutton (
-						hwnd,
-						IDC_CHECKUPDATES_CHK,
-						_r_update_isenabled (FALSE)
-					);
+					_r_ctrl_checkbutton (hwnd, IDC_SKIPUACWARNING_CHK, _r_skipuac_isenabled ());
+					_r_ctrl_checkbutton (hwnd, IDC_CHECKUPDATES_CHK, _r_update_isenabled (FALSE));
 
 					_r_locale_enum (hwnd, IDC_LANGUAGE, 0);
 
@@ -1702,7 +1663,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_COLOR_WARNING:
 				case IDC_COLOR_DANGER:
 				{
-					COLORREF cust[16] = {
+					static COLORREF cust[16] = {
 						TRAY_COLOR_DANGER,
 						TRAY_COLOR_WARNING,
 						TRAY_COLOR_BG,
@@ -1724,42 +1685,42 @@ INT_PTR CALLBACK SettingsProc (
 					cc.lpCustColors = cust;
 					cc.rgbResult = (COLORREF)GetWindowLongPtr (hctrl, GWLP_USERDATA);
 
-					if (ChooseColor (&cc))
+					if (!ChooseColor (&cc))
+						break;
+
+					switch (ctrl_id)
 					{
-						switch (ctrl_id)
+						case IDC_COLOR_TEXT:
 						{
-							case IDC_COLOR_TEXT:
-							{
-								_r_config_setulong (L"TrayColorText", cc.rgbResult);
-								break;
-							}
-
-							case IDC_COLOR_BACKGROUND:
-							{
-								_r_config_setulong (L"TrayColorBg", cc.rgbResult);
-								break;
-							}
-
-							case IDC_COLOR_WARNING:
-							{
-								_r_config_setulong (L"TrayColorWarning", cc.rgbResult);
-								break;
-							}
-
-							case IDC_COLOR_DANGER:
-							{
-								_r_config_setulong (L"TrayColorDanger", cc.rgbResult);
-								break;
-							}
+							_r_config_setulong (L"TrayColorText", cc.rgbResult);
+							break;
 						}
 
-						SetWindowLongPtr (hctrl, GWLP_USERDATA, (LONG_PTR)cc.rgbResult);
+						case IDC_COLOR_BACKGROUND:
+						{
+							_r_config_setulong (L"TrayColorBg", cc.rgbResult);
+							break;
+						}
 
-						dpi_value = _r_dc_gettaskbardpi ();
+						case IDC_COLOR_WARNING:
+						{
+							_r_config_setulong (L"TrayColorWarning", cc.rgbResult);
+							break;
+						}
 
-						_app_iconinit (dpi_value);
-						_app_iconredraw (_r_app_gethwnd ());
+						case IDC_COLOR_DANGER:
+						{
+							_r_config_setulong (L"TrayColorDanger", cc.rgbResult);
+							break;
+						}
 					}
+
+					SetWindowLongPtr (hctrl, GWLP_USERDATA, (LONG_PTR)cc.rgbResult);
+
+					dpi_value = _r_dc_gettaskbardpi ();
+
+					_app_iconinit (dpi_value);
+					_app_iconredraw (_r_app_gethwnd ());
 
 					break;
 				}
@@ -1845,9 +1806,9 @@ VOID _app_initialize (
 	_In_opt_ HWND hwnd
 )
 {
-	ULONG privileges[] = {
-	SE_INCREASE_QUOTA_PRIVILEGE,
-	SE_PROF_SINGLE_PROCESS_PRIVILEGE,
+	static ULONG privileges[] = {
+		SE_INCREASE_QUOTA_PRIVILEGE,
+		SE_PROF_SINGLE_PROCESS_PRIVILEGE,
 	};
 
 	LONG dpi_value;
@@ -2016,28 +1977,14 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
 
 				_r_menu_setitemtextformat (hmenu, IDM_SETTINGS, FALSE, L"%s...\tF2", _r_locale_getstring (IDS_SETTINGS));
-
 				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
-
-				_r_menu_setitemtext (
-					hmenu,
-					IDM_ALWAYSONTOP_CHK,
-					FALSE,
-					_r_locale_getstring (IDS_ALWAYSONTOP_CHK)
-				);
-
+				_r_menu_setitemtext (hmenu, IDM_ALWAYSONTOP_CHK, FALSE, _r_locale_getstring (IDS_ALWAYSONTOP_CHK));
 				_r_menu_setitemtext (hmenu, IDM_LOADONSTARTUP_CHK, FALSE, _r_locale_getstring (IDS_LOADONSTARTUP_CHK));
-
 				_r_menu_setitemtext (hmenu, IDM_STARTMINIMIZED_CHK, FALSE, _r_locale_getstring (IDS_STARTMINIMIZED_CHK));
-
 				_r_menu_setitemtext (hmenu, IDM_REDUCTCONFIRMATION_CHK, FALSE, _r_locale_getstring (IDS_REDUCTCONFIRMATION_CHK));
-
 				_r_menu_setitemtext (hmenu, IDM_SKIPUACWARNING_CHK, FALSE, _r_locale_getstring (IDS_SKIPUACWARNING_CHK));
-
 				_r_menu_setitemtext (hmenu, IDM_CHECKUPDATES_CHK, FALSE, _r_locale_getstring (IDS_CHECKUPDATES_CHK));
-
 				_r_menu_setitemtextformat (GetSubMenu (hmenu, 1), LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
-
 				_r_menu_setitemtext (hmenu, IDM_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
 				_r_menu_setitemtext (hmenu, IDM_CHECKUPDATES, FALSE, _r_locale_getstring (IDS_CHECKUPDATES));
 				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
@@ -2131,31 +2078,31 @@ INT_PTR CALLBACK DlgProc (
 
 					hsubmenu = CreatePopupMenu ();
 
-					if (hsubmenu)
+					if (!hsubmenu)
+						break;
+
+					_r_menu_additem (hsubmenu, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_SYSTEMWORKINGSET, TITLE_SYSTEMWORKINGSET);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
+
+					if (_r_sys_isosversionlower (WINDOWS_10))
+						_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, MF_BYCOMMAND, FALSE);
+
+					if (GetClientRect (nmlp->hwndFrom, &rect))
 					{
-						_r_menu_additem (hsubmenu, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
-						_r_menu_additem (hsubmenu, IDM_CLEAN_SYSTEMWORKINGSET, TITLE_SYSTEMWORKINGSET);
-						_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
-						_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
-						_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
-						_r_menu_additem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
+						ClientToScreen (nmlp->hwndFrom, (PPOINT)&rect);
 
-						if (_r_sys_isosversionlower (WINDOWS_10))
-							_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, MF_BYCOMMAND, FALSE);
+						_r_wnd_recttorectangle (&rectangle, &rect);
+						_r_wnd_adjustrectangletoworkingarea (&rectangle, nmlp->hwndFrom);
+						_r_wnd_rectangletorect (&rect, &rectangle);
 
-						if (GetClientRect (nmlp->hwndFrom, &rect))
-						{
-							ClientToScreen (nmlp->hwndFrom, (PPOINT)&rect);
-
-							_r_wnd_recttorectangle (&rectangle, &rect);
-							_r_wnd_adjustrectangletoworkingarea (&rectangle, nmlp->hwndFrom);
-							_r_wnd_rectangletorect (&rect, &rectangle);
-
-							_r_menu_popup (hsubmenu, hwnd, (PPOINT)&rect, TRUE);
-						}
-
-						DestroyMenu (hsubmenu);
+						_r_menu_popup (hsubmenu, hwnd, (PPOINT)&rect, TRUE);
 					}
+
+					DestroyMenu (hsubmenu);
 
 					break;
 				}
@@ -2586,8 +2533,7 @@ INT_PTR CALLBACK DlgProc (
 							return FALSE;
 					}
 
-					if ((ctrl_id == IDM_STANDBYLIST_CHK && !(mask & REDUCT_STANDBY_LIST)) ||
-						(ctrl_id == IDM_MODIFIEDLIST_CHK && !(mask & REDUCT_MODIFIED_LIST)))
+					if ((ctrl_id == IDM_STANDBYLIST_CHK && !(mask & REDUCT_STANDBY_LIST)) || (ctrl_id == IDM_MODIFIEDLIST_CHK && !(mask & REDUCT_MODIFIED_LIST)))
 					{
 						if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation"))
 							return FALSE;
@@ -2814,12 +2760,7 @@ INT APIENTRY wWinMain (
 	if (_app_parseargs (cmdline))
 		return ERROR_SUCCESS;
 
-	hwnd = _r_app_createwindow (
-		hinst,
-		MAKEINTRESOURCE (IDD_MAIN),
-		MAKEINTRESOURCE (IDI_MAIN),
-		&DlgProc
-	);
+	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
 
 	if (!hwnd)
 		return ERROR_APP_INIT_FAILURE;
