@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2022 Henry++
+// Copyright (c) 2011-2023 Henry++
 
 #include "routine.h"
 
@@ -130,7 +130,7 @@ VOID _app_generate_menu (
 		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
 }
 
-ULONG _app_getlimitvalue ()
+LONG _app_getlimitvalue ()
 {
 	ULONG value;
 
@@ -139,7 +139,7 @@ ULONG _app_getlimitvalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-ULONG _app_getintervalvalue ()
+LONG _app_getintervalvalue ()
 {
 	ULONG value;
 
@@ -148,7 +148,7 @@ ULONG _app_getintervalvalue ()
 	return _r_calc_clamp (value, 1, 1440);
 }
 
-ULONG _app_getdangervalue ()
+LONG _app_getdangervalue ()
 {
 	ULONG value;
 
@@ -157,7 +157,7 @@ ULONG _app_getdangervalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-ULONG _app_getwarningvalue ()
+LONG _app_getwarningvalue ()
 {
 	ULONG value;
 
@@ -185,7 +185,7 @@ VOID _app_getmemoryinfo (
 		mem_info->physical_memory.free_bytes = msex.ullAvailPhys;
 		mem_info->physical_memory.used_bytes = msex.ullTotalPhys - msex.ullAvailPhys;
 
-		mem_info->physical_memory.percent = (ULONG)_r_calc_percentof64 (mem_info->physical_memory.used_bytes, mem_info->physical_memory.total_bytes);
+		mem_info->physical_memory.percent = _r_calc_percentof64 (mem_info->physical_memory.used_bytes, mem_info->physical_memory.total_bytes);
 
 		// virtual memory information
 		mem_info->virtual_memory.total_bytes = msex.ullTotalPageFile;
@@ -572,7 +572,7 @@ VOID _app_drawtext (
 }
 
 HICON _app_iconcreate (
-	_In_ ULONG percent
+	_In_ LONG percent
 )
 {
 	static HICON hicon = NULL;
@@ -2111,7 +2111,7 @@ INT_PTR CALLBACK DlgProc (
 				{
 					LPNMLVCUSTOMDRAW lpnmlv;
 					LONG_PTR result;
-					ULONG value;
+					LONG value;
 
 					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 					result = CDRF_DODEFAULT;

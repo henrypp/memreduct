@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2022 Henry++
+// Copyright (c) 2011-2023 Henry++
 
 #pragma once
 
@@ -69,7 +69,7 @@ typedef struct _MEMORY_OBJECT
 	ULONG64 total_bytes;
 	ULONG64 free_bytes;
 	ULONG64 used_bytes;
-	ULONG percent;
+	LONG percent;
 } MEMORY_OBJECT, *PMEMORY_OBJECT;
 
 typedef struct _MEMORY_INFO
