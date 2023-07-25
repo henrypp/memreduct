@@ -249,8 +249,8 @@ VOID _app_memoryclean (
 )
 {
 	MEMORY_INFO mem_info;
-	MEMORY_COMBINE_INFORMATION_EX combine_info_ex;
-	SYSTEM_FILECACHE_INFORMATION sfci;
+	MEMORY_COMBINE_INFORMATION_EX combine_info_ex = {0};
+	SYSTEM_FILECACHE_INFORMATION sfci = {0};
 	SYSTEM_MEMORY_LIST_COMMAND command;
 	WCHAR buffer1[64];
 	WCHAR buffer2[256];
@@ -308,8 +308,6 @@ VOID _app_memoryclean (
 	{
 		if (mask & REDUCT_COMBINE_MEMORY_LISTS)
 		{
-			RtlZeroMemory (&combine_info_ex, sizeof (combine_info_ex));
-
 			status = NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combine_info_ex, sizeof (combine_info_ex));
 
 			if (!NT_SUCCESS (status))
@@ -328,8 +326,6 @@ VOID _app_memoryclean (
 	// System working set
 	if (mask & REDUCT_SYSTEM_WORKING_SET)
 	{
-		RtlZeroMemory (&sfci, sizeof (sfci));
-
 		sfci.MinimumWorkingSet = (ULONG_PTR)-1;
 		sfci.MaximumWorkingSet = (ULONG_PTR)-1;
 
@@ -363,7 +359,7 @@ VOID _app_memoryclean (
 					NULL,
 					L"NtSetSystemInformation",
 					status,
-					L"SystemMemoryListInformation (MemoryEmptyWorkingSets)"
+					L"MemoryEmptyWorkingSets"
 				);
 			}
 		}
@@ -382,7 +378,7 @@ VOID _app_memoryclean (
 					NULL,
 					L"NtSetSystemInformation",
 					status,
-					L"SystemMemoryListInformation (MemoryPurgeLowPriorityStandbyList)"
+					L"MemoryPurgeLowPriorityStandbyList"
 				);
 			}
 		}
@@ -401,7 +397,7 @@ VOID _app_memoryclean (
 					NULL,
 					L"NtSetSystemInformation",
 					status,
-					L"SystemMemoryListInformation (MemoryPurgeStandbyList)"
+					L"MemoryPurgeStandbyList"
 				);
 			}
 		}
@@ -420,7 +416,7 @@ VOID _app_memoryclean (
 					NULL,
 					L"NtSetSystemInformation",
 					status,
-					L"SystemMemoryListInformation (MemoryFlushModifiedList)"
+					L"MemoryFlushModifiedList"
 				);
 			}
 		}
@@ -577,7 +573,7 @@ HICON _app_iconcreate (
 {
 	static HICON hicon = NULL;
 
-	ICONINFO ii;
+	ICONINFO ii = {0};
 	WCHAR icon_text[8];
 	HGDIOBJ prev_bmp;
 	HGDIOBJ prev_font;
@@ -678,8 +674,6 @@ HICON _app_iconcreate (
 	SelectObject (config.hdc_mask, prev_font);
 
 	// create icon
-	ZeroMemory (&ii, sizeof (ii));
-
 	ii.fIcon = TRUE;
 	ii.hbmColor = config.hbitmap;
 	ii.hbmMask = config.hbitmap_mask;
@@ -703,7 +697,7 @@ VOID CALLBACK _app_timercallback (
 {
 	WCHAR buffer[128];
 	MEMORY_INFO mem_info;
-	HICON hicon;
+	HICON hicon = NULL;
 	LONG64 timestamp;
 	ULONG percent;
 	BOOLEAN is_clean;
@@ -735,9 +729,6 @@ VOID CALLBACK _app_timercallback (
 		if (is_clean)
 			_app_memoryclean (SOURCE_AUTO, 0);
 	}
-
-	// refresh tray information
-	hicon = NULL;
 
 	// check previous percent to prevent icon redraw
 	if (!config.ms_prev || config.ms_prev != mem_info.physical_memory.percent)
@@ -2111,7 +2102,7 @@ INT_PTR CALLBACK DlgProc (
 				{
 					LPNMLVCUSTOMDRAW lpnmlv;
 					LONG_PTR result;
-					LONG value;
+					LONG value = 0;
 
 					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 					result = CDRF_DODEFAULT;
