@@ -42,8 +42,8 @@ VOID _app_generate_array (
 {
 	PR_HASHTABLE hashtable;
 	ULONG_PTR hash_code;
-	SIZE_T index;
-	SIZE_T enum_key;
+	SIZE_T index = 0;
+	SIZE_T enum_key = 0;
 
 	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
 
@@ -57,9 +57,6 @@ VOID _app_generate_array (
 		if (index >= 5)
 			_r_obj_addhashtableitem (hashtable, index, NULL);
 	}
-
-	enum_key = 0;
-	index = 0;
 
 	RtlZeroMemory (integers, sizeof (ULONG) * count);
 
@@ -332,15 +329,7 @@ VOID _app_memoryclean (
 		status = NtSetSystemInformation (SystemFileCacheInformation, &sfci, sizeof (sfci));
 
 		if (!NT_SUCCESS (status))
-		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				NULL,
-				L"NtSetSystemInformation",
-				status,
-				L"SystemFileCacheInformation"
-			);
-		}
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemFileCacheInformation");
 	}
 
 	// Working set (vista+)
@@ -351,15 +340,7 @@ VOID _app_memoryclean (
 		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 
 		if (!NT_SUCCESS (status))
-		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				NULL,
-				L"NtSetSystemInformation",
-				status,
-				L"MemoryEmptyWorkingSets"
-			);
-		}
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryEmptyWorkingSets");
 	}
 
 	// Standby priority-0 list (vista+)
@@ -370,15 +351,7 @@ VOID _app_memoryclean (
 		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 
 		if (!NT_SUCCESS (status))
-		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				NULL,
-				L"NtSetSystemInformation",
-				status,
-				L"MemoryPurgeLowPriorityStandbyList"
-			);
-		}
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeLowPriorityStandbyList");
 	}
 
 	// Standby list (vista+)
@@ -389,15 +362,7 @@ VOID _app_memoryclean (
 		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 
 		if (!NT_SUCCESS (status))
-		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				NULL,
-				L"NtSetSystemInformation",
-				status,
-				L"MemoryPurgeStandbyList"
-			);
-		}
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeStandbyList");
 	}
 
 	// Modified page list (vista+)
@@ -408,15 +373,7 @@ VOID _app_memoryclean (
 		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
 
 		if (!NT_SUCCESS (status))
-		{
-			_r_log (
-				LOG_LEVEL_ERROR,
-				NULL,
-				L"NtSetSystemInformation",
-				status,
-				L"MemoryFlushModifiedList"
-			);
-		}
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryFlushModifiedList");
 	}
 
 	// difference (after)
@@ -784,7 +741,7 @@ VOID _app_iconinit (
 	_In_ LONG dpi_value
 )
 {
-	BITMAPINFO bmi;
+	BITMAPINFO bmi = {0};
 	LOGFONT logfont;
 	PVOID bits;
 	HDC hdc;
@@ -814,8 +771,6 @@ VOID _app_iconinit (
 	config.hdc_mask = CreateCompatibleDC (hdc);
 
 	// init bitmap
-	RtlZeroMemory (&bmi, sizeof (bmi));
-
 	bmi.bmiHeader.biSize = sizeof (bmi.bmiHeader);
 	bmi.bmiHeader.biWidth = config.icon_size.right;
 	bmi.bmiHeader.biHeight = config.icon_size.bottom;
@@ -878,7 +833,9 @@ INT_PTR CALLBACK SettingsProc (
 	{
 		case RM_INITIALIZE:
 		{
-			INT dialog_id = (INT)wparam;
+			INT dialog_id;
+
+			dialog_id = (INT)wparam;
 
 			switch (dialog_id)
 			{
@@ -1010,7 +967,9 @@ INT_PTR CALLBACK SettingsProc (
 
 		case RM_LOCALIZE:
 		{
-			INT dialog_id = (INT)wparam;
+			INT dialog_id;
+
+			dialog_id = (INT)wparam;
 
 			// localize titles
 			_r_ctrl_setstringformat (hwnd, IDC_TITLE_1, L"%s:", _r_locale_getstring (IDS_TITLE_1));
@@ -1119,7 +1078,9 @@ INT_PTR CALLBACK SettingsProc (
 
 		case WM_NOTIFY:
 		{
-			LPNMHDR nmlp = (LPNMHDR)lparam;
+
+			LPNMHDR nmlp;
+			nmlp = (LPNMHDR)lparam;
 
 			switch (nmlp->code)
 			{
@@ -2442,7 +2403,9 @@ INT_PTR CALLBACK DlgProc (
 						}
 
 						default:
+						{
 							return FALSE;
+						}
 					}
 
 					if ((ctrl_id == IDM_STANDBYLIST_CHK && !(mask & REDUCT_STANDBY_LIST)) || (ctrl_id == IDM_MODIFIEDLIST_CHK && !(mask & REDUCT_MODIFIED_LIST)))
@@ -2503,7 +2466,9 @@ INT_PTR CALLBACK DlgProc (
 						}
 
 						default:
+						{
 							return FALSE;
+						}
 					}
 
 					_app_memoryclean (SOURCE_CMDLINE, mask);
@@ -2589,7 +2554,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_WEBSITE:
 				case IDM_TRAY_WEBSITE:
 				{
-					_r_shell_opendefault (_r_app_getwebsite_url ());
+					_r_shell_opendefault (_r_app_getsources_url ());
 					break;
 				}
 
