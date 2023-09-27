@@ -2579,43 +2579,49 @@ INT_PTR CALLBACK DlgProc (
 	return FALSE;
 }
 
-BOOLEAN _app_parseargs (
-	_In_ LPCWSTR cmdline
+BOOLEAN NTAPI _app_parseargs (
+	_In_ R_CMDLINE_INFO_CLASS type
 )
 {
 	PR_STRING clean_args;
 	ULONG mask = 0;
 
-	if (_r_sys_getopt (cmdline, L"clean", &clean_args))
+	switch (type)
 	{
-		if (clean_args)
+		case CmdlineClean:
 		{
-			if (_r_str_isequal2 (&clean_args->sr, L"full", TRUE))
-				mask = REDUCT_MASK_ALL;
+			_r_sys_getopt (_r_sys_getimagecommandline (), L"clean", &clean_args);
 
-			_r_obj_dereference (clean_args);
+			if (clean_args)
+			{
+				if (_r_str_isequal2 (&clean_args->sr, L"full", TRUE))
+					mask = REDUCT_MASK_ALL;
+
+				_r_obj_dereference (clean_args);
+			}
+
+			if (!mask)
+				mask = REDUCT_MASK_DEFAULT;
+
+			_app_initialize (NULL);
+
+			_app_memoryclean (SOURCE_CMDLINE, mask);
+
+			return TRUE;
 		}
 
-		if (!mask)
-			mask = REDUCT_MASK_DEFAULT;
+		case CmdlineHelp:
+		{
+			_r_show_message (
+				NULL,
+				MB_OK | MB_ICONINFORMATION | MB_TOPMOST,
+				L"Available options for memreduct.exe:",
+				L"-clean - clear default memory regions\r\n" \
+				L"-clean:full - clear all memory regions"
+			);
 
-		_app_initialize (NULL);
-
-		_app_memoryclean (SOURCE_CMDLINE, mask);
-
-		return TRUE;
-	}
-	else if (_r_sys_getopt (cmdline, L"help", NULL))
-	{
-		_r_show_message (
-			NULL,
-			MB_OK | MB_ICONINFORMATION | MB_TOPMOST,
-			L"Available options for memreduct.exe:",
-			L"-clean - clear default memory regions\r\n" \
-			L"-clean:full - clear all memory regions"
-		);
-
-		return TRUE;
+			return TRUE;
+		}
 	}
 
 	return FALSE;
@@ -2630,11 +2636,8 @@ INT APIENTRY wWinMain (
 {
 	HWND hwnd;
 
-	if (!_r_app_initialize (NULL))
+	if (!_r_app_initialize (&_app_parseargs))
 		return ERROR_APP_INIT_FAILURE;
-
-	if (_app_parseargs (cmdline))
-		return ERROR_SUCCESS;
 
 	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
 
