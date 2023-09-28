@@ -127,7 +127,7 @@ VOID _app_generate_menu (
 		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
 }
 
-LONG _app_getlimitvalue ()
+ULONG _app_getlimitvalue ()
 {
 	ULONG value;
 
@@ -136,7 +136,7 @@ LONG _app_getlimitvalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-LONG _app_getintervalvalue ()
+ULONG _app_getintervalvalue ()
 {
 	ULONG value;
 
@@ -145,7 +145,7 @@ LONG _app_getintervalvalue ()
 	return _r_calc_clamp (value, 1, 1440);
 }
 
-LONG _app_getdangervalue ()
+ULONG _app_getdangervalue ()
 {
 	ULONG value;
 
@@ -154,7 +154,7 @@ LONG _app_getdangervalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-LONG _app_getwarningvalue ()
+ULONG _app_getwarningvalue ()
 {
 	ULONG value;
 
@@ -163,46 +163,13 @@ LONG _app_getwarningvalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-VOID _app_getmemoryinfo (
-	_Out_ PMEMORY_INFO mem_info
+ULONG64 _app_getmemoryinfo (
+	_Out_ PR_MEMORY_INFO mem_info
 )
 {
-	SYSTEM_FILECACHE_INFORMATION sfci = {0};
-	MEMORYSTATUSEX msex = {0};
-	NTSTATUS status;
+	_r_sys_getmemoryinfo (mem_info);
 
-	msex.dwLength = sizeof (msex);
-
-	RtlZeroMemory (mem_info, sizeof (MEMORY_INFO));
-
-	if (GlobalMemoryStatusEx (&msex))
-	{
-		// physical memory information
-		mem_info->physical_memory.total_bytes = msex.ullTotalPhys;
-		mem_info->physical_memory.free_bytes = msex.ullAvailPhys;
-		mem_info->physical_memory.used_bytes = msex.ullTotalPhys - msex.ullAvailPhys;
-
-		mem_info->physical_memory.percent = _r_calc_percentof64 (mem_info->physical_memory.used_bytes, mem_info->physical_memory.total_bytes);
-
-		// virtual memory information
-		mem_info->virtual_memory.total_bytes = msex.ullTotalPageFile;
-		mem_info->virtual_memory.free_bytes = msex.ullAvailPageFile;
-		mem_info->virtual_memory.used_bytes = msex.ullTotalPageFile - msex.ullAvailPageFile;
-
-		mem_info->virtual_memory.percent = _r_calc_percentof64 (mem_info->virtual_memory.used_bytes, mem_info->virtual_memory.total_bytes);
-	}
-
-	// system cache information
-	status = NtQuerySystemInformation (SystemFileCacheInformation, &sfci, sizeof (sfci), NULL);
-
-	if (NT_SUCCESS (status))
-	{
-		mem_info->system_cache.total_bytes = sfci.PeakSize;
-		mem_info->system_cache.free_bytes = sfci.PeakSize - sfci.CurrentSize;
-		mem_info->system_cache.used_bytes = sfci.CurrentSize;
-
-		mem_info->system_cache.percent = _r_calc_percentof64 (mem_info->system_cache.used_bytes, mem_info->system_cache.total_bytes);
-	}
+	return mem_info->physical_memory.used_bytes;
 }
 
 FORCEINLINE LPCWSTR _app_getcleanupreason (
@@ -245,7 +212,7 @@ VOID _app_memoryclean (
 	_In_opt_ ULONG mask
 )
 {
-	MEMORY_INFO mem_info;
+	R_MEMORY_INFO mem_info;
 	MEMORY_COMBINE_INFORMATION_EX combine_info_ex = {0};
 	SYSTEM_FILECACHE_INFORMATION sfci = {0};
 	SYSTEM_MEMORY_LIST_COMMAND command;
@@ -287,7 +254,7 @@ VOID _app_memoryclean (
 	if (src == SOURCE_AUTO)
 	{
 		if (!_r_config_getboolean (L"IsAllowStandbyListCleanup", FALSE))
-			mask &= ~REDUCT_MASK_FREEZES; // exclude freezes for autoclean feature ;)
+			mask &= ~REDUCT_MASK_FREEZES; // exclude freezes from autoclean feature ;)
 	}
 	else if (src == SOURCE_MANUAL)
 	{
@@ -296,9 +263,7 @@ VOID _app_memoryclean (
 	}
 
 	// difference (before)
-	_app_getmemoryinfo (&mem_info);
-
-	reduct_before = mem_info.physical_memory.used_bytes;
+	reduct_before = _app_getmemoryinfo (&mem_info);
 
 	// Combine memory lists (win10+)
 	if (_r_sys_isosversiongreaterorequal (WINDOWS_10))
@@ -377,9 +342,7 @@ VOID _app_memoryclean (
 	}
 
 	// difference (after)
-	_app_getmemoryinfo (&mem_info);
-
-	reduct_after = mem_info.physical_memory.used_bytes;
+	reduct_after = _app_getmemoryinfo (&mem_info);
 
 	if (reduct_after < reduct_before)
 	{
@@ -504,7 +467,7 @@ VOID _app_drawtext (
 }
 
 HICON _app_iconcreate (
-	_In_ LONG percent
+	_In_ ULONG percent
 )
 {
 	static HICON hicon = NULL;
@@ -618,7 +581,7 @@ VOID CALLBACK _app_timercallback (
 )
 {
 	WCHAR buffer[128];
-	MEMORY_INFO mem_info;
+	R_MEMORY_INFO mem_info;
 	HICON hicon = NULL;
 	LONG64 timestamp;
 	ULONG percent;
@@ -666,7 +629,7 @@ VOID CALLBACK _app_timercallback (
 		_r_locale_getstring (IDS_GROUP_1),
 		mem_info.physical_memory.percent,
 		_r_locale_getstring (IDS_GROUP_2),
-		mem_info.virtual_memory.percent,
+		mem_info.page_file.percent,
 		_r_locale_getstring (IDS_GROUP_3),
 		mem_info.system_cache.percent
 	);
@@ -684,7 +647,11 @@ VOID CALLBACK _app_timercallback (
 		}
 		else if (i < 6)
 		{
-			percent = mem_info.virtual_memory.percent;
+			percent = mem_info.page_file.percent;
+		}
+		else if (i < 9)
+		{
+			percent = mem_info.system_cache.percent;
 		}
 		else
 		{
@@ -705,13 +672,13 @@ VOID CALLBACK _app_timercallback (
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer);
 
 	// virtual memory
-	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.virtual_memory.percent);
+	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.page_file.percent);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer);
 
-	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.virtual_memory.free_bytes);
+	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.free_bytes);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, buffer);
 
-	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.virtual_memory.total_bytes);
+	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.total_bytes);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer);
 
 	// system cache
@@ -1989,7 +1956,7 @@ INT_PTR CALLBACK DlgProc (
 				{
 					LPNMLVCUSTOMDRAW lpnmlv;
 					LONG_PTR result;
-					LONG value = 0;
+					ULONG value = 0;
 
 					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
 					result = CDRF_DODEFAULT;
@@ -2554,7 +2521,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_WEBSITE:
 				case IDM_TRAY_WEBSITE:
 				{
-					_r_shell_opendefault (_r_app_getsources_url ());
+					_r_shell_opendefault (_r_app_getwebsite_url ());
 					break;
 				}
 

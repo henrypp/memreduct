@@ -64,21 +64,6 @@ typedef struct _STATIC_DATA
 	ULONG ms_prev;
 } STATIC_DATA, *PSTATIC_DATA;
 
-typedef struct _MEMORY_OBJECT
-{
-	ULONG64 total_bytes;
-	ULONG64 free_bytes;
-	ULONG64 used_bytes;
-	LONG percent;
-} MEMORY_OBJECT, *PMEMORY_OBJECT;
-
-typedef struct _MEMORY_INFO
-{
-	MEMORY_OBJECT physical_memory;
-	MEMORY_OBJECT virtual_memory;
-	MEMORY_OBJECT system_cache;
-} MEMORY_INFO, *PMEMORY_INFO;
-
 typedef enum _CLEANUP_SOURCE_ENUM
 {
 	SOURCE_AUTO,
