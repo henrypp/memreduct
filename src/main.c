@@ -85,14 +85,10 @@ VOID _app_generate_menu (
 )
 {
 	WCHAR buffer[64];
-	ULONG menu_items;
+	ULONG menu_items = 0;
 	ULONG menu_value;
 	ULONG menu_id;
-	BOOLEAN is_checked;
-
-	is_checked = FALSE;
-
-	menu_items = 0;
+	BOOLEAN is_checked = FALSE;
 
 	_r_menu_setitemtext (hsubmenu, 0, TRUE, _r_locale_getstring (IDS_TRAY_DISABLE));
 
@@ -117,6 +113,7 @@ VOID _app_generate_menu (
 		if (value == menu_value)
 		{
 			_r_menu_checkitem (hsubmenu, menu_id, menu_id, MF_BYCOMMAND, menu_id);
+
 			is_checked = TRUE;
 		}
 
@@ -273,15 +270,7 @@ VOID _app_memoryclean (
 			status = NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combine_info_ex, sizeof (combine_info_ex));
 
 			if (!NT_SUCCESS (status))
-			{
-				_r_log (
-					LOG_LEVEL_ERROR,
-					NULL,
-					L"NtSetSystemInformation",
-					status,
-					L"SystemCombinePhysicalMemoryInformation"
-				);
-			}
+				_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemCombinePhysicalMemoryInformation");
 		}
 	}
 
@@ -549,7 +538,14 @@ HICON _app_iconcreate (
 	prev_font = SelectObject (config.hdc_mask, config.hfont);
 	prev_mode = SetBkMode (config.hdc_mask, TRANSPARENT);
 
-	_app_drawbackground (config.hdc_mask, TRAY_COLOR_WHITE, is_border ? TRAY_COLOR_BLACK : TRAY_COLOR_WHITE, is_transparent ? TRAY_COLOR_WHITE : TRAY_COLOR_BLACK, &config.icon_size, is_round);
+	_app_drawbackground (
+		config.hdc_mask,
+		TRAY_COLOR_WHITE,
+		is_border ? TRAY_COLOR_BLACK : TRAY_COLOR_WHITE,
+		is_transparent ? TRAY_COLOR_WHITE : TRAY_COLOR_BLACK,
+		&config.icon_size,
+		is_round
+	);
 
 	_app_drawtext (config.hdc_mask, icon_text, text_length, &config.icon_size, TRAY_COLOR_BLACK);
 
@@ -691,7 +687,7 @@ VOID CALLBACK _app_timercallback (
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.total_bytes);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, buffer);
 
-	_r_listview_redraw (hwnd, IDC_LISTVIEW, -1);
+	_r_listview_redraw (hwnd, IDC_LISTVIEW);
 }
 
 VOID _app_iconredraw (
@@ -1095,10 +1091,9 @@ INT_PTR CALLBACK SettingsProc (
 		{
 			LONG value;
 			INT ctrl_id;
-			BOOLEAN is_stylechanged;
+			BOOLEAN is_stylechanged = FALSE;
 
 			ctrl_id = GetDlgCtrlID ((HWND)lparam);
-			is_stylechanged = FALSE;
 
 			if (ctrl_id == IDC_AUTOREDUCTVALUE)
 			{
@@ -1133,7 +1128,7 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				_app_iconredraw (_r_app_gethwnd ());
 
-				_r_listview_redraw (_r_app_gethwnd (), IDC_LISTVIEW, -1);
+				_r_listview_redraw (_r_app_gethwnd (), IDC_LISTVIEW);
 			}
 
 			break;
@@ -1196,7 +1191,7 @@ INT_PTR CALLBACK SettingsProc (
 
 						_app_iconredraw (_r_app_gethwnd ());
 
-						_r_listview_redraw (_r_app_gethwnd (), IDC_LISTVIEW, -1);
+						_r_listview_redraw (_r_app_gethwnd (), IDC_LISTVIEW);
 					}
 
 					break;
@@ -1265,6 +1260,7 @@ INT_PTR CALLBACK SettingsProc (
 					is_enable = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
 
 					_r_skipuac_enable (hwnd, is_enable);
+
 					is_enable = _r_skipuac_isenabled ();
 
 					_r_menu_checkitem (GetMenu (_r_app_gethwnd ()), IDM_SKIPUACWARNING_CHK, 0, MF_BYCOMMAND, is_enable);
