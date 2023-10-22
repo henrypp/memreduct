@@ -29,6 +29,23 @@ You can download either the installer or portable version. For correct working y
 To activate portable mode, create "memreduct.ini" in application folder, or move it from "%APPDATA%\Henry++\Mem Reduct".
 ```
 
+### System requirements:
+- Windows 8.1 and above operating system.
+- [Visual C++ 2022 Redistributable package](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
+
+### Donate:
+- [Bitcoin](https://www.blockchain.com/btc/address/1LrRTXPsvHcQWCNZotA9RcwjsGcRghG96c) (BTC)
+- [Ethereum](https://www.blockchain.com/explorer/addresses/eth/0xe2C84A62eb2a4EF154b19bec0c1c106734B95960) (ETC)
+- [Paypal](https://paypal.me/henrypp) (USD)
+- [Yandex Money](https://yoomoney.ru/to/4100115776040583) (RUB)
+
+### GPG Signature:
+Binaries have GPG signature simplewall.exe.sig in application folder.
+
+- Public key: [pubkey.asc](https://raw.githubusercontent.com/henrypp/builder/master/pubkey.asc) ([pgpkeys.eu](https://pgpkeys.eu/pks/lookup?op=index&fingerprint=on&search=0x5635B5FD))
+- Key ID: 0x5635B5FD
+- Fingerprint: D985 2361 1524 AB29 BE73 30AC 2881 20A7 5635 B5FD
+
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
 <br />
