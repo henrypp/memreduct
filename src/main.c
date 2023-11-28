@@ -765,7 +765,7 @@ VOID _app_hotkeyinit (
 		return;
 
 	if (!RegisterHotKey (hwnd, UID, (HIBYTE (hk) & 2) | ((HIBYTE (hk) & 4) >> 2) | ((HIBYTE (hk) & 1) << 2), LOBYTE (hk)))
-		_r_show_errormessage (hwnd, NULL, GetLastError (), NULL);
+		_r_show_errormessage (hwnd, NULL, PebLastError (), NULL, NULL, NULL);
 }
 
 VOID _app_setfontcontrol (
