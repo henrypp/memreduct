@@ -36,14 +36,14 @@ INT __cdecl compare_numbers (
 
 VOID _app_generate_array (
 	_Out_ _Writable_elements_ (count) PULONG integers,
-	_In_ SIZE_T count,
-	_In_ SIZE_T value
+	_In_ ULONG_PTR count,
+	_In_ ULONG_PTR value
 )
 {
 	PR_HASHTABLE hashtable;
 	ULONG_PTR hash_code;
-	SIZE_T index = 0;
-	SIZE_T enum_key = 0;
+	ULONG_PTR index = 0;
+	ULONG_PTR enum_key = 0;
 
 	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
 
@@ -78,7 +78,7 @@ VOID _app_generate_menu (
 	_In_ HMENU hsubmenu,
 	_In_ UINT menu_idx,
 	_Out_ _Writable_elements_ (count) PULONG integers,
-	_In_ SIZE_T count,
+	_In_ ULONG_PTR count,
 	_In_ LPCWSTR format,
 	_In_ ULONG value,
 	_In_ BOOLEAN is_enabled
@@ -450,7 +450,7 @@ VOID _app_drawtext (
 
 	flags = DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX;
 
-	DrawTextEx (hdc, text, length, rect, flags, NULL);
+	DrawTextExW (hdc, text, length, rect, flags, NULL);
 
 	SetTextColor (hdc, prev_clr);
 }
@@ -719,7 +719,7 @@ VOID _app_iconinit (
 	// init font
 	_app_fontinit (&logfont, dpi_value);
 
-	config.hfont = CreateFontIndirect (&logfont);
+	config.hfont = CreateFontIndirectW (&logfont);
 
 	// init rect
 	SetRect (&config.icon_size, 0, 0, _r_dc_getsystemmetrics (SM_CXSMICON, dpi_value), _r_dc_getsystemmetrics (SM_CYSMICON, dpi_value));
@@ -852,23 +852,23 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_checkbutton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE));
 
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 1, 99);
+					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 1, 99);
 
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getlimitvalue ());
+					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getlimitvalue ());
 
 					_r_ctrl_checkbutton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_config_getboolean (L"AutoreductIntervalEnable", FALSE));
 
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 1, 1440);
+					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 1, 1440);
 
-					SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getintervalvalue ());
+					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getintervalvalue ());
 
 					_r_ctrl_checkbutton (hwnd, IDC_HOTKEY_CLEAN_CHK, _r_config_getboolean (L"HotkeyCleanEnable", FALSE));
 
-					SendDlgItemMessage (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (WPARAM)_r_config_getlong (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)), 0);
+					SendDlgItemMessageW (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (WPARAM)_r_config_getlong (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)), 0);
 
-					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTENABLE_CHK, 0), 0);
-					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTINTERVALENABLE_CHK, 0), 0);
-					PostMessage (hwnd, WM_COMMAND, MAKEWPARAM (IDC_HOTKEY_CLEAN_CHK, 0), 0);
+					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTENABLE_CHK, 0), 0);
+					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTINTERVALENABLE_CHK, 0), 0);
+					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_HOTKEY_CLEAN_CHK, 0), 0);
 
 					break;
 				}
@@ -889,24 +889,24 @@ INT_PTR CALLBACK SettingsProc (
 					_app_fontinit (&logfont, dpi_value);
 					_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
-					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT));
-					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG));
-					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_WARNING), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING));
-					SetWindowLongPtr (GetDlgItem (hwnd, IDC_COLOR_DANGER), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER));
+					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT));
+					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG));
+					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_WARNING), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING));
+					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_DANGER), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER));
 
 					break;
 				}
 
 				case IDD_SETTINGS_TRAY:
 				{
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_app_getwarningvalue ());
+					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_SETRANGE32, 1, 99);
+					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_app_getwarningvalue ());
 
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_app_getdangervalue ());
+					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_SETRANGE32, 1, 99);
+					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_app_getdangervalue ());
 
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
 
 					_r_ctrl_checkbutton (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_config_getboolean (L"IsTrayIconSingleClick", TRUE));
 
@@ -1007,19 +1007,19 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_setstring (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_locale_getstring (IDS_TRAYICONSINGLECLICK_CHK));
 
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_RESETCONTENT, 0, 0);
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_RESETCONTENT, 0, 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_RESETCONTENT, 0, 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_RESETCONTENT, 0, 0);
 
 					for (INT i = 0; i < 3; i++)
 					{
 						string = _r_locale_getstring (IDS_TRAY_ACTION_1 + i);
 
-						SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_INSERTSTRING, i, (LPARAM)string);
-						SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_INSERTSTRING, i, (LPARAM)string);
+						SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_INSERTSTRING, i, (LPARAM)string);
+						SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_INSERTSTRING, i, (LPARAM)string);
 					}
 
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
-					SendDlgItemMessage (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
+					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
 
 					_r_ctrl_setstring (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_locale_getstring (IDS_SHOW_CLEAN_RESULT_CHK));
 					_r_ctrl_setstring (hwnd, IDC_NOTIFICATIONSOUND_CHK, _r_locale_getstring (IDS_NOTIFICATIONSOUND_CHK));
@@ -1071,11 +1071,12 @@ INT_PTR CALLBACK SettingsProc (
 						lpnmcd->rc.right -= padding;
 						lpnmcd->rc.bottom -= padding;
 
-						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, (COLORREF)GetWindowLongPtr (nmlp->hwndFrom, GWLP_USERDATA));
+						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, (COLORREF)GetWindowLongPtrW (nmlp->hwndFrom, GWLP_USERDATA));
 
 						result = CDRF_DODEFAULT | CDRF_DOERASE;
 
-						SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result);
+						SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, result);
+
 						return result;
 					}
 
@@ -1097,13 +1098,13 @@ INT_PTR CALLBACK SettingsProc (
 
 			if (ctrl_id == IDC_AUTOREDUCTVALUE)
 			{
-				value = (LONG)SendDlgItemMessage (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
 
 				_r_config_setlong (L"AutoreductValue", value);
 			}
 			else if (ctrl_id == IDC_AUTOREDUCTINTERVALVALUE)
 			{
-				value = (LONG)SendDlgItemMessage (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
 
 				_r_config_setlong (L"AutoreductIntervalValue", value);
 			}
@@ -1111,7 +1112,7 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				is_stylechanged = TRUE;
 
-				value = (LONG)SendDlgItemMessage (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
 
 				_r_config_setlong (L"TrayLevelWarning", value);
 			}
@@ -1119,7 +1120,7 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				is_stylechanged = TRUE;
 
-				value = (LONG)SendDlgItemMessage (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
 
 				_r_config_setlong (L"TrayLevelDanger", value);
 			}
@@ -1147,7 +1148,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						value = (LONG)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0);
+						value = (LONG)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0);
 
 						_r_config_setlong (L"AutoreductValue", value);
 					}
@@ -1161,7 +1162,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						value = (LONG)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0);
+						value = (LONG)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0);
 
 						_r_config_setlong (L"AutoreductIntervalValue", value);
 					}
@@ -1178,13 +1179,13 @@ INT_PTR CALLBACK SettingsProc (
 					{
 						if (ctrl_id == IDC_TRAYLEVELWARNING_CTRL)
 						{
-							value = (LONG)SendDlgItemMessage (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0);
+							value = (LONG)SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0);
 
 							_r_config_setlong (L"TrayLevelWarning", value);
 						}
 						else if (ctrl_id == IDC_TRAYLEVELDANGER_CTRL)
 						{
-							value = (LONG)SendDlgItemMessage (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0);
+							value = (LONG)SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0);
 
 							_r_config_setlong (L"TrayLevelDanger", value);
 						}
@@ -1342,7 +1343,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					is_enabled = _r_ctrl_isenabled (hwnd, ctrl_id);
 
-					hbuddy = (HWND)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETBUDDY, 0, 0);
+					hbuddy = (HWND)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETBUDDY, 0, 0);
 
 					if (hbuddy)
 						_r_ctrl_enable (hbuddy, 0, is_enabled);
@@ -1364,7 +1365,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					is_enabled = _r_ctrl_isenabled (hwnd, ctrl_id);
 
-					hbuddy = (HWND)SendDlgItemMessage (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETBUDDY, 0, 0);
+					hbuddy = (HWND)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETBUDDY, 0, 0);
 
 					if (hbuddy)
 						_r_ctrl_enable (hbuddy, 0, is_enabled);
@@ -1406,7 +1407,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						_r_config_setlong (L"HotkeyClean", (LONG)SendDlgItemMessage (hwnd, ctrl_id, HKM_GETHOTKEY, 0, 0));
+						_r_config_setlong (L"HotkeyClean", (LONG)SendDlgItemMessageW (hwnd, ctrl_id, HKM_GETHOTKEY, 0, 0));
 
 						_app_hotkeyinit (_r_app_gethwnd ());
 					}
@@ -1469,7 +1470,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_TRAYACTIONDC:
 				{
 					if (notify_code == CBN_SELCHANGE)
-						_r_config_setlong (L"TrayActionDc", (INT)SendDlgItemMessage (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
+						_r_config_setlong (L"TrayActionDc", (INT)SendDlgItemMessageW (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
 
 					break;
 				}
@@ -1477,7 +1478,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_TRAYACTIONMC:
 				{
 					if (notify_code == CBN_SELCHANGE)
-						_r_config_setlong (L"TrayActionMc", (INT)SendDlgItemMessage (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
+						_r_config_setlong (L"TrayActionMc", (INT)SendDlgItemMessageW (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
 
 					break;
 				}
@@ -1540,7 +1541,7 @@ INT_PTR CALLBACK SettingsProc (
 					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
 					cc.hwndOwner = hwnd;
 					cc.lpCustColors = cust;
-					cc.rgbResult = (COLORREF)GetWindowLongPtr (hctrl, GWLP_USERDATA);
+					cc.rgbResult = (COLORREF)GetWindowLongPtrW (hctrl, GWLP_USERDATA);
 
 					if (!ChooseColor (&cc))
 						break;
@@ -1572,7 +1573,7 @@ INT_PTR CALLBACK SettingsProc (
 						}
 					}
 
-					SetWindowLongPtr (hctrl, GWLP_USERDATA, (LONG_PTR)cc.rgbResult);
+					SetWindowLongPtrW (hctrl, GWLP_USERDATA, (LONG_PTR)cc.rgbResult);
 
 					dpi_value = _r_dc_gettaskbardpi ();
 
@@ -1598,7 +1599,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					cf.lpLogFont = &logfont;
 
-					if (ChooseFont (&cf))
+					if (ChooseFontW (&cf))
 					{
 						_r_config_setfont (L"TrayFont", &logfont, dpi_value);
 
@@ -1677,7 +1678,7 @@ VOID _app_initialize (
 	else
 	{
 		if (hwnd)
-			SendDlgItemMessage (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
+			SendDlgItemMessageW (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
 	}
 
 	if (!hwnd)
@@ -1990,7 +1991,8 @@ INT_PTR CALLBACK DlgProc (
 						}
 					}
 
-					SetWindowLongPtr (hwnd, DWLP_MSGRESULT, result);
+					SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, result);
+
 					return result;
 				}
 			}
@@ -2029,6 +2031,7 @@ INT_PTR CALLBACK DlgProc (
 						if (LOWORD (lparam) == WM_LBUTTONUP)
 						{
 							SetForegroundWindow (hwnd);
+
 							break;
 						}
 					}
@@ -2080,7 +2083,7 @@ INT_PTR CALLBACK DlgProc (
 
 					SetForegroundWindow (hwnd); // don't touch
 
-					hmenu = LoadMenu (NULL, MAKEINTRESOURCE (IDM_TRAY));
+					hmenu = LoadMenuW (NULL, MAKEINTRESOURCE (IDM_TRAY));
 
 					if (!hmenu)
 						break;
@@ -2218,9 +2221,9 @@ INT_PTR CALLBACK DlgProc (
 			}
 			else if ((ctrl_id >= IDX_TRAY_POPUP_1 && ctrl_id <= IDX_TRAY_POPUP_1 + (INT)RTL_NUMBER_OF (limits_arr) - 1))
 			{
-				SIZE_T idx;
+				ULONG_PTR idx;
 
-				idx = (SIZE_T)ctrl_id - IDX_TRAY_POPUP_1;
+				idx = (ULONG_PTR)ctrl_id - IDX_TRAY_POPUP_1;
 
 				_r_config_setboolean (L"AutoreductEnable", TRUE);
 				_r_config_setlong (L"AutoreductValue", limits_arr[idx]);
@@ -2229,9 +2232,9 @@ INT_PTR CALLBACK DlgProc (
 			}
 			else if ((ctrl_id >= IDX_TRAY_POPUP_2 && ctrl_id <= IDX_TRAY_POPUP_2 + (INT)RTL_NUMBER_OF (intervals_arr) - 1))
 			{
-				SIZE_T idx;
+				ULONG_PTR idx;
 
-				idx = (SIZE_T)ctrl_id - IDX_TRAY_POPUP_2;
+				idx = (ULONG_PTR)ctrl_id - IDX_TRAY_POPUP_2;
 
 				_r_config_setboolean (L"AutoreductIntervalEnable", TRUE);
 				_r_config_setlong (L"AutoreductIntervalValue", intervals_arr[idx]);
