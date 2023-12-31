@@ -40,7 +40,7 @@ To activate portable mode, create "memreduct.ini" in application folder, or move
 - [Yandex Money](https://yoomoney.ru/to/4100115776040583) (RUB)
 
 ### GPG Signature:
-Binaries have GPG signature simplewall.exe.sig in application folder.
+Binaries have GPG signature `memreduct.exe.sig` in application folder.
 
 - Public key: [pubkey.asc](https://raw.githubusercontent.com/henrypp/builder/master/pubkey.asc) ([pgpkeys.eu](https://pgpkeys.eu/pks/lookup?op=index&fingerprint=on&search=0x5635B5FD))
 - Key ID: 0x5635B5FD
@@ -49,4 +49,4 @@ Binaries have GPG signature simplewall.exe.sig in application folder.
 Website: [www.henrypp.org](https://www.henrypp.org)<br />
 Support: support@henrypp.org<br />
 <br />
-(c) 2011-2023 Henry++
+(c) 2011-2024 Henry++
