@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2023 Henry++
+// Copyright (c) 2011-2024 Henry++
 
 #include "routine.h"
 
@@ -209,19 +209,23 @@ VOID _app_memoryclean (
 	_In_opt_ ULONG mask
 )
 {
-	R_MEMORY_INFO mem_info;
 	MEMORY_COMBINE_INFORMATION_EX combine_info_ex = {0};
 	SYSTEM_FILECACHE_INFORMATION sfci = {0};
 	SYSTEM_MEMORY_LIST_COMMAND command;
+	R_MEMORY_INFO mem_info;
 	WCHAR buffer1[64];
 	WCHAR buffer2[256];
 	LPCWSTR error_text;
 	ULONG64 reduct_before;
 	ULONG64 reduct_after;
+	ULONG flags = NIIF_ERROR;
 	NTSTATUS status;
 	HWND hwnd;
 
 	hwnd = _r_app_gethwnd ();
+
+	if (_r_config_getboolean (L"IsNotificationsSound", TRUE))
+		flags |= NIIF_NOSOUND;
 
 	if (!_r_sys_iselevated ())
 	{
@@ -233,13 +237,7 @@ VOID _app_memoryclean (
 		}
 		else
 		{
-			_r_tray_popup (
-				hwnd,
-				&GUID_TrayIcon,
-				NIIF_ERROR | (_r_config_getboolean (L"IsNotificationsSound", TRUE) ? 0 : NIIF_NOSOUND),
-				_r_app_getname (),
-				error_text
-			);
+			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), error_text);
 		}
 
 		return;
@@ -277,10 +275,10 @@ VOID _app_memoryclean (
 	// System working set
 	if (mask & REDUCT_SYSTEM_WORKING_SET)
 	{
-		sfci.MinimumWorkingSet = (ULONG_PTR)-1;
-		sfci.MaximumWorkingSet = (ULONG_PTR)-1;
+		sfci.MinimumWorkingSet = MAXSIZE_T;
+		sfci.MaximumWorkingSet = MAXSIZE_T;
 
-		status = NtSetSystemInformation (SystemFileCacheInformation, &sfci, sizeof (sfci));
+		status = NtSetSystemInformation (SystemFileCacheInformationEx, &sfci, sizeof (sfci));
 
 		if (!NT_SUCCESS (status))
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemFileCacheInformation");
@@ -330,6 +328,15 @@ VOID _app_memoryclean (
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryFlushModifiedList");
 	}
 
+	// Flush registry hives
+	if (mask & REDUCT_REGISTRY_HIVE)
+	{
+		status = NtSetSystemInformation (SystemRegistryReconciliationInformation, NULL, 0);
+
+		if (!NT_SUCCESS (status))
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemRegistryReconciliationInformation");
+	}
+
 	// difference (after)
 	reduct_after = _app_getmemoryinfo (&mem_info);
 
@@ -356,15 +363,7 @@ VOID _app_memoryclean (
 	else
 	{
 		if (_r_config_getboolean (L"BalloonCleanResults", TRUE))
-		{
-			_r_tray_popup (
-				hwnd,
-				&GUID_TrayIcon,
-				NIIF_INFO | (_r_config_getboolean (L"IsNotificationsSound", TRUE) ? 0 : NIIF_NOSOUND),
-				_r_app_getname (),
-				buffer2
-			);
-		}
+			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), buffer2);
 	}
 
 	if (_r_config_getboolean (L"LogCleanResults", FALSE))
@@ -704,7 +703,6 @@ VOID _app_iconinit (
 	_In_ LONG dpi_value
 )
 {
-	BITMAPINFO bmi = {0};
 	LOGFONT logfont;
 	PVOID bits;
 	HDC hdc;
@@ -734,15 +732,7 @@ VOID _app_iconinit (
 	config.hdc_mask = CreateCompatibleDC (hdc);
 
 	// init bitmap
-	bmi.bmiHeader.biSize = sizeof (bmi.bmiHeader);
-	bmi.bmiHeader.biWidth = config.icon_size.right;
-	bmi.bmiHeader.biHeight = config.icon_size.bottom;
-	bmi.bmiHeader.biPlanes = 1;
-	bmi.bmiHeader.biCompression = BI_RGB;
-	bmi.bmiHeader.biBitCount = 32; // four 8-bit components
-	bmi.bmiHeader.biSizeImage = (config.icon_size.right * config.icon_size.bottom) * 4; // rgba
-
-	config.hbitmap = CreateDIBSection (config.hdc, &bmi, DIB_RGB_COLORS, &bits, NULL, 0);
+	config.hbitmap = _r_dc_createbitmap (hdc, config.icon_size.right, config.icon_size.bottom, &bits);
 	config.hbitmap_mask = CreateBitmap (config.icon_size.right, config.icon_size.bottom, 1, 1, NULL);
 
 	ReleaseDC (NULL, hdc);
@@ -765,7 +755,7 @@ VOID _app_hotkeyinit (
 		return;
 
 	if (!RegisterHotKey (hwnd, UID, (HIBYTE (hk) & 2) | ((HIBYTE (hk) & 4) >> 2) | ((HIBYTE (hk) & 1) << 2), LOBYTE (hk)))
-		_r_show_errormessage (hwnd, NULL, PebLastError (), NULL, NULL, NULL);
+		_r_show_errormessage (hwnd, NULL, PebLastError (), NULL, FALSE);
 }
 
 VOID _app_setfontcontrol (
@@ -899,14 +889,14 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_TRAY:
 				{
-					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_SETPOS32, 0, (WPARAM)_app_getwarningvalue ());
+					_r_updown_setrange (hwnd, IDC_TRAYLEVELWARNING, 1, 99);
+					_r_updown_setvalue (hwnd, IDC_TRAYLEVELWARNING, _app_getwarningvalue ());
 
-					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_SETRANGE32, 1, 99);
-					SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_SETPOS32, 0, (WPARAM)_app_getdangervalue ());
+					_r_updown_setrange (hwnd, IDC_TRAYLEVELDANGER, 1, 99);
+					_r_updown_setvalue (hwnd, IDC_TRAYLEVELDANGER, _app_getdangervalue ());
 
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
+					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONDC, _r_config_getlong (L"TrayActionDc", 0));
+					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONMC, _r_config_getlong (L"TrayActionMc", 1));
 
 					_r_ctrl_checkbutton (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_config_getboolean (L"IsTrayIconSingleClick", TRUE));
 
@@ -1007,19 +997,19 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_setstring (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_locale_getstring (IDS_TRAYICONSINGLECLICK_CHK));
 
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_RESETCONTENT, 0, 0);
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_RESETCONTENT, 0, 0);
+					_r_combobox_clear (hwnd, IDC_TRAYACTIONDC);
+					_r_combobox_clear (hwnd, IDC_TRAYACTIONMC);
 
 					for (INT i = 0; i < 3; i++)
 					{
 						string = _r_locale_getstring (IDS_TRAY_ACTION_1 + i);
 
-						SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_INSERTSTRING, i, (LPARAM)string);
-						SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_INSERTSTRING, i, (LPARAM)string);
+						_r_combobox_insertitem (hwnd, IDC_TRAYACTIONDC, i, string, i);
+						_r_combobox_insertitem (hwnd, IDC_TRAYACTIONMC, i, string, i);
 					}
 
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONDC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionDc", 0), 0);
-					SendDlgItemMessageW (hwnd, IDC_TRAYACTIONMC, CB_SETCURSEL, (WPARAM)_r_config_getlong (L"TrayActionMc", 1), 0);
+					_r_combobox_setcurrentitembylparam (hwnd, IDC_TRAYACTIONDC, _r_config_getlong (L"TrayActionDc", 0));
+					_r_combobox_setcurrentitembylparam (hwnd, IDC_TRAYACTIONMC, _r_config_getlong (L"TrayActionMc", 1));
 
 					_r_ctrl_setstring (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_locale_getstring (IDS_SHOW_CLEAN_RESULT_CHK));
 					_r_ctrl_setstring (hwnd, IDC_NOTIFICATIONSOUND_CHK, _r_locale_getstring (IDS_NOTIFICATIONSOUND_CHK));
@@ -1098,13 +1088,13 @@ INT_PTR CALLBACK SettingsProc (
 
 			if (ctrl_id == IDC_AUTOREDUCTVALUE)
 			{
-				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"AutoreductValue", value);
 			}
 			else if (ctrl_id == IDC_AUTOREDUCTINTERVALVALUE)
 			{
-				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"AutoreductIntervalValue", value);
 			}
@@ -1112,7 +1102,7 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				is_stylechanged = TRUE;
 
-				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"TrayLevelWarning", value);
 			}
@@ -1120,7 +1110,7 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				is_stylechanged = TRUE;
 
-				value = (LONG)SendDlgItemMessageW (hwnd, ctrl_id, UDM_GETPOS32, 0, 0);
+				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"TrayLevelDanger", value);
 			}
@@ -1148,7 +1138,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						value = (LONG)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETPOS32, 0, 0);
+						value = _r_updown_getvalue (hwnd, IDC_AUTOREDUCTVALUE);
 
 						_r_config_setlong (L"AutoreductValue", value);
 					}
@@ -1162,7 +1152,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						value = (LONG)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETPOS32, 0, 0);
+						value = _r_updown_getvalue (hwnd, IDC_AUTOREDUCTINTERVALVALUE);
 
 						_r_config_setlong (L"AutoreductIntervalValue", value);
 					}
@@ -1179,13 +1169,13 @@ INT_PTR CALLBACK SettingsProc (
 					{
 						if (ctrl_id == IDC_TRAYLEVELWARNING_CTRL)
 						{
-							value = (LONG)SendDlgItemMessageW (hwnd, IDC_TRAYLEVELWARNING, UDM_GETPOS32, 0, 0);
+							value = _r_updown_getvalue (hwnd, IDC_TRAYLEVELWARNING);
 
 							_r_config_setlong (L"TrayLevelWarning", value);
 						}
 						else if (ctrl_id == IDC_TRAYLEVELDANGER_CTRL)
 						{
-							value = (LONG)SendDlgItemMessageW (hwnd, IDC_TRAYLEVELDANGER, UDM_GETPOS32, 0, 0);
+							value = _r_updown_getvalue (hwnd, IDC_TRAYLEVELDANGER);
 
 							_r_config_setlong (L"TrayLevelDanger", value);
 						}
@@ -1343,7 +1333,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					is_enabled = _r_ctrl_isenabled (hwnd, ctrl_id);
 
-					hbuddy = (HWND)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_GETBUDDY, 0, 0);
+					hbuddy = _r_updown_getbuddy (hwnd, IDC_AUTOREDUCTVALUE);
 
 					if (hbuddy)
 						_r_ctrl_enable (hbuddy, 0, is_enabled);
@@ -1365,7 +1355,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					is_enabled = _r_ctrl_isenabled (hwnd, ctrl_id);
 
-					hbuddy = (HWND)SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_GETBUDDY, 0, 0);
+					hbuddy = _r_updown_getbuddy (hwnd, IDC_AUTOREDUCTINTERVALVALUE);
 
 					if (hbuddy)
 						_r_ctrl_enable (hbuddy, 0, is_enabled);
@@ -1470,7 +1460,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_TRAYACTIONDC:
 				{
 					if (notify_code == CBN_SELCHANGE)
-						_r_config_setlong (L"TrayActionDc", (INT)SendDlgItemMessageW (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
+						_r_config_setlong (L"TrayActionDc", _r_combobox_getcurrentitem (hwnd, ctrl_id));
 
 					break;
 				}
@@ -1478,7 +1468,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_TRAYACTIONMC:
 				{
 					if (notify_code == CBN_SELCHANGE)
-						_r_config_setlong (L"TrayActionMc", (INT)SendDlgItemMessageW (hwnd, ctrl_id, CB_GETCURSEL, 0, 0));
+						_r_config_setlong (L"TrayActionMc", _r_combobox_getcurrentitem (hwnd, ctrl_id));
 
 					break;
 				}
@@ -1521,7 +1511,7 @@ INT_PTR CALLBACK SettingsProc (
 				case IDC_COLOR_WARNING:
 				case IDC_COLOR_DANGER:
 				{
-					static COLORREF cust[16] = {
+					COLORREF cust[16] = {
 						TRAY_COLOR_DANGER,
 						TRAY_COLOR_WARNING,
 						TRAY_COLOR_BG,
@@ -1543,7 +1533,7 @@ INT_PTR CALLBACK SettingsProc (
 					cc.lpCustColors = cust;
 					cc.rgbResult = (COLORREF)GetWindowLongPtrW (hctrl, GWLP_USERDATA);
 
-					if (!ChooseColor (&cc))
+					if (!ChooseColorW (&cc))
 						break;
 
 					switch (ctrl_id)
@@ -1664,7 +1654,7 @@ VOID _app_initialize (
 	_In_opt_ HWND hwnd
 )
 {
-	static ULONG privileges[] = {
+	ULONG privileges[] = {
 		SE_INCREASE_QUOTA_PRIVILEGE,
 		SE_PROF_SINGLE_PROCESS_PRIVILEGE,
 	};
@@ -1929,6 +1919,7 @@ INT_PTR CALLBACK DlgProc (
 					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_REGISTRYHIVE, TITLE_REGISTRYHIVES);
 
 					if (_r_sys_isosversionlower (WINDOWS_10))
 						_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, MF_BYCOMMAND, FALSE);
@@ -2083,7 +2074,7 @@ INT_PTR CALLBACK DlgProc (
 
 					SetForegroundWindow (hwnd); // don't touch
 
-					hmenu = LoadMenuW (NULL, MAKEINTRESOURCE (IDM_TRAY));
+					hmenu = LoadMenuW (NULL, MAKEINTRESOURCEW (IDM_TRAY));
 
 					if (!hmenu)
 						break;
@@ -2391,6 +2382,7 @@ INT_PTR CALLBACK DlgProc (
 				case IDM_CLEAN_STANDBYLIST:
 				case IDM_CLEAN_MODIFIEDLIST:
 				case IDM_CLEAN_COMBINEMEMORYLISTS:
+				case IDM_CLEAN_REGISTRYHIVE:
 				{
 					ULONG mask;
 
@@ -2428,6 +2420,12 @@ INT_PTR CALLBACK DlgProc (
 						case IDM_CLEAN_COMBINEMEMORYLISTS:
 						{
 							mask = REDUCT_COMBINE_MEMORY_LISTS;
+							break;
+						}
+
+						case IDM_CLEAN_REGISTRYHIVE:
+						{
+							mask = REDUCT_REGISTRY_HIVE;
 							break;
 						}
 
@@ -2605,10 +2603,10 @@ INT APIENTRY wWinMain (
 	if (!_r_app_initialize (&_app_parseargs))
 		return ERROR_APP_INIT_FAILURE;
 
-	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCE (IDD_MAIN), MAKEINTRESOURCE (IDI_MAIN), &DlgProc);
+	hwnd = _r_app_createwindow (hinst, MAKEINTRESOURCEW (IDD_MAIN), MAKEINTRESOURCEW (IDI_MAIN), &DlgProc);
 
 	if (!hwnd)
 		return ERROR_APP_INIT_FAILURE;
 
-	return _r_wnd_message_callback (hwnd, MAKEINTRESOURCE (IDA_MAIN));
+	return _r_wnd_message_callback (hwnd, MAKEINTRESOURCEW (IDA_MAIN));
 }
