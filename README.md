@@ -11,7 +11,7 @@
 -------
 
 <p align="center">
-	<img src="https://www.henrypp.org/images/memreduct.png" />
+	<img src="/images/memreduct.png?cache" />
 </p>
 
 ### Description:
