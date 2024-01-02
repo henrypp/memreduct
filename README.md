@@ -11,7 +11,7 @@
 -------
 
 <p align="center">
-	<img src="/images/memreduct.png?cache" />
+	<img src="/images/memreduct.png?cachefix" />
 </p>
 
 ### Description:
