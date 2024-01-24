@@ -124,20 +124,20 @@ VOID _app_generate_menu (
 		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
 }
 
-ULONG _app_getlimitvalue ()
+LONG _app_getlimitvalue ()
 {
-	ULONG value;
+	LONG value;
 
-	value = _r_config_getulong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
+	value = _r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
 
 	return _r_calc_clamp (value, 1, 99);
 }
 
-ULONG _app_getintervalvalue ()
+LONG _app_getintervalvalue ()
 {
-	ULONG value;
+	LONG value;
 
-	value = _r_config_getulong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
+	value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
 
 	return _r_calc_clamp (value, 1, 1440);
 }
@@ -592,7 +592,7 @@ VOID CALLBACK _app_timercallback (
 	{
 		if (_r_config_getboolean (L"AutoreductEnable", FALSE))
 		{
-			if (mem_info.physical_memory.percent >= _app_getlimitvalue ())
+			if (mem_info.physical_memory.percent >= (ULONG)_app_getlimitvalue ())
 				is_clean = TRUE;
 		}
 
@@ -842,15 +842,15 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_checkbutton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE));
 
-					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETRANGE32, 1, 99);
+					_r_updown_setrange (hwnd, IDC_AUTOREDUCTVALUE, 1, 99);
 
-					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getlimitvalue ());
+					_r_updown_setvalue (hwnd, IDC_AUTOREDUCTVALUE, _app_getlimitvalue ());
 
 					_r_ctrl_checkbutton (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_config_getboolean (L"AutoreductIntervalEnable", FALSE));
 
-					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETRANGE32, 1, 1440);
+					_r_updown_setrange (hwnd, IDC_AUTOREDUCTINTERVALVALUE, 1, 1440);
 
-					SendDlgItemMessageW (hwnd, IDC_AUTOREDUCTINTERVALVALUE, UDM_SETPOS32, 0, (WPARAM)_app_getintervalvalue ());
+					_r_updown_setvalue (hwnd, IDC_AUTOREDUCTINTERVALVALUE, _app_getintervalvalue ());
 
 					_r_ctrl_checkbutton (hwnd, IDC_HOTKEY_CLEAN_CHK, _r_config_getboolean (L"HotkeyCleanEnable", FALSE));
 
