@@ -742,7 +742,7 @@ VOID _app_hotkeyinit (
 	_In_ HWND hwnd
 )
 {
-	UINT hk;
+	LONG hk;
 
 	UnregisterHotKey (hwnd, UID);
 
@@ -755,7 +755,7 @@ VOID _app_hotkeyinit (
 		return;
 
 	if (!RegisterHotKey (hwnd, UID, (HIBYTE (hk) & 2) | ((HIBYTE (hk) & 4) >> 2) | ((HIBYTE (hk) & 1) << 2), LOBYTE (hk)))
-		_r_show_errormessage (hwnd, NULL, PebLastError (), NULL, FALSE);
+		_r_show_errormessage (hwnd, NULL, NtLastError (), NULL, FALSE);
 }
 
 VOID _app_setfontcontrol (
@@ -1040,10 +1040,11 @@ INT_PTR CALLBACK SettingsProc (
 				case NM_CUSTOMDRAW:
 				{
 					LPNMCUSTOMDRAW lpnmcd;
+					COLORREF clr;
 					LONG_PTR result;
 					LONG dpi_value;
+					LONG padding;
 					INT ctrl_id;
-					INT padding;
 
 					lpnmcd = (LPNMCUSTOMDRAW)lparam;
 					ctrl_id = (INT)(INT_PTR)nmlp->idFrom;
@@ -1053,15 +1054,17 @@ INT_PTR CALLBACK SettingsProc (
 						dpi_value = _r_dc_getwindowdpi (hwnd);
 
 						padding = _r_dc_getsystemmetrics (SM_CXBORDER, dpi_value);
-						padding *= 4;
+						padding *= 2;
 
-						// intersect
+						// inflate
 						lpnmcd->rc.left += padding;
 						lpnmcd->rc.top += padding;
 						lpnmcd->rc.right -= padding;
 						lpnmcd->rc.bottom -= padding;
 
-						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, (COLORREF)GetWindowLongPtrW (nmlp->hwndFrom, GWLP_USERDATA));
+						clr = (COLORREF)GetWindowLongPtrW (nmlp->hwndFrom, GWLP_USERDATA);
+
+						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, clr);
 
 						result = CDRF_DODEFAULT | CDRF_DOERASE;
 
