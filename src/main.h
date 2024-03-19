@@ -21,7 +21,7 @@ DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 
 #define TIMER 1000
 #define UID 1337
 
-#define LANG_MENU 7
+#define LANG_MENU 8
 
 #define TRAY_SUBMENU_1 4
 #define TRAY_SUBMENU_2 5

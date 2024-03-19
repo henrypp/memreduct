@@ -825,6 +825,7 @@ INT_PTR CALLBACK SettingsProc (
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN_CHK, FALSE);
+						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, FALSE);
 					}
 
 					// Combine memory lists (win10+)
@@ -854,7 +855,10 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_checkbutton (hwnd, IDC_HOTKEY_CLEAN_CHK, _r_config_getboolean (L"HotkeyCleanEnable", FALSE));
 
-					SendDlgItemMessageW (hwnd, IDC_HOTKEY_CLEAN, HKM_SETHOTKEY, (WPARAM)_r_config_getlong (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)), 0);
+					if (!_r_ctrl_isbuttonchecked (hwnd, IDC_HOTKEY_CLEAN_CHK))
+						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, FALSE);
+
+					_r_hotkey_set (hwnd, IDC_HOTKEY_CLEAN, _r_config_getlong (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)));
 
 					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTENABLE_CHK, 0), 0);
 					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTINTERVALENABLE_CHK, 0), 0);
@@ -1054,7 +1058,7 @@ INT_PTR CALLBACK SettingsProc (
 						dpi_value = _r_dc_getwindowdpi (hwnd);
 
 						padding = _r_dc_getsystemmetrics (SM_CXBORDER, dpi_value);
-						padding *= 2;
+						padding *= 4;
 
 						// inflate
 						lpnmcd->rc.left += padding;
@@ -1375,20 +1379,15 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDC_HOTKEY_CLEAN_CHK:
 				{
-					BOOLEAN is_enabled;
+					BOOLEAN is_checked;
 
-					is_enabled = _r_ctrl_isenabled (hwnd, ctrl_id);
+					is_checked = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
 
-					_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, is_enabled);
+					_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, is_checked);
 
-					if (is_enabled)
-					{
-						is_enabled = (_r_ctrl_isbuttonchecked (hwnd, ctrl_id));
+					_r_config_setboolean (L"HotkeyCleanEnable", is_checked);
 
-						_r_config_setboolean (L"HotkeyCleanEnable", is_enabled);
-
-						_app_hotkeyinit (_r_app_gethwnd ());
-					}
+					_app_hotkeyinit (_r_app_gethwnd ());
 
 					break;
 				}
@@ -1400,7 +1399,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (notify_code == EN_CHANGE)
 					{
-						_r_config_setlong (L"HotkeyClean", (LONG)SendDlgItemMessageW (hwnd, ctrl_id, HKM_GETHOTKEY, 0, 0));
+						_r_config_setlong (L"HotkeyClean", _r_hotkey_get (hwnd, ctrl_id));
 
 						_app_hotkeyinit (_r_app_gethwnd ());
 					}
@@ -1754,6 +1753,7 @@ INT_PTR CALLBACK DlgProc (
 			if (hmenu)
 			{
 				_r_menu_checkitem (hmenu, IDM_ALWAYSONTOP_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"AlwaysOnTop", FALSE));
+				_r_menu_checkitem (hmenu, IDM_USEDARKTHEME, 0, MF_BYCOMMAND, _r_theme_isenabled ());
 				_r_menu_checkitem (hmenu, IDM_LOADONSTARTUP_CHK, 0, MF_BYCOMMAND, _r_autorun_isenabled ());
 				_r_menu_checkitem (hmenu, IDM_STARTMINIMIZED_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsStartMinimized", FALSE));
 				_r_menu_checkitem (hmenu, IDM_REDUCTCONFIRMATION_CHK, 0, MF_BYCOMMAND, _r_config_getboolean (L"IsShowReductConfirmation", TRUE));
@@ -1815,6 +1815,7 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
 				_r_menu_setitemtext (hmenu, IDM_ALWAYSONTOP_CHK, FALSE, _r_locale_getstring (IDS_ALWAYSONTOP_CHK));
 				_r_menu_setitemtext (hmenu, IDM_LOADONSTARTUP_CHK, FALSE, _r_locale_getstring (IDS_LOADONSTARTUP_CHK));
+				_r_menu_setitemtext (hmenu, IDM_USEDARKTHEME, FALSE, _r_locale_getstring (IDS_USEDARKTHEME));
 				_r_menu_setitemtext (hmenu, IDM_STARTMINIMIZED_CHK, FALSE, _r_locale_getstring (IDS_STARTMINIMIZED_CHK));
 				_r_menu_setitemtext (hmenu, IDM_REDUCTCONFIRMATION_CHK, FALSE, _r_locale_getstring (IDS_REDUCTCONFIRMATION_CHK));
 				_r_menu_setitemtext (hmenu, IDM_SKIPUACWARNING_CHK, FALSE, _r_locale_getstring (IDS_SKIPUACWARNING_CHK));
@@ -1877,16 +1878,11 @@ INT_PTR CALLBACK DlgProc (
 			if (!hdc)
 				break;
 
-			_r_dc_drawwindow (hdc, hwnd, 0, TRUE);
+			_r_dc_drawwindow (hdc, hwnd, TRUE);
 
 			EndPaint (hwnd, &ps);
 
 			break;
-		}
-
-		case WM_ERASEBKGND:
-		{
-			return TRUE;
 		}
 
 		case WM_HOTKEY:
@@ -2284,6 +2280,16 @@ INT_PTR CALLBACK DlgProc (
 
 					_r_autorun_enable (hwnd, new_val);
 					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, _r_autorun_isenabled ());
+
+					break;
+				}
+
+				case IDM_USEDARKTHEME:
+				{
+					BOOLEAN is_enabled = !_r_theme_isenabled ();
+
+					_r_theme_enable (hwnd, is_enabled);
+					_r_menu_checkitem (GetMenu (hwnd), ctrl_id, 0, MF_BYCOMMAND, is_enabled);
 
 					break;
 				}
