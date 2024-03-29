@@ -630,7 +630,7 @@ VOID CALLBACK _app_timercallback (
 	);
 
 	// refresh listview information
-	if (!_r_wnd_isvisible (hwnd))
+	if (!_r_wnd_isvisible (hwnd, FALSE))
 		return;
 
 	// set item lparam information
