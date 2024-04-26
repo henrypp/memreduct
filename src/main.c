@@ -579,7 +579,6 @@ VOID CALLBACK _app_timercallback (
 	R_MEMORY_INFO mem_info;
 	HICON hicon = NULL;
 	LONG64 timestamp;
-	ULONG percent;
 	BOOLEAN is_clean = FALSE;
 
 	if (id_event != UID)
@@ -629,64 +628,38 @@ VOID CALLBACK _app_timercallback (
 		mem_info.system_cache.percent
 	);
 
-	// refresh listview information
-	if (!_r_wnd_isvisible (hwnd, FALSE))
-		return;
-
-	// set item lparam information
-	for (INT i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
-	{
-		if (i < 3)
-		{
-			percent = mem_info.physical_memory.percent;
-		}
-		else if (i < 6)
-		{
-			percent = mem_info.page_file.percent;
-		}
-		else if (i < 9)
-		{
-			percent = mem_info.system_cache.percent;
-		}
-		else
-		{
-			break;
-		}
-
-		_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, i, 0, NULL, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
-	}
-
 	// physical memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.physical_memory.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 0, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 1, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 2, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
 
 	// virtual memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.page_file.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 3, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 4, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 5, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
 
 	// system cache
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.system_cache.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 6, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 7, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, buffer);
+	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 8, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
 
-	_r_listview_redraw (hwnd, IDC_LISTVIEW);
+	if (_r_wnd_isvisible (hwnd, FALSE))
+		_r_listview_redraw (hwnd, IDC_LISTVIEW);
 }
 
 VOID _app_iconredraw (
