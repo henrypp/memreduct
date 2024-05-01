@@ -579,6 +579,7 @@ VOID CALLBACK _app_timercallback (
 	R_MEMORY_INFO mem_info;
 	HICON hicon = NULL;
 	LONG64 timestamp;
+	ULONG percent;
 	BOOLEAN is_clean = FALSE;
 
 	if (id_event != UID)
@@ -627,6 +628,29 @@ VOID CALLBACK _app_timercallback (
 		_r_locale_getstring (IDS_GROUP_3),
 		mem_info.system_cache.percent
 	);
+
+	// set item lparam information
+	for (INT i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
+	{
+		if (i < 3)
+		{
+			percent = mem_info.physical_memory.percent;
+		}
+		else if (i < 6)
+		{
+			percent = mem_info.page_file.percent;
+		}
+		else if (i < 9)
+		{
+			percent = mem_info.system_cache.percent;
+		}
+		else
+		{
+			break;
+		}
+
+		_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, i, 0, NULL, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
+	}
 
 	// physical memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.physical_memory.percent);
