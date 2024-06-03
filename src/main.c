@@ -205,6 +205,7 @@ FORCEINLINE LPCWSTR _app_getcleanupreason (
 }
 
 VOID _app_memoryclean (
+	_In_opt_ HWND hwnd,
 	_In_ CLEANUP_SOURCE_ENUM src,
 	_In_opt_ ULONG mask
 )
@@ -218,11 +219,8 @@ VOID _app_memoryclean (
 	LPCWSTR error_text;
 	ULONG64 reduct_before;
 	ULONG64 reduct_after;
-	ULONG flags = NIIF_ERROR;
+	ULONG flags = NIIF_WARNING;
 	NTSTATUS status;
-	HWND hwnd;
-
-	hwnd = _r_app_gethwnd ();
 
 	if (_r_config_getboolean (L"IsNotificationsSound", TRUE))
 		flags |= NIIF_NOSOUND;
@@ -237,7 +235,8 @@ VOID _app_memoryclean (
 		}
 		else
 		{
-			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), error_text);
+			if (hwnd)
+				_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), error_text);
 		}
 
 		return;
@@ -362,7 +361,7 @@ VOID _app_memoryclean (
 	}
 	else
 	{
-		if (_r_config_getboolean (L"BalloonCleanResults", TRUE))
+		if (hwnd && _r_config_getboolean (L"BalloonCleanResults", TRUE))
 			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), buffer2);
 	}
 
@@ -443,27 +442,25 @@ VOID _app_drawtext (
 )
 {
 	COLORREF prev_clr;
-	ULONG flags;
 
 	prev_clr = SetTextColor (hdc, clr);
 
-	flags = DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX;
-
-	DrawTextExW (hdc, text, length, rect, flags, NULL);
+	DrawTextExW (hdc, text, length, rect, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, NULL);
 
 	SetTextColor (hdc, prev_clr);
 }
 
 HICON _app_iconcreate (
-	_In_ ULONG percent
+	_In_opt_ ULONG percent
 )
 {
 	static HICON hicon = NULL;
 
+	R_MEMORY_INFO mem_info;
 	ICONINFO ii = {0};
 	WCHAR icon_text[8];
-	HGDIOBJ prev_bmp;
 	HGDIOBJ prev_font;
+	HGDIOBJ prev_bmp;
 	COLORREF text_color;
 	COLORREF bg_color;
 	INT text_length;
@@ -471,8 +468,8 @@ HICON _app_iconcreate (
 	BOOLEAN is_transparent;
 	BOOLEAN is_border;
 	BOOLEAN is_round;
-	BOOLEAN has_danger;
 	BOOLEAN has_warning;
+	BOOLEAN has_danger;
 	HICON hicon_new;
 
 	text_color = _r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT);
@@ -481,6 +478,13 @@ HICON _app_iconcreate (
 	is_transparent = _r_config_getboolean (L"TrayUseTransparency", FALSE);
 	is_border = _r_config_getboolean (L"TrayShowBorder", FALSE);
 	is_round = _r_config_getboolean (L"TrayRoundCorners", FALSE);
+
+	if (!percent)
+	{
+		_app_getmemoryinfo (&mem_info);
+
+		percent = mem_info.physical_memory.percent;
+	}
 
 	has_danger = percent >= _app_getdangervalue ();
 	has_warning = !has_danger && percent >= _app_getwarningvalue ();
@@ -605,7 +609,7 @@ VOID CALLBACK _app_timercallback (
 		}
 
 		if (is_clean)
-			_app_memoryclean (SOURCE_AUTO, 0);
+			_app_memoryclean (hwnd, SOURCE_AUTO, 0);
 	}
 
 	// check previous percent to prevent icon redraw
@@ -644,43 +648,39 @@ VOID CALLBACK _app_timercallback (
 		{
 			percent = mem_info.system_cache.percent;
 		}
-		else
-		{
-			break;
-		}
 
 		_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, i, 0, NULL, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
 	}
 
 	// physical memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.physical_memory.percent);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 0, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.free_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 1, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.total_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 2, 1, buffer, I_IMAGENONE, 1, (LPARAM)mem_info.physical_memory.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer);
 
 	// virtual memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.page_file.percent);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 3, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.free_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 4, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.total_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 5, 1, buffer, I_IMAGENONE, 2, (LPARAM)mem_info.page_file.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer);
 
 	// system cache
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.system_cache.percent);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 6, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.free_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 7, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, buffer);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.total_bytes);
-	_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, 8, 1, buffer, I_IMAGENONE, 3, (LPARAM)mem_info.system_cache.percent);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, buffer);
 
 	if (_r_wnd_isvisible (hwnd, FALSE))
 		_r_listview_redraw (hwnd, IDC_LISTVIEW);
@@ -1885,7 +1885,7 @@ INT_PTR CALLBACK DlgProc (
 		case WM_HOTKEY:
 		{
 			if (wparam == UID)
-				_app_memoryclean (SOURCE_HOTKEY, 0);
+				_app_memoryclean (hwnd, SOURCE_HOTKEY, 0);
 
 			break;
 		}
@@ -2035,7 +2035,7 @@ INT_PTR CALLBACK DlgProc (
 					{
 						case 1:
 						{
-							_app_memoryclean (SOURCE_TRAY, 0);
+							_app_memoryclean (hwnd, SOURCE_TRAY, 0);
 							break;
 						}
 
@@ -2440,7 +2440,7 @@ INT_PTR CALLBACK DlgProc (
 						}
 					}
 
-					_app_memoryclean (SOURCE_CMDLINE, mask);
+					_app_memoryclean (hwnd, SOURCE_CMDLINE, mask);
 
 					break;
 				}
@@ -2511,7 +2511,7 @@ INT_PTR CALLBACK DlgProc (
 						}
 						else
 						{
-							_app_memoryclean (SOURCE_MANUAL, 0);
+							_app_memoryclean (hwnd, SOURCE_MANUAL, 0);
 						}
 
 						is_opened = FALSE;
@@ -2559,7 +2559,7 @@ BOOLEAN NTAPI _app_parseargs (
 	{
 		case CmdlineClean:
 		{
-			_r_sys_getopt (_r_sys_getimagecommandline (), L"clean", &clean_args);
+			_r_sys_getopt (_r_sys_getcommandline (), L"clean", &clean_args);
 
 			if (clean_args)
 			{
@@ -2574,7 +2574,7 @@ BOOLEAN NTAPI _app_parseargs (
 
 			_app_initialize (NULL);
 
-			_app_memoryclean (SOURCE_CMDLINE, mask);
+			_app_memoryclean (NULL, SOURCE_CMDLINE, mask);
 
 			return TRUE;
 		}
