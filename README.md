@@ -30,7 +30,7 @@ To activate portable mode, create "memreduct.ini" in application folder, or move
 ```
 
 ### System requirements:
-- Windows 8.1 and above operating system.
+- Windows 7SP1 and above operating system.
 - [Visual C++ 2022 Redistributable package](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170)
 
 ### Donate:
