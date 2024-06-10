@@ -8,20 +8,20 @@
 #include "resource.h"
 #include "app.h"
 
-DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 0xe6, 0x6b, 0x5f, 0xd2);
+DEFINE_GUID (GUID_TrayIcon, 0xAE9053F0, 0x8D59, 0x4803, 0x9A, 0xBB, 0x74, 0xAF, 0xE6, 0x6B, 0x5F, 0xD2);
 
-#define TITLE_WORKINGSET L"Working set (vista+)"
+#define TITLE_WORKINGSET L"Working set"
 #define TITLE_SYSTEMWORKINGSET L"System working set"
-#define TITLE_STANDBYLISTPRIORITY0 L"Standby list (without priority) (vista+)"
-#define TITLE_STANDBYLIST L"Standby list* (vista+)"
-#define TITLE_MODIFIEDLIST L"Modified page list* (vista+)"
-#define TITLE_COMBINEMEMORYLISTS L"Combine memory lists (win10+)"
+#define TITLE_STANDBYLISTPRIORITY0 L"Standby list (without priority)"
+#define TITLE_STANDBYLIST L"Standby list*"
+#define TITLE_MODIFIEDLIST L"Modified page list*"
 #define TITLE_REGISTRYHIVES L"Registry hives"
+#define TITLE_COMBINEMEMORYLISTS L"Combine memory lists (win10+)"
 
 #define TIMER 1000
 #define UID 1337
 
-#define LANG_MENU 8
+#define LANG_MENU 4
 
 #define TRAY_SUBMENU_1 4
 #define TRAY_SUBMENU_2 5
@@ -35,11 +35,11 @@ DEFINE_GUID (GUID_TrayIcon, 0xae9053f0, 0x8d59, 0x4803, 0x9a, 0xbb, 0x74, 0xaf, 
 
 // colors
 #define TRAY_COLOR_BLACK RGB(0, 0, 0)
-#define TRAY_COLOR_WHITE RGB(255, 255, 255)
-#define TRAY_COLOR_TEXT RGB(255, 255, 255)
-#define TRAY_COLOR_BG RGB(0, 128, 64)
-#define TRAY_COLOR_WARNING RGB(255, 128, 64)
-#define TRAY_COLOR_DANGER RGB(237, 28, 36)
+#define TRAY_COLOR_WHITE RGB(0xFF, 0xFF, 0xFF)
+#define TRAY_COLOR_TEXT RGB(0xFF, 0xFF, 0xFF)
+#define TRAY_COLOR_BG RGB(0x00, 0x80, 0x40)
+#define TRAY_COLOR_WARNING RGB(0xFF, 0x80, 0x40)
+#define TRAY_COLOR_DANGER RGB(0xEC, 0x1C, 0x24)
 
 // memory cleaning mask
 #define REDUCT_WORKING_SET 0x01
