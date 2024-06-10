@@ -13,22 +13,22 @@ STATIC_DATA config = {0};
 ULONG limits_arr[13] = {0};
 ULONG intervals_arr[13] = {0};
 
-INT __cdecl compare_numbers (
+INT WINAPIV compare_numbers (
 	_In_opt_ PVOID context,
-	_In_ VOID CONST* ptr1,
-	_In_ VOID CONST* ptr2
+	_In_ LPCVOID ptr1,
+	_In_ LPCVOID ptr2
 )
 {
-	ULONG CONST* val1;
-	ULONG CONST* val2;
+	ULONG val1;
+	ULONG val2;
 
-	val1 = ptr1;
-	val2 = ptr2;
+	val1 = PtrToUlong (ptr1);
+	val2 = PtrToUlong (ptr2);
 
-	if (*val1 < *val2)
+	if (val1 < val2)
 		return -1;
 
-	if (*val1 > *val2)
+	if (val1 > val2)
 		return 1;
 
 	return 0;
@@ -42,8 +42,10 @@ VOID _app_generate_array (
 {
 	PR_HASHTABLE hashtable;
 	ULONG_PTR hash_code;
-	ULONG_PTR index = 0;
+	ULONG_PTR index;
 	ULONG_PTR enum_key = 0;
+
+	RtlZeroMemory (integers, sizeof (ULONG) * count);
 
 	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
 
@@ -58,12 +60,12 @@ VOID _app_generate_array (
 			_r_obj_addhashtableitem (hashtable, index, NULL);
 	}
 
-	RtlZeroMemory (integers, sizeof (ULONG) * count);
+	index = 0;
 
 	while (_r_obj_enumhashtable (hashtable, NULL, &hash_code, &enum_key))
 	{
 		if (hash_code <= 99)
-			*(PULONG)PTR_ADD_OFFSET (integers, sizeof (ULONG) * index) = (ULONG)hash_code;
+			*(PULONG)PTR_ADD_OFFSET (integers, index * sizeof (ULONG)) = (ULONG)hash_code;
 
 		if (++index >= count)
 			break;
@@ -376,7 +378,7 @@ VOID _app_fontinit (
 {
 	RtlZeroMemory (logfont, sizeof (LOGFONT));
 
-	_r_str_copy (logfont->lfFaceName, LF_FACESIZE, L"Tahoma");
+	_r_str_copy (logfont->lfFaceName, LF_FACESIZE, L"Lucida Console");
 
 	logfont->lfHeight = _r_dc_fontsizetoheight (8, dpi_value);
 	logfont->lfWeight = FW_NORMAL;
@@ -384,15 +386,7 @@ VOID _app_fontinit (
 	_r_config_getfont (L"TrayFont", logfont, dpi_value);
 
 	logfont->lfCharSet = DEFAULT_CHARSET;
-
-	if (_r_config_getboolean (L"TrayUseAntialiasing", FALSE))
-	{
-		logfont->lfQuality = CLEARTYPE_QUALITY;
-	}
-	else
-	{
-		logfont->lfQuality = NONANTIALIASED_QUALITY;
-	}
+	logfont->lfQuality = _r_config_getboolean (L"TrayUseAntialiasing", FALSE) ? CLEARTYPE_QUALITY : NONANTIALIASED_QUALITY;
 }
 
 VOID _app_drawbackground (
@@ -400,7 +394,7 @@ VOID _app_drawbackground (
 	_In_ COLORREF bg_clr,
 	_In_ COLORREF pen_clr,
 	_In_ COLORREF brush_clr,
-	_In_ PRECT rect,
+	_In_ LPCRECT rect,
 	_In_ BOOLEAN is_round
 )
 {
@@ -433,23 +427,6 @@ VOID _app_drawbackground (
 	SetBkColor (hdc, prev_clr);
 }
 
-VOID _app_drawtext (
-	_In_ HDC hdc,
-	_In_ LPWSTR text,
-	_In_ INT length,
-	_In_ PRECT rect,
-	_In_ COLORREF clr
-)
-{
-	COLORREF prev_clr;
-
-	prev_clr = SetTextColor (hdc, clr);
-
-	DrawTextExW (hdc, text, length, rect, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, NULL);
-
-	SetTextColor (hdc, prev_clr);
-}
-
 HICON _app_iconcreate (
 	_In_opt_ ULONG percent
 )
@@ -457,13 +434,13 @@ HICON _app_iconcreate (
 	static HICON hicon = NULL;
 
 	R_MEMORY_INFO mem_info;
+	R_STRINGREF sr;
 	ICONINFO ii = {0};
 	WCHAR icon_text[8];
 	HGDIOBJ prev_font;
 	HGDIOBJ prev_bmp;
 	COLORREF text_color;
 	COLORREF bg_color;
-	INT text_length;
 	INT prev_mode;
 	BOOLEAN is_transparent;
 	BOOLEAN is_border;
@@ -520,7 +497,7 @@ HICON _app_iconcreate (
 	// set tray text
 	_r_str_fromulong (icon_text, RTL_NUMBER_OF (icon_text), percent);
 
-	text_length = (INT)(INT_PTR)_r_str_getlength (icon_text);
+	_r_obj_initializestringref (&sr, icon_text);
 
 	// draw main device context
 	prev_bmp = SelectObject (config.hdc, config.hbitmap);
@@ -529,7 +506,7 @@ HICON _app_iconcreate (
 
 	_app_drawbackground (config.hdc, bg_color, is_border ? text_color : bg_color, is_transparent ? text_color : bg_color, &config.icon_size, is_round);
 
-	_app_drawtext (config.hdc, icon_text, text_length, &config.icon_size, text_color);
+	_r_dc_drawtext (NULL, config.hdc, &sr, &config.icon_size, 0, 0, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, text_color);
 
 	SetBkMode (config.hdc, prev_mode);
 
@@ -550,7 +527,7 @@ HICON _app_iconcreate (
 		is_round
 	);
 
-	_app_drawtext (config.hdc_mask, icon_text, text_length, &config.icon_size, TRAY_COLOR_BLACK);
+	_r_dc_drawtext (NULL, config.hdc_mask, &sr, &config.icon_size, 0, 0, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, TRAY_COLOR_BLACK);
 
 	SetBkMode (config.hdc, prev_mode);
 
@@ -704,12 +681,12 @@ VOID _app_iconinit (
 	PVOID bits;
 	HDC hdc;
 
-	SAFE_DELETE_OBJECT (config.hfont);
-	SAFE_DELETE_OBJECT (config.hbitmap);
 	SAFE_DELETE_OBJECT (config.hbitmap_mask);
+	SAFE_DELETE_OBJECT (config.hbitmap);
+	SAFE_DELETE_OBJECT (config.hfont);
 
-	SAFE_DELETE_DC (config.hdc);
 	SAFE_DELETE_DC (config.hdc_mask);
+	SAFE_DELETE_DC (config.hdc);
 
 	// init font
 	_app_fontinit (&logfont, dpi_value);
@@ -880,10 +857,10 @@ INT_PTR CALLBACK SettingsProc (
 					_app_fontinit (&logfont, dpi_value);
 					_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
-					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_TEXT), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT));
-					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG));
-					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_WARNING), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING));
-					SetWindowLongPtrW (GetDlgItem (hwnd, IDC_COLOR_DANGER), GWLP_USERDATA, (LONG_PTR)_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER));
+					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_TEXT), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT)));
+					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG)));
+					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_WARNING), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING)));
+					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_DANGER), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER)));
 
 					break;
 				}
@@ -1040,34 +1017,52 @@ INT_PTR CALLBACK SettingsProc (
 			{
 				case NM_CUSTOMDRAW:
 				{
-					LPNMCUSTOMDRAW lpnmcd;
-					COLORREF clr;
+					LPNMCUSTOMDRAW draw_info;
 					LONG_PTR result;
-					LONG dpi_value;
-					LONG padding;
+					COLORREF clr;
 					INT ctrl_id;
 
-					lpnmcd = (LPNMCUSTOMDRAW)lparam;
+					draw_info = (LPNMCUSTOMDRAW)lparam;
 					ctrl_id = (INT)(INT_PTR)nmlp->idFrom;
 
 					if (ctrl_id == IDC_COLOR_TEXT || ctrl_id == IDC_COLOR_BACKGROUND || ctrl_id == IDC_COLOR_WARNING || ctrl_id == IDC_COLOR_DANGER)
 					{
-						dpi_value = _r_dc_getwindowdpi (hwnd);
+						if (_r_theme_isenabled ())
+						{
+							if ((draw_info->uItemState & CDIS_SELECTED) == CDIS_SELECTED)
+							{
+								clr = WND_GRAYTEXT_CLR;
+							}
+							else if ((draw_info->uItemState & CDIS_HOT) == CDIS_HOT)
+							{
+								clr = WND_HOT_CLR;
+							}
+							else
+							{
+								clr = WND_BUTTON_CLR;
+							}
 
-						padding = _r_dc_getsystemmetrics (SM_CXBORDER, dpi_value);
-						padding *= 4;
+							_r_dc_fillrect (draw_info->hdc, &draw_info->rc, clr);
 
-						// inflate
-						lpnmcd->rc.left += padding;
-						lpnmcd->rc.top += padding;
-						lpnmcd->rc.right -= padding;
-						lpnmcd->rc.bottom -= padding;
+							if ((draw_info->uItemState & CDIS_FOCUS) == CDIS_FOCUS)
+							{
+								DrawFocusRect (draw_info->hdc, &draw_info->rc);
+							}
+							else
+							{
+								_r_dc_framerect (draw_info->hdc, &draw_info->rc, WND_BACKGROUND2_CLR);
+							}
 
-						clr = (COLORREF)GetWindowLongPtrW (nmlp->hwndFrom, GWLP_USERDATA);
+							result = CDRF_SKIPDEFAULT;
+						}
+						else
+						{
+							result = CDRF_DODEFAULT | CDRF_DOERASE;
+						}
 
-						_r_dc_fillrect (lpnmcd->hdc, &lpnmcd->rc, clr);
+						InflateRect (&draw_info->rc, -4, -4);
 
-						result = CDRF_DODEFAULT | CDRF_DOERASE;
+						_r_dc_fillrect (draw_info->hdc, &draw_info->rc, PtrToUlong (_r_wnd_getcontext (nmlp->hwndFrom, SHORT_MAX)));
 
 						SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, result);
 
@@ -1562,7 +1557,7 @@ INT_PTR CALLBACK SettingsProc (
 						}
 					}
 
-					SetWindowLongPtrW (hctrl, GWLP_USERDATA, (LONG_PTR)cc.rgbResult);
+					_r_wnd_setcontext (hctrl, SHORT_MAX, ULongToPtr (cc.rgbResult));
 
 					dpi_value = _r_dc_gettaskbardpi ();
 
@@ -1667,7 +1662,7 @@ VOID _app_initialize (
 	else
 	{
 		if (hwnd)
-			SendDlgItemMessageW (hwnd, IDC_CLEAN, BCM_SETSHIELD, 0, TRUE);
+			_r_ctrl_setbuttonshield (hwnd, IDC_CLEAN, TRUE);
 	}
 
 	if (!hwnd)
@@ -1805,8 +1800,9 @@ INT_PTR CALLBACK DlgProc (
 			if (hmenu)
 			{
 				_r_menu_setitemtext (hmenu, 0, TRUE, _r_locale_getstring (IDS_FILE));
-				_r_menu_setitemtext (hmenu, 1, TRUE, _r_locale_getstring (IDS_SETTINGS));
-				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_HELP));
+				_r_menu_setitemtext (hmenu, 1, TRUE, _r_locale_getstring (IDS_VIEW));
+				_r_menu_setitemtext (hmenu, 2, TRUE, _r_locale_getstring (IDS_SETTINGS));
+				_r_menu_setitemtext (hmenu, 3, TRUE, _r_locale_getstring (IDS_HELP));
 
 				_r_menu_setitemtextformat (hmenu, IDM_SETTINGS, FALSE, L"%s...\tF2", _r_locale_getstring (IDS_SETTINGS));
 				_r_menu_setitemtext (hmenu, IDM_EXIT, FALSE, _r_locale_getstring (IDS_EXIT));
