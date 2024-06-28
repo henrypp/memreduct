@@ -187,11 +187,6 @@ FORCEINLINE LPCWSTR _app_getcleanupreason (
 			return L"Cleanup (Manual)";
 		}
 
-		case SOURCE_TRAY:
-		{
-			return L"Cleanup (Tray icon)";
-		}
-
 		case SOURCE_HOTKEY:
 		{
 			return L"Cleanup (Hotkey)";
@@ -2031,7 +2026,7 @@ INT_PTR CALLBACK DlgProc (
 					{
 						case 1:
 						{
-							_app_memoryclean (hwnd, SOURCE_TRAY, 0);
+							_app_memoryclean (hwnd, SOURCE_MANUAL, 0);
 							break;
 						}
 
