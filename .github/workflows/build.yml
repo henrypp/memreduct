@@ -1,0 +1,63 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  SOLUTION_FILE_PATH: .
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: windows-latest
+    continue-on-error: true
+
+    steps:
+    - name: Check out main repo
+      uses: actions/checkout@main
+
+    - name: Clone routine
+      run: git clone https://github.com/henrypp/routine.git ../routine
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@main
+
+    - name: Build ARM64
+      run: msbuild /m /p:Configuration=Release /p:Platform=ARM64 ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build x64
+      run: msbuild /m /p:Configuration=Release /p:Platform=x64 ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Build x86
+      run: msbuild /m /p:Configuration=Release /p:Platform=x86 ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Archive ARM64
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        path: ${{env.SOLUTION_FILE_PATH}}/bin/ARM64/*
+        filename: 'memreduct-ARM64.zip'
+
+    - name: Archive x64
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        path: ${{env.SOLUTION_FILE_PATH}}/bin/64/*
+        filename: 'memreduct-x64.zip'
+
+    - name: Archive x86
+      uses: thedoctor0/zip-release@main
+      with:
+        type: 'zip'
+        path: ${{env.SOLUTION_FILE_PATH}}/bin/32/*
+        filename: 'memreduct-x86.zip'
+
+    - name: Delete release if exist then create release
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        gh release view "nightly" && gh release delete "nightly" -y --cleanup-tag
+        gh release create "nightly" --latest "memreduct-ARM64.zip" "memreduct-x64.zip" "memreduct-x86.zip" -t "Nightly build binaries (without installer)" --generate-notes
