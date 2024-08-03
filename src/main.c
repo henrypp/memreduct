@@ -381,7 +381,7 @@ VOID _app_fontinit (
 	_r_config_getfont (L"TrayFont", logfont, dpi_value);
 
 	logfont->lfCharSet = DEFAULT_CHARSET;
-	logfont->lfQuality = _r_config_getboolean (L"TrayUseAntialiasing", FALSE) ? CLEARTYPE_QUALITY : NONANTIALIASED_QUALITY;
+	logfont->lfQuality = CLEARTYPE_QUALITY;
 }
 
 VOID _app_drawbackground (
@@ -852,10 +852,49 @@ INT_PTR CALLBACK SettingsProc (
 					_app_fontinit (&logfont, dpi_value);
 					_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
-					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_TEXT), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT)));
-					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_BACKGROUND), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG)));
-					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_WARNING), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING)));
-					_r_wnd_setcontext (GetDlgItem (hwnd, IDC_COLOR_DANGER), SHORT_MAX, ULongToPtr (_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER)));
+					_r_listview_setstyle (hwnd, IDC_COLORS, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP, FALSE);
+
+					_r_listview_addcolumn (hwnd, IDC_COLORS, 0, L"", -100, LVCFMT_LEFT);
+
+					_r_listview_additem_ex (
+						hwnd,
+						IDC_COLORS,
+						0,
+						_r_locale_getstring (IDS_COLOR_TEXT_HINT),
+						I_IMAGENONE,
+						I_GROUPIDNONE,
+						_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT)
+					);
+
+					_r_listview_additem_ex (
+						hwnd,
+						IDC_COLORS,
+						1,
+						_r_locale_getstring (IDS_COLOR_BACKGROUND_HINT),
+						I_IMAGENONE,
+						I_GROUPIDNONE,
+						_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG)
+					);
+
+					_r_listview_additem_ex (
+						hwnd,
+						IDC_COLORS,
+						2,
+						_r_locale_getstring (IDS_COLOR_WARNING_HINT),
+						I_IMAGENONE,
+						I_GROUPIDNONE,
+						_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING)
+					);
+
+					_r_listview_additem_ex (
+						hwnd,
+						IDC_COLORS,
+						3,
+						_r_locale_getstring (IDS_COLOR_DANGER_HINT),
+						I_IMAGENONE,
+						I_GROUPIDNONE,
+						_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER)
+					);
 
 					break;
 				}
@@ -950,10 +989,10 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_setstring (hwnd, IDC_FONT_HINT, _r_locale_getstring (IDS_FONT_HINT));
 
-					_r_ctrl_setstring (hwnd, IDC_COLOR_TEXT_HINT, _r_locale_getstring (IDS_COLOR_TEXT_HINT));
-					_r_ctrl_setstring (hwnd, IDC_COLOR_BACKGROUND_HINT, _r_locale_getstring (IDS_COLOR_BACKGROUND_HINT));
-					_r_ctrl_setstring (hwnd, IDC_COLOR_WARNING_HINT, _r_locale_getstring (IDS_COLOR_WARNING_HINT));
-					_r_ctrl_setstring (hwnd, IDC_COLOR_DANGER_HINT, _r_locale_getstring (IDS_COLOR_DANGER_HINT));
+					_r_listview_setitem (hwnd, IDC_COLORS, 0, 0, _r_locale_getstring (IDS_COLOR_TEXT_HINT));
+					_r_listview_setitem (hwnd, IDC_COLORS, 1, 0, _r_locale_getstring (IDS_COLOR_BACKGROUND_HINT));
+					_r_listview_setitem (hwnd, IDC_COLORS, 2, 0, _r_locale_getstring (IDS_COLOR_WARNING_HINT));
+					_r_listview_setitem (hwnd, IDC_COLORS, 3, 0, _r_locale_getstring (IDS_COLOR_DANGER_HINT));
 
 					break;
 				}
@@ -1004,64 +1043,99 @@ INT_PTR CALLBACK SettingsProc (
 
 		case WM_NOTIFY:
 		{
-
 			LPNMHDR nmlp;
+
 			nmlp = (LPNMHDR)lparam;
 
 			switch (nmlp->code)
 			{
 				case NM_CUSTOMDRAW:
 				{
-					LPNMCUSTOMDRAW draw_info;
-					LONG_PTR result;
+					LPNMLVCUSTOMDRAW lpnmlv;
 					COLORREF clr;
+
+					lpnmlv = (LPNMLVCUSTOMDRAW)lparam;
+
+					switch (lpnmlv->nmcd.dwDrawStage)
+					{
+						case CDDS_PREPAINT:
+						{
+							SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, CDRF_NOTIFYITEMDRAW);
+
+							return CDRF_NOTIFYITEMDRAW;
+						}
+
+						case CDDS_ITEMPREPAINT:
+						{
+							clr = (COLORREF)lpnmlv->nmcd.lItemlParam;
+
+							lpnmlv->clrText = _r_dc_getcolorbrightness (clr);
+							lpnmlv->clrTextBk = clr;
+
+							_r_dc_fillrect (lpnmlv->nmcd.hdc, &lpnmlv->nmcd.rc, clr);
+
+							SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, CDRF_NEWFONT);
+
+							return CDRF_NEWFONT;
+						}
+					}
+
+					break;
+				}
+
+				case NM_DBLCLK:
+				{
+					LPNMITEMACTIVATE lpnmlv;
+					CHOOSECOLOR cc = {0};
+					COLORREF cust[16] = {TRAY_COLOR_DANGER, TRAY_COLOR_WARNING, TRAY_COLOR_BG, TRAY_COLOR_TEXT};
+					COLORREF clr;
+					LONG dpi_value;
 					INT ctrl_id;
 
-					draw_info = (LPNMCUSTOMDRAW)lparam;
-					ctrl_id = (INT)(INT_PTR)nmlp->idFrom;
+					lpnmlv = (LPNMITEMACTIVATE)lparam;
+					ctrl_id = (INT)(INT_PTR)lpnmlv->hdr.idFrom;
 
-					if (ctrl_id == IDC_COLOR_TEXT || ctrl_id == IDC_COLOR_BACKGROUND || ctrl_id == IDC_COLOR_WARNING || ctrl_id == IDC_COLOR_DANGER)
+					if (ctrl_id != IDC_COLORS || lpnmlv->iItem == -1)
+						break;
+
+					clr = (COLORREF)_r_listview_getitemlparam (hwnd, ctrl_id, lpnmlv->iItem);
+
+					if (!clr)
+						break;
+
+					cc.lStructSize = sizeof (cc);
+					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
+					cc.hwndOwner = hwnd;
+					cc.lpCustColors = cust;
+					cc.rgbResult = clr;
+
+					if (ChooseColorW (&cc))
 					{
-						if (_r_theme_isenabled ())
+						if (lpnmlv->iItem == 0)
 						{
-							if ((draw_info->uItemState & CDIS_SELECTED) == CDIS_SELECTED)
-							{
-								clr = WND_GRAYTEXT_CLR;
-							}
-							else if ((draw_info->uItemState & CDIS_HOT) == CDIS_HOT)
-							{
-								clr = WND_HOT_CLR;
-							}
-							else
-							{
-								clr = WND_BUTTON_CLR;
-							}
-
-							_r_dc_fillrect (draw_info->hdc, &draw_info->rc, clr);
-
-							if ((draw_info->uItemState & CDIS_FOCUS) == CDIS_FOCUS)
-							{
-								DrawFocusRect (draw_info->hdc, &draw_info->rc);
-							}
-							else
-							{
-								_r_dc_framerect (draw_info->hdc, &draw_info->rc, WND_BACKGROUND2_CLR);
-							}
-
-							result = CDRF_SKIPDEFAULT;
+							_r_config_setulong (L"TrayColorText", cc.rgbResult);
 						}
-						else
+						else if (lpnmlv->iItem == 1)
 						{
-							result = CDRF_DODEFAULT | CDRF_DOERASE;
+							_r_config_setulong (L"TrayColorBg", cc.rgbResult);
+						}
+						else if (lpnmlv->iItem == 2)
+						{
+							_r_config_setulong (L"TrayColorWarning", cc.rgbResult);
+						}
+						else if (lpnmlv->iItem == 3)
+						{
+							_r_config_setulong (L"TrayColorDanger", cc.rgbResult);
 						}
 
-						InflateRect (&draw_info->rc, -4, -4);
+						_r_listview_setitem_ex (hwnd, IDC_COLORS, lpnmlv->iItem, lpnmlv->iSubItem, NULL, I_IMAGENONE, I_GROUPIDNONE, cc.rgbResult);
 
-						_r_dc_fillrect (draw_info->hdc, &draw_info->rc, PtrToUlong (_r_wnd_getcontext (nmlp->hwndFrom, SHORT_MAX)));
+						_r_listview_redraw (hwnd, IDC_COLORS);
 
-						SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, result);
+						dpi_value = _r_dc_gettaskbardpi ();
 
-						return result;
+						_app_iconinit (dpi_value);
+						_app_iconredraw (_r_app_gethwnd ());
 					}
 
 					break;
@@ -1491,73 +1565,6 @@ INT_PTR CALLBACK SettingsProc (
 					is_enabled = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
 
 					_r_config_setboolean (L"IsNotificationsSound", is_enabled);
-
-					break;
-				}
-
-				case IDC_COLOR_TEXT:
-				case IDC_COLOR_BACKGROUND:
-				case IDC_COLOR_WARNING:
-				case IDC_COLOR_DANGER:
-				{
-					COLORREF cust[16] = {
-						TRAY_COLOR_DANGER,
-						TRAY_COLOR_WARNING,
-						TRAY_COLOR_BG,
-						TRAY_COLOR_TEXT
-					};
-
-					CHOOSECOLOR cc = {0};
-					HWND hctrl;
-					LONG dpi_value;
-
-					hctrl = GetDlgItem (hwnd, ctrl_id);
-
-					if (!hctrl)
-						break;
-
-					cc.lStructSize = sizeof (cc);
-					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
-					cc.hwndOwner = hwnd;
-					cc.lpCustColors = cust;
-					cc.rgbResult = (COLORREF)GetWindowLongPtrW (hctrl, GWLP_USERDATA);
-
-					if (!ChooseColorW (&cc))
-						break;
-
-					switch (ctrl_id)
-					{
-						case IDC_COLOR_TEXT:
-						{
-							_r_config_setulong (L"TrayColorText", cc.rgbResult);
-							break;
-						}
-
-						case IDC_COLOR_BACKGROUND:
-						{
-							_r_config_setulong (L"TrayColorBg", cc.rgbResult);
-							break;
-						}
-
-						case IDC_COLOR_WARNING:
-						{
-							_r_config_setulong (L"TrayColorWarning", cc.rgbResult);
-							break;
-						}
-
-						case IDC_COLOR_DANGER:
-						{
-							_r_config_setulong (L"TrayColorDanger", cc.rgbResult);
-							break;
-						}
-					}
-
-					_r_wnd_setcontext (hctrl, SHORT_MAX, ULongToPtr (cc.rgbResult));
-
-					dpi_value = _r_dc_gettaskbardpi ();
-
-					_app_iconinit (dpi_value);
-					_app_iconredraw (_r_app_gethwnd ());
 
 					break;
 				}
