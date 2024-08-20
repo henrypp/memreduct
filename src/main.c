@@ -41,11 +41,11 @@ VOID _app_generate_array (
 )
 {
 	PR_HASHTABLE hashtable;
+	ULONG_PTR enum_key = 0;
 	ULONG_PTR hash_code;
 	ULONG_PTR index;
-	ULONG_PTR enum_key = 0;
 
-	RtlZeroMemory (integers, sizeof (ULONG) * count);
+	RtlSecureZeroMemory (integers, sizeof (ULONG) * count);
 
 	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
 
