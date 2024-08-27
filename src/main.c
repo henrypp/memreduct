@@ -2039,7 +2039,7 @@ INT_PTR CALLBACK DlgProc (
 
 						case 2:
 						{
-							_r_sys_createprocess (L"taskmgr.exe", NULL, NULL);
+							_r_sys_createprocess (L"taskmgr.exe", NULL, NULL, FALSE);
 							break;
 						}
 
