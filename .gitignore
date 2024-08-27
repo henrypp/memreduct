@@ -1,6 +1,7 @@
 .vs/
 .vscode/
 temp/
+packages/
 bin/32/
 bin/64/
 bin/arm64/
@@ -36,3 +37,5 @@ desktop.ini
 *.obj
 *.res
 *.tlog
+
+*PVS-Studio*
