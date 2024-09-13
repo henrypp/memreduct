@@ -224,6 +224,14 @@ FONT 8, "Ms Shell Dlg"
 //
 STRINGTABLE
 {
+	IDS_UPDATE_NO "No updates available."
+	IDS_UPDATE_YES "Update available, download and install them?"
+	IDS_UPDATE_DOWNLOAD "Downloading update..."
+	IDS_UPDATE_DONE "Downloading update finished."
+	IDS_UPDATE_ERROR "Update server connection error."
+	IDS_UPDATE_INIT "Checking for new releases..."
+	IDS_UPDATE_INSTALL "Update available, do you want to install them?"
+
 	IDS_FILE "File"
 	IDS_VIEW "View"
 	IDS_SETTINGS "Settings"
