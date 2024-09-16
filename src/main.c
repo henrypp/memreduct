@@ -110,7 +110,7 @@ VOID _app_generate_menu (
 		_r_menu_additem (hsubmenu, menu_id, buffer);
 
 		if (!_r_sys_iselevated ())
-			_r_menu_enableitem (hsubmenu, menu_id, MF_BYCOMMAND, FALSE);
+			_r_menu_enableitem (hsubmenu, menu_id, FALSE, FALSE);
 
 		if (value == menu_value)
 		{
@@ -1755,7 +1755,7 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_checkitem (hmenu, IDM_CHECKUPDATES_CHK, 0, MF_BYCOMMAND, _r_update_isenabled (FALSE));
 
 				if (!_r_sys_iselevated ())
-					_r_menu_enableitem (hmenu, IDM_SKIPUACWARNING_CHK, MF_BYCOMMAND, FALSE);
+					_r_menu_enableitem (hmenu, IDM_SKIPUACWARNING_CHK, FALSE, FALSE);
 			}
 
 			dpi_value = _r_dc_gettaskbardpi ();
@@ -1916,7 +1916,7 @@ INT_PTR CALLBACK DlgProc (
 					_r_menu_additem (hsubmenu, IDM_CLEAN_REGISTRYHIVE, TITLE_REGISTRYHIVES);
 
 					if (_r_sys_isosversionlower (WINDOWS_10))
-						_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, MF_BYCOMMAND, FALSE);
+						_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, FALSE, FALSE);
 
 					if (GetClientRect (nmlp->hwndFrom, &rect))
 					{
@@ -2124,18 +2124,18 @@ INT_PTR CALLBACK DlgProc (
 
 						if (!_r_sys_iselevated ())
 						{
-							_r_menu_enableitem (hsubmenu_region, IDM_WORKINGSET_CHK, MF_BYCOMMAND, FALSE);
-							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, MF_BYCOMMAND, FALSE);
-							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLIST_CHK, MF_BYCOMMAND, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, FALSE);
 
-							_r_menu_enableitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, MF_BYCOMMAND, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, FALSE);
 
-							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, MF_BYCOMMAND, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, FALSE);
 						}
 
 						// Combine memory lists (win10+)
 						if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_10))
-							_r_menu_enableitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, MF_BYCOMMAND, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, FALSE);
 					}
 
 					// configure submenu #2
