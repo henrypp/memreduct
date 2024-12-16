@@ -1,3 +1,15 @@
+v3.5 (17 December 2024)
+- added mitigations (win10+)
+- added dark theme support
+- added registry cache clean
+- stability improvements
+- updated translations
+- updated project sdk
+- fixed command line interface (issue #204)
+- fixed pagefile information display
+- fixed cosmetics bugs
+- fixed bugs
+
 v3.4 (25 January 2022)
 - security code improvements
 - improved windows 10 support
