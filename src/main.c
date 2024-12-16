@@ -1,5 +1,5 @@
 // Mem Reduct
-// Copyright (c) 2011-2024 Henry++
+// Copyright (c) 2011-2025 Henry++
 
 #include "routine.h"
 
@@ -47,7 +47,7 @@ VOID _app_generate_array (
 
 	RtlSecureZeroMemory (integers, sizeof (ULONG) * count);
 
-	hashtable = _r_obj_createhashtable_ex (sizeof (BOOLEAN), 16, NULL);
+	hashtable = _r_obj_createhashtable (sizeof (BOOLEAN), 16, NULL);
 
 	for (index = 1; index < 9; index++)
 	{
@@ -82,13 +82,13 @@ VOID _app_generate_menu (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ ULONG_PTR count,
 	_In_ LPCWSTR format,
-	_In_ ULONG value,
+	_In_ LONG_PTR value,
 	_In_ BOOLEAN is_enabled
 )
 {
 	WCHAR buffer[64];
+	LONG64 menu_value;
 	ULONG menu_items = 0;
-	ULONG menu_value;
 	ULONG menu_id;
 	BOOLEAN is_checked = FALSE;
 
@@ -126,22 +126,28 @@ VOID _app_generate_menu (
 		_r_menu_checkitem (hsubmenu, 0, menu_items + 2, MF_BYPOSITION, 0);
 }
 
-LONG _app_getlimitvalue ()
+ULONG _app_getlimitvalue ()
 {
-	LONG value;
+	ULONG value;
 
-	value = _r_config_getlong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
+	value = _r_config_getulong (L"AutoreductValue", DEFAULT_AUTOREDUCT_VAL);
 
 	return _r_calc_clamp (value, 1, 99);
 }
 
-LONG _app_getintervalvalue ()
+LONG_PTR _app_getintervalvalue ()
 {
-	LONG value;
+	LONG_PTR value;
 
+#if defined(_WIN64)
+	value = _r_config_getlong64 (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
+
+	return _r_calc_clamp64 (value, 1, 1440);
+#else
 	value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL);
 
 	return _r_calc_clamp (value, 1, 1440);
+#endif // _WIN64
 }
 
 ULONG _app_getdangervalue ()
@@ -211,15 +217,15 @@ VOID _app_memoryclean (
 	SYSTEM_FILECACHE_INFORMATION sfci = {0};
 	SYSTEM_MEMORY_LIST_COMMAND command;
 	R_MEMORY_INFO mem_info;
-	WCHAR buffer1[64];
-	WCHAR buffer2[256];
+	WCHAR buffer1[256] = {0};
+	WCHAR buffer2[256] = {0};
 	LPCWSTR error_text;
 	ULONG64 reduct_before;
 	ULONG64 reduct_after;
 	ULONG flags = NIIF_WARNING;
 	NTSTATUS status;
 
-	if (_r_config_getboolean (L"IsNotificationsSound", TRUE))
+	if (!_r_config_getboolean (L"IsNotificationsSound", TRUE))
 		flags |= NIIF_NOSOUND;
 
 	if (!_r_sys_iselevated ())
@@ -240,7 +246,7 @@ VOID _app_memoryclean (
 	}
 
 	if (!mask)
-		mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+		mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
 	if (src == SOURCE_AUTO)
 	{
@@ -249,88 +255,114 @@ VOID _app_memoryclean (
 	}
 	else if (src == SOURCE_MANUAL)
 	{
-		if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION), L"IsShowReductConfirmation"))
+		if ((mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_WORKINGSET L"\r\n");
+
+		if ((mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_SYSTEMWORKINGSET L"\r\n");
+
+		if ((mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDLIST L"\r\n");
+
+		if ((mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_STANDBYLIST L"\r\n");
+
+		if ((mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_STANDBYLISTPRIORITY0 L"\r\n");
+
+		if ((mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_REGISTRYCACHE L"\r\n");
+
+		if ((mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_COMBINEMEMORYLISTS L"\r\n");
+
+		StrTrimW (buffer1, L"\r\n");
+
+		if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION), buffer1, L"IsShowReductConfirmation"))
 			return;
 	}
 
 	// difference (before)
 	reduct_before = _app_getmemoryinfo (&mem_info);
 
-	// Combine memory lists (win10+)
-	if (_r_sys_isosversiongreaterorequal (WINDOWS_10))
-	{
-		if (mask & REDUCT_COMBINE_MEMORY_LISTS)
-		{
-			status = NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combine_info_ex, sizeof (combine_info_ex));
-
-			if (!NT_SUCCESS (status))
-				_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemCombinePhysicalMemoryInformation");
-		}
-	}
-
-	// System working set
-	if (mask & REDUCT_SYSTEM_WORKING_SET)
-	{
-		sfci.MinimumWorkingSet = MAXSIZE_T;
-		sfci.MaximumWorkingSet = MAXSIZE_T;
-
-		status = NtSetSystemInformation (SystemFileCacheInformationEx, &sfci, sizeof (sfci));
-
-		if (!NT_SUCCESS (status))
-			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemFileCacheInformation");
-	}
-
 	// Working set (vista+)
-	if (mask & REDUCT_WORKING_SET)
+	if ((mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET)
 	{
 		command = MemoryEmptyWorkingSets;
 
-		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
+		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (SYSTEM_MEMORY_LIST_COMMAND));
 
 		if (!NT_SUCCESS (status))
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryEmptyWorkingSets");
 	}
 
-	// Standby priority-0 list (vista+)
-	if (mask & REDUCT_STANDBY_PRIORITY0_LIST)
+	// System working set
+	if ((mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET)
 	{
-		command = MemoryPurgeLowPriorityStandbyList;
+		sfci.MinimumWorkingSet = MAXSIZE_T;
+		sfci.MaximumWorkingSet = MAXSIZE_T;
 
-		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
+		status = NtSetSystemInformation (SystemFileCacheInformationEx, &sfci, sizeof (SYSTEM_FILECACHE_INFORMATION));
 
 		if (!NT_SUCCESS (status))
-			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeLowPriorityStandbyList");
-	}
-
-	// Standby list (vista+)
-	if (mask & REDUCT_STANDBY_LIST)
-	{
-		command = MemoryPurgeStandbyList;
-
-		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
-
-		if (!NT_SUCCESS (status))
-			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeStandbyList");
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemFileCacheInformation");
 	}
 
 	// Modified page list (vista+)
-	if (mask & REDUCT_MODIFIED_LIST)
+	if ((mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST)
 	{
 		command = MemoryFlushModifiedList;
 
-		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (command));
+		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (SYSTEM_MEMORY_LIST_COMMAND));
 
 		if (!NT_SUCCESS (status))
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryFlushModifiedList");
 	}
 
-	// Flush registry hives
-	if (mask & REDUCT_REGISTRY_HIVE)
+	// Standby list (vista+)
+	if ((mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST)
 	{
-		status = NtSetSystemInformation (SystemRegistryReconciliationInformation, NULL, 0);
+		command = MemoryPurgeStandbyList;
+
+		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (SYSTEM_MEMORY_LIST_COMMAND));
 
 		if (!NT_SUCCESS (status))
-			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemRegistryReconciliationInformation");
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeStandbyList");
+	}
+
+	// Standby priority-0 list (vista+)
+	if ((mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST)
+	{
+		command = MemoryPurgeLowPriorityStandbyList;
+
+		status = NtSetSystemInformation (SystemMemoryListInformation, &command, sizeof (SYSTEM_MEMORY_LIST_COMMAND));
+
+		if (!NT_SUCCESS (status))
+			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeLowPriorityStandbyList");
+	}
+
+	// Flush registry cache (win8.1+)
+	if (_r_sys_isosversiongreaterorequal (WINDOWS_8_1))
+	{
+		if ((mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE)
+		{
+			status = NtSetSystemInformation (SystemRegistryReconciliationInformation, NULL, 0);
+
+			if (!NT_SUCCESS (status))
+				_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemRegistryReconciliationInformation");
+		}
+	}
+
+	// Combine memory lists (win10+)
+	if (_r_sys_isosversiongreaterorequal (WINDOWS_10))
+	{
+		if ((mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS)
+		{
+			status = NtSetSystemInformation (SystemCombinePhysicalMemoryInformation, &combine_info_ex, sizeof (MEMORY_COMBINE_INFORMATION_EX));
+
+			if (!NT_SUCCESS (status))
+				_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemCombinePhysicalMemoryInformation");
+		}
 	}
 
 	// difference (after)
@@ -434,15 +466,15 @@ HICON _app_iconcreate (
 	WCHAR icon_text[8];
 	HGDIOBJ prev_font;
 	HGDIOBJ prev_bmp;
+	HICON hicon_new;
 	COLORREF text_color;
 	COLORREF bg_color;
-	INT prev_mode;
+	LONG prev_mode;
 	BOOLEAN is_transparent;
 	BOOLEAN is_border;
 	BOOLEAN is_round;
 	BOOLEAN has_warning;
 	BOOLEAN has_danger;
-	HICON hicon_new;
 
 	text_color = _r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT);
 	bg_color = _r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG);
@@ -551,8 +583,8 @@ VOID CALLBACK _app_timercallback (
 	_In_ ULONG time
 )
 {
-	WCHAR buffer[128];
 	R_MEMORY_INFO mem_info;
+	WCHAR buffer[128];
 	HICON hicon = NULL;
 	LONG64 timestamp;
 	ULONG percent;
@@ -568,7 +600,7 @@ VOID CALLBACK _app_timercallback (
 	{
 		if (_r_config_getboolean (L"AutoreductEnable", FALSE))
 		{
-			if (mem_info.physical_memory.percent >= (ULONG)_app_getlimitvalue ())
+			if (mem_info.physical_memory.percent >= _app_getlimitvalue ())
 				is_clean = TRUE;
 		}
 
@@ -576,7 +608,7 @@ VOID CALLBACK _app_timercallback (
 		{
 			timestamp = _r_unixtime_now () - _r_config_getlong64 (L"StatisticLastReduct", 0);
 
-			if (timestamp >= ((LONG64)_app_getintervalvalue () * 60))
+			if (timestamp >= (_app_getintervalvalue () * 60))
 				is_clean = TRUE;
 		}
 
@@ -604,6 +636,9 @@ VOID CALLBACK _app_timercallback (
 		_r_locale_getstring (IDS_GROUP_3),
 		mem_info.system_cache.percent
 	);
+
+	if (!_r_wnd_isvisible (hwnd, FALSE))
+		return;
 
 	// set item lparam information
 	for (INT i = 0; i < _r_listview_getitemcount (hwnd, IDC_LISTVIEW); i++)
@@ -783,32 +818,41 @@ INT_PTR CALLBACK SettingsProc (
 				{
 					ULONG mask;
 
+					_r_listview_setstyle (hwnd, IDC_REGIONS, LVS_EX_CHECKBOXES | LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP, FALSE);
+
+					_r_wnd_setcontext (hwnd, IDC_REGIONS, INVALID_HANDLE_VALUE);
+
+					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, L"", 10, LVCFMT_LEFT);
+
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_IMAGENONE, I_GROUPIDNONE, REDUCT_WORKING_SET);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMWORKINGSET, I_IMAGENONE, I_GROUPIDNONE, REDUCT_SYSTEM_WORKING_SET);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 2, TITLE_MODIFIEDLIST, I_IMAGENONE, I_GROUPIDNONE, REDUCT_MODIFIED_LIST);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 3, TITLE_STANDBYLIST, I_IMAGENONE, I_GROUPIDNONE, REDUCT_STANDBY_LIST);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 4, TITLE_STANDBYLISTPRIORITY0, I_IMAGENONE, I_GROUPIDNONE, REDUCT_STANDBY_PRIORITY0_LIST);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 5, TITLE_REGISTRYCACHE, I_IMAGENONE, I_GROUPIDNONE, REDUCT_REGISTRY_CACHE);
+					_r_listview_additem_ex (hwnd, IDC_REGIONS, 6, TITLE_COMBINEMEMORYLISTS, I_IMAGENONE, I_GROUPIDNONE, REDUCT_COMBINE_MEMORY_LISTS);
+
+					_r_listview_setcolumn (hwnd, IDC_REGIONS, 0, NULL, -100);
+
+					mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 0, (mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 1, (mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 2, (mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 3, (mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 4, (mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 5, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 6, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
+
+					_r_wnd_removecontext (hwnd, IDC_REGIONS);
+
 					if (!_r_sys_iselevated ())
 					{
-						_r_ctrl_enable (hwnd, IDC_WORKINGSET_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_STANDBYLIST_CHK, FALSE);
-						_r_ctrl_enable (hwnd, IDC_MODIFIEDLIST_CHK, FALSE);
-
-						_r_ctrl_enable (hwnd, IDC_SYSTEMWORKINGSET_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN, FALSE);
 					}
-
-					// Combine memory lists (win10+)
-					if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_10))
-						_r_ctrl_enable (hwnd, IDC_COMBINEMEMORYLISTS_CHK, FALSE);
-
-					mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
-
-					_r_ctrl_checkbutton (hwnd, IDC_WORKINGSET_CHK, (mask & REDUCT_WORKING_SET));
-					_r_ctrl_checkbutton (hwnd, IDC_SYSTEMWORKINGSET_CHK, (mask & REDUCT_SYSTEM_WORKING_SET));
-					_r_ctrl_checkbutton (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, (mask & REDUCT_STANDBY_PRIORITY0_LIST));
-					_r_ctrl_checkbutton (hwnd, IDC_STANDBYLIST_CHK, (mask & REDUCT_STANDBY_LIST));
-					_r_ctrl_checkbutton (hwnd, IDC_MODIFIEDLIST_CHK, (mask & REDUCT_MODIFIED_LIST));
-					_r_ctrl_checkbutton (hwnd, IDC_COMBINEMEMORYLISTS_CHK, (mask & REDUCT_COMBINE_MEMORY_LISTS));
 
 					_r_ctrl_checkbutton (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_config_getboolean (L"AutoreductEnable", FALSE));
 
@@ -829,9 +873,9 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_hotkey_set (hwnd, IDC_HOTKEY_CLEAN, _r_config_getlong (L"HotkeyClean", MAKEWORD (VK_F1, HOTKEYF_CONTROL)));
 
-					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTENABLE_CHK, 0), 0);
-					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_AUTOREDUCTINTERVALENABLE_CHK, 0), 0);
-					PostMessageW (hwnd, WM_COMMAND, MAKEWPARAM (IDC_HOTKEY_CLEAN_CHK, 0), 0);
+					_r_ctrl_sendcommand (hwnd, IDC_AUTOREDUCTENABLE_CHK, 0);
+					_r_ctrl_sendcommand (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, 0);
+					_r_ctrl_sendcommand (hwnd, IDC_HOTKEY_CLEAN_CHK, 0);
 
 					break;
 				}
@@ -964,13 +1008,6 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_MEMORY:
 				{
-					_r_ctrl_setstring (hwnd, IDC_WORKINGSET_CHK, TITLE_WORKINGSET);
-					_r_ctrl_setstring (hwnd, IDC_SYSTEMWORKINGSET_CHK, TITLE_SYSTEMWORKINGSET);
-					_r_ctrl_setstring (hwnd, IDC_STANDBYLISTPRIORITY0_CHK, TITLE_STANDBYLISTPRIORITY0);
-					_r_ctrl_setstring (hwnd, IDC_STANDBYLIST_CHK, TITLE_STANDBYLIST);
-					_r_ctrl_setstring (hwnd, IDC_MODIFIEDLIST_CHK, TITLE_MODIFIEDLIST);
-					_r_ctrl_setstring (hwnd, IDC_COMBINEMEMORYLISTS_CHK, TITLE_COMBINEMEMORYLISTS);
-
 					_r_ctrl_setstring (hwnd, IDC_AUTOREDUCTENABLE_CHK, _r_locale_getstring (IDS_AUTOREDUCTENABLE_CHK));
 					_r_ctrl_setstring (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, _r_locale_getstring (IDS_AUTOREDUCTINTERVALENABLE_CHK));
 
@@ -1067,16 +1104,41 @@ INT_PTR CALLBACK SettingsProc (
 
 						case CDDS_ITEMPREPAINT:
 						{
-							clr = (COLORREF)lpnmlv->nmcd.lItemlParam;
+							if (lpnmlv->nmcd.hdr.idFrom == IDC_REGIONS)
+							{
+								if (_r_sys_isosversionlower (WINDOWS_8_1) && (lpnmlv->nmcd.lItemlParam & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE)
+								{
+									clr = _r_theme_isenabled () ? WND_GRAYTEXT_CLR : GetSysColor (COLOR_GRAYTEXT);
 
-							lpnmlv->clrText = _r_dc_getcolorbrightness (clr);
-							lpnmlv->clrTextBk = clr;
+									lpnmlv->clrText = _r_dc_getcolorbrightness (clr);
+									lpnmlv->clrTextBk = clr;
 
-							_r_dc_fillrect (lpnmlv->nmcd.hdc, &lpnmlv->nmcd.rc, clr);
+									return CDRF_NEWFONT;
+								}
 
-							SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, CDRF_NEWFONT);
+								if (_r_sys_isosversionlower (WINDOWS_10) && (lpnmlv->nmcd.lItemlParam & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS)
+								{
+									clr = _r_theme_isenabled () ? WND_GRAYTEXT_CLR : GetSysColor (COLOR_GRAYTEXT);
 
-							return CDRF_NEWFONT;
+									lpnmlv->clrText = _r_dc_getcolorbrightness (clr);
+									lpnmlv->clrTextBk = clr;
+
+									return CDRF_NEWFONT;
+								}
+							}
+							else if (lpnmlv->nmcd.hdr.idFrom == IDC_COLORS)
+							{
+								clr = (COLORREF)lpnmlv->nmcd.lItemlParam;
+
+								lpnmlv->clrText = _r_dc_getcolorbrightness (clr);
+								lpnmlv->clrTextBk = clr;
+
+								_r_dc_fillrect (lpnmlv->nmcd.hdc, &lpnmlv->nmcd.rc, clr);
+
+								SetWindowLongPtrW (hwnd, DWLP_MSGRESULT, CDRF_NEWFONT);
+
+								return CDRF_NEWFONT;
+							}
 						}
 					}
 
@@ -1090,20 +1152,20 @@ INT_PTR CALLBACK SettingsProc (
 					COLORREF cust[16] = {TRAY_COLOR_DANGER, TRAY_COLOR_WARNING, TRAY_COLOR_BG, TRAY_COLOR_TEXT};
 					COLORREF clr;
 					LONG dpi_value;
-					INT ctrl_id;
+					INT listview_id;
 
 					lpnmlv = (LPNMITEMACTIVATE)lparam;
-					ctrl_id = (INT)(INT_PTR)lpnmlv->hdr.idFrom;
+					listview_id = (INT)(INT_PTR)lpnmlv->hdr.idFrom;
 
-					if (ctrl_id != IDC_COLORS || lpnmlv->iItem == -1)
+					if (lpnmlv->iItem == -1 || listview_id != IDC_COLORS)
 						break;
 
-					clr = (COLORREF)_r_listview_getitemlparam (hwnd, ctrl_id, lpnmlv->iItem);
+					clr = (COLORREF)_r_listview_getitemlparam (hwnd, listview_id, lpnmlv->iItem);
 
 					if (!clr)
 						break;
 
-					cc.lStructSize = sizeof (cc);
+					cc.lStructSize = sizeof (CHOOSECOLOR);
 					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
 					cc.hwndOwner = hwnd;
 					cc.lpCustColors = cust;
@@ -1140,6 +1202,73 @@ INT_PTR CALLBACK SettingsProc (
 
 					break;
 				}
+
+				case LVN_ITEMCHANGED:
+				{
+					LPNMLISTVIEW lpnmlv;
+					INT listview_id;
+					ULONG value;
+					ULONG mask;
+
+					lpnmlv = (LPNMLISTVIEW)lparam;
+					listview_id = (INT)(INT_PTR)lpnmlv->hdr.idFrom;
+
+					if (listview_id != IDC_REGIONS)
+						break;
+
+					if (_r_wnd_getcontext (hwnd, listview_id))
+						break;
+
+					if ((lpnmlv->uChanged & LVIF_STATE) == 0)
+						break;
+
+					if ((lpnmlv->uNewState & LVIS_STATEIMAGEMASK) == INDEXTOSTATEIMAGEMASK (1) || ((lpnmlv->uNewState & LVIS_STATEIMAGEMASK) == INDEXTOSTATEIMAGEMASK (2)))
+					{
+						value = (ULONG)lpnmlv->lParam;
+
+						mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+
+						if ((lpnmlv->uNewState & LVIS_STATEIMAGEMASK) == INDEXTOSTATEIMAGEMASK (2))
+						{
+							if ((value & REDUCT_MASK_FREEZES) != 0)
+							{
+								if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation"))
+								{
+									_r_listview_setitemcheck (hwnd, listview_id, lpnmlv->iItem, FALSE);
+
+									return FALSE;
+								}
+							}
+						}
+
+						if (_r_sys_isosversionlower (WINDOWS_8_1) && (value & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE)
+						{
+							_r_listview_setitemcheck (hwnd, listview_id, lpnmlv->iItem, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
+
+							return FALSE;
+						}
+
+						if (_r_sys_isosversionlower (WINDOWS_10) && (value & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS)
+						{
+							_r_listview_setitemcheck (hwnd, listview_id, lpnmlv->iItem, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
+
+							return FALSE;
+						}
+
+						if ((lpnmlv->uNewState & LVIS_STATEIMAGEMASK) == INDEXTOSTATEIMAGEMASK (2))
+						{
+							mask |= value;
+						}
+						else
+						{
+							mask &= ~value;
+						}
+
+						_r_config_setulong (L"ReductMask2", mask);
+					}
+
+					break;
+				}
 			}
 
 			break;
@@ -1168,19 +1297,19 @@ INT_PTR CALLBACK SettingsProc (
 			}
 			else if (ctrl_id == IDC_TRAYLEVELWARNING)
 			{
-				is_stylechanged = TRUE;
-
 				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"TrayLevelWarning", value);
+
+				is_stylechanged = TRUE;
 			}
 			else if (ctrl_id == IDC_TRAYLEVELDANGER)
 			{
-				is_stylechanged = TRUE;
-
 				value = _r_updown_getvalue (hwnd, ctrl_id);
 
 				_r_config_setlong (L"TrayLevelDanger", value);
+
+				is_stylechanged = TRUE;
 			}
 
 			if (is_stylechanged)
@@ -1348,48 +1477,6 @@ INT_PTR CALLBACK SettingsProc (
 				{
 					if (notify_code == CBN_SELCHANGE)
 						_r_locale_apply (hwnd, ctrl_id, 0);
-
-					break;
-				}
-
-				case IDC_WORKINGSET_CHK:
-				case IDC_SYSTEMWORKINGSET_CHK:
-				case IDC_STANDBYLISTPRIORITY0_CHK:
-				case IDC_STANDBYLIST_CHK:
-				case IDC_MODIFIEDLIST_CHK:
-				case IDC_COMBINEMEMORYLISTS_CHK:
-				{
-					ULONG mask = 0;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_WORKINGSET_CHK))
-						mask |= REDUCT_WORKING_SET;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_SYSTEMWORKINGSET_CHK))
-						mask |= REDUCT_SYSTEM_WORKING_SET;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_STANDBYLISTPRIORITY0_CHK))
-						mask |= REDUCT_STANDBY_PRIORITY0_LIST;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_STANDBYLIST_CHK))
-						mask |= REDUCT_STANDBY_LIST;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_MODIFIEDLIST_CHK))
-						mask |= REDUCT_MODIFIED_LIST;
-
-					if (_r_ctrl_isbuttonchecked (hwnd, IDC_COMBINEMEMORYLISTS_CHK))
-						mask |= REDUCT_COMBINE_MEMORY_LISTS;
-
-					if ((ctrl_id == IDC_STANDBYLIST_CHK && (mask & REDUCT_STANDBY_LIST)) || (ctrl_id == IDC_MODIFIEDLIST_CHK && (mask & REDUCT_MODIFIED_LIST)))
-					{
-						if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation"))
-						{
-							_r_ctrl_checkbutton (hwnd, ctrl_id, FALSE);
-
-							return FALSE;
-						}
-					}
-
-					_r_config_setulong (L"ReductMask2", mask);
 
 					break;
 				}
@@ -1575,7 +1662,7 @@ INT_PTR CALLBACK SettingsProc (
 					LOGFONT logfont;
 					LONG dpi_value;
 
-					cf.lStructSize = sizeof (cf);
+					cf.lStructSize = sizeof (CHOOSEFONT);
 					cf.hwndOwner = hwnd;
 					cf.Flags = CF_INITTOLOGFONTSTRUCT | CF_FORCEFONTEXIST | CF_SCREENFONTS;
 
@@ -1632,18 +1719,8 @@ VOID _app_resizecolumns (
 	_In_ HWND hwnd
 )
 {
-	LONG width;
-	HWND hlistview;
-
-	hlistview = GetDlgItem (hwnd, IDC_LISTVIEW);
-
-	if (!hlistview)
-		return;
-
-	width = _r_ctrl_getwidth (hlistview, 0);
-
-	_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 0, NULL, width / 2);
-	_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 1, NULL, width / 2);
+	_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 0, NULL, -50);
+	_r_listview_setcolumn (hwnd, IDC_LISTVIEW, 1, NULL, -50);
 }
 
 VOID _app_initialize (
@@ -1651,8 +1728,8 @@ VOID _app_initialize (
 )
 {
 	ULONG privileges[] = {
-		SE_INCREASE_QUOTA_PRIVILEGE,
 		SE_PROF_SINGLE_PROCESS_PRIVILEGE,
+		SE_INCREASE_QUOTA_PRIVILEGE,
 	};
 
 	LONG dpi_value;
@@ -1815,7 +1892,7 @@ INT_PTR CALLBACK DlgProc (
 				_r_menu_setitemtext (hmenu, IDM_REDUCTCONFIRMATION_CHK, FALSE, _r_locale_getstring (IDS_REDUCTCONFIRMATION_CHK));
 				_r_menu_setitemtext (hmenu, IDM_SKIPUACWARNING_CHK, FALSE, _r_locale_getstring (IDS_SKIPUACWARNING_CHK));
 				_r_menu_setitemtext (hmenu, IDM_CHECKUPDATES_CHK, FALSE, _r_locale_getstring (IDS_CHECKUPDATES_CHK));
-				_r_menu_setitemtextformat (GetSubMenu (hmenu, 1), LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
+				_r_menu_setitemtextformat (GetSubMenu (hmenu, LANG_SUBMENU), LANG_MENU, TRUE, L"%s (Language)", _r_locale_getstring (IDS_LANGUAGE));
 				_r_menu_setitemtext (hmenu, IDM_WEBSITE, FALSE, _r_locale_getstring (IDS_WEBSITE));
 				_r_menu_setitemtext (hmenu, IDM_CHECKUPDATES, FALSE, _r_locale_getstring (IDS_CHECKUPDATES));
 				_r_menu_setitemtextformat (hmenu, IDM_ABOUT, FALSE, L"%s\tF1", _r_locale_getstring (IDS_ABOUT));
@@ -1837,7 +1914,7 @@ INT_PTR CALLBACK DlgProc (
 
 			// enum localizations
 			if (hmenu)
-				_r_locale_enum (GetSubMenu (hmenu, 1), LANG_MENU, IDX_LANGUAGE);
+				_r_locale_enum (GetSubMenu (hmenu, LANG_SUBMENU), LANG_MENU, IDX_LANGUAGE);
 
 			break;
 		}
@@ -1909,11 +1986,14 @@ INT_PTR CALLBACK DlgProc (
 
 					_r_menu_additem (hsubmenu, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_SYSTEMWORKINGSET, TITLE_SYSTEMWORKINGSET);
-					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
-					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_REGISTRYCACHE, TITLE_REGISTRYCACHE);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
-					_r_menu_additem (hsubmenu, IDM_CLEAN_REGISTRYHIVE, TITLE_REGISTRYHIVES);
+
+					if (_r_sys_isosversionlower (WINDOWS_8_1))
+						_r_menu_enableitem (hsubmenu, IDM_CLEAN_REGISTRYCACHE, FALSE, FALSE);
 
 					if (_r_sys_isosversionlower (WINDOWS_10))
 						_r_menu_enableitem (hsubmenu, IDM_CLEAN_COMBINEMEMORYLISTS, FALSE, FALSE);
@@ -2095,46 +2175,44 @@ INT_PTR CALLBACK DlgProc (
 					// configure region submenu
 					if (hsubmenu_region)
 					{
-						mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+						mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
 						_r_menu_setitemtext (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, TITLE_WORKINGSET);
 						_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, TITLE_SYSTEMWORKINGSET);
-						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, TITLE_STANDBYLISTPRIORITY0);
-						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, TITLE_STANDBYLIST);
 						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, TITLE_MODIFIEDLIST);
+						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, TITLE_STANDBYLIST);
+						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, TITLE_STANDBYLISTPRIORITY0);
+						_r_menu_setitemtext (hsubmenu_region, IDM_REGISTRYCACHE_CHK, FALSE, TITLE_REGISTRYCACHE);
 						_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, TITLE_COMBINEMEMORYLISTS);
 
-						if (mask & REDUCT_WORKING_SET)
-							_r_menu_checkitem (hsubmenu_region, IDM_WORKINGSET_CHK, 0, MF_BYCOMMAND, TRUE);
-
-						if (mask & REDUCT_SYSTEM_WORKING_SET)
-							_r_menu_checkitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, 0, MF_BYCOMMAND, TRUE);
-
-						if (mask & REDUCT_STANDBY_PRIORITY0_LIST)
-							_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, 0, MF_BYCOMMAND, TRUE);
-
-						if (mask & REDUCT_STANDBY_LIST)
-							_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLIST_CHK, 0, MF_BYCOMMAND, TRUE);
-
-						if (mask & REDUCT_MODIFIED_LIST)
-							_r_menu_checkitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, 0, MF_BYCOMMAND, TRUE);
-
-						if (mask & REDUCT_COMBINE_MEMORY_LISTS)
-							_r_menu_checkitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, 0, MF_BYCOMMAND, TRUE);
+						_r_menu_checkitem (hsubmenu_region, IDM_WORKINGSET_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET);
+						_r_menu_checkitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET);
+						_r_menu_checkitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST);
+						_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLIST_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST);
+						_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST);
+						_r_menu_checkitem (hsubmenu_region, IDM_REGISTRYCACHE_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
+						_r_menu_checkitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
 
 						if (!_r_sys_iselevated ())
 						{
 							_r_menu_enableitem (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, FALSE);
-							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, FALSE);
-							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, FALSE);
 
 							_r_menu_enableitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, FALSE);
 
-							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, FALSE);
+
+							_r_menu_enableitem (hsubmenu_region, IDM_REGISTRYCACHE_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, FALSE);
 						}
 
+						// Flush registry cache (win8.1+)
+						if (_r_sys_isosversionlower (WINDOWS_8_1))
+							_r_menu_enableitem (hsubmenu_region, IDM_REGISTRYCACHE_CHK, FALSE, FALSE);
+
 						// Combine memory lists (win10+)
-						if (!_r_sys_iselevated () || _r_sys_isosversionlower (WINDOWS_10))
+						if (_r_sys_isosversionlower (WINDOWS_10))
 							_r_menu_enableitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, FALSE);
 					}
 
@@ -2164,7 +2242,7 @@ INT_PTR CALLBACK DlgProc (
 							IDX_TRAY_POPUP_2,
 							intervals_arr,
 							RTL_NUMBER_OF (intervals_arr),
-							L"%" TEXT (PR_ULONG) L" min.",
+							L"%" TEXT (PR_LONG64) L" min.",
 							_app_getintervalvalue (),
 							is_enabled
 						);
@@ -2195,7 +2273,7 @@ INT_PTR CALLBACK DlgProc (
 
 				if (hmenu)
 				{
-					hsubmenu = GetSubMenu (GetSubMenu (hmenu, 1), LANG_MENU);
+					hsubmenu = GetSubMenu (GetSubMenu (hmenu, LANG_SUBMENU), LANG_MENU);
 
 					if (hsubmenu)
 						_r_locale_apply (hsubmenu, ctrl_id, IDX_LANGUAGE);
@@ -2314,15 +2392,16 @@ INT_PTR CALLBACK DlgProc (
 
 				case IDM_WORKINGSET_CHK:
 				case IDM_SYSTEMWORKINGSET_CHK:
-				case IDM_STANDBYLISTPRIORITY0_CHK:
-				case IDM_STANDBYLIST_CHK:
 				case IDM_MODIFIEDLIST_CHK:
+				case IDM_STANDBYLIST_CHK:
+				case IDM_STANDBYLISTPRIORITY0_CHK:
 				case IDM_COMBINEMEMORYLISTS_CHK:
+				case IDM_REGISTRYCACHE_CHK:
 				{
-					ULONG mask;
 					ULONG new_mask = 0;
+					ULONG mask;
 
-					mask = _r_config_getlong (L"ReductMask2", REDUCT_MASK_DEFAULT);
+					mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT);
 
 					switch (ctrl_id)
 					{
@@ -2338,9 +2417,9 @@ INT_PTR CALLBACK DlgProc (
 							break;
 						}
 
-						case IDM_STANDBYLISTPRIORITY0_CHK:
+						case IDM_MODIFIEDLIST_CHK:
 						{
-							new_mask = REDUCT_STANDBY_PRIORITY0_LIST;
+							new_mask = REDUCT_MODIFIED_LIST;
 							break;
 						}
 
@@ -2350,9 +2429,15 @@ INT_PTR CALLBACK DlgProc (
 							break;
 						}
 
-						case IDM_MODIFIEDLIST_CHK:
+						case IDM_STANDBYLISTPRIORITY0_CHK:
 						{
-							new_mask = REDUCT_MODIFIED_LIST;
+							new_mask = REDUCT_STANDBY_PRIORITY0_LIST;
+							break;
+						}
+
+						case IDM_REGISTRYCACHE_CHK:
+						{
+							new_mask = REDUCT_REGISTRY_CACHE;
 							break;
 						}
 
@@ -2374,18 +2459,18 @@ INT_PTR CALLBACK DlgProc (
 							return FALSE;
 					}
 
-					_r_config_setlong (L"ReductMask2", (mask & new_mask) != 0 ? (mask & ~new_mask) : (mask | new_mask));
+					_r_config_setulong (L"ReductMask2", (mask & new_mask) != 0 ? (mask & ~new_mask) : (mask | new_mask));
 
 					break;
 				}
 
 				case IDM_CLEAN_WORKINGSET:
 				case IDM_CLEAN_SYSTEMWORKINGSET:
-				case IDM_CLEAN_STANDBYLISTPRIORITY0:
-				case IDM_CLEAN_STANDBYLIST:
 				case IDM_CLEAN_MODIFIEDLIST:
+				case IDM_CLEAN_STANDBYLIST:
+				case IDM_CLEAN_STANDBYLISTPRIORITY0:
 				case IDM_CLEAN_COMBINEMEMORYLISTS:
-				case IDM_CLEAN_REGISTRYHIVE:
+				case IDM_CLEAN_REGISTRYCACHE:
 				{
 					ULONG mask;
 
@@ -2403,32 +2488,33 @@ INT_PTR CALLBACK DlgProc (
 							break;
 						}
 
-						case IDM_CLEAN_STANDBYLISTPRIORITY0:
-						{
-							mask = REDUCT_STANDBY_PRIORITY0_LIST;
-							break;
-						}
-						case IDM_CLEAN_STANDBYLIST:
-						{
-							mask = REDUCT_STANDBY_LIST;
-							break;
-						}
-
 						case IDM_CLEAN_MODIFIEDLIST:
 						{
 							mask = REDUCT_MODIFIED_LIST;
 							break;
 						}
 
-						case IDM_CLEAN_COMBINEMEMORYLISTS:
+						case IDM_CLEAN_STANDBYLIST:
 						{
-							mask = REDUCT_COMBINE_MEMORY_LISTS;
+							mask = REDUCT_STANDBY_LIST;
 							break;
 						}
 
-						case IDM_CLEAN_REGISTRYHIVE:
+						case IDM_CLEAN_STANDBYLISTPRIORITY0:
 						{
-							mask = REDUCT_REGISTRY_HIVE;
+							mask = REDUCT_STANDBY_PRIORITY0_LIST;
+							break;
+						}
+
+						case IDM_CLEAN_REGISTRYCACHE:
+						{
+							mask = REDUCT_REGISTRY_CACHE;
+							break;
+						}
+
+						case IDM_CLEAN_COMBINEMEMORYLISTS:
+						{
+							mask = REDUCT_COMBINE_MEMORY_LISTS;
 							break;
 						}
 
@@ -2490,29 +2576,20 @@ INT_PTR CALLBACK DlgProc (
 				case IDC_CLEAN:
 				case IDM_TRAY_CLEAN:
 				{
-					static BOOLEAN is_opened = FALSE;
-
-					if (!is_opened)
+					if (_r_sys_iselevated ())
 					{
-						is_opened = TRUE;
-
-						if (!_r_sys_iselevated ())
+						_app_memoryclean (hwnd, SOURCE_MANUAL, 0);
+					}
+					else
+					{
+						if (_r_app_runasadmin ())
 						{
-							if (_r_app_runasadmin ())
-							{
-								DestroyWindow (hwnd);
-							}
-							else
-							{
-								_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, _r_locale_getstring (IDS_STATUS_NOPRIVILEGES));
-							}
+							DestroyWindow (hwnd);
 						}
 						else
 						{
-							_app_memoryclean (hwnd, SOURCE_MANUAL, 0);
+							_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, _r_locale_getstring (IDS_STATUS_NOPRIVILEGES));
 						}
-
-						is_opened = FALSE;
 					}
 
 					break;
