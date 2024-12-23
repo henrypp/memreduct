@@ -278,7 +278,7 @@ VOID _app_memoryclean (
 
 		StrTrimW (buffer1, L"\r\n");
 
-		if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION), buffer1, L"IsShowReductConfirmation"))
+		if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION), buffer1, L"IsShowReductConfirmation", FALSE))
 			return;
 	}
 
@@ -656,38 +656,38 @@ VOID CALLBACK _app_timercallback (
 			percent = mem_info.system_cache.percent;
 		}
 
-		_r_listview_setitem_ex (hwnd, IDC_LISTVIEW, i, 0, NULL, I_IMAGENONE, I_GROUPIDNONE, (LPARAM)percent);
+		_r_listview_setitem (hwnd, IDC_LISTVIEW, i, 0, NULL, I_DEFAULT, I_DEFAULT, (LPARAM)percent);
 	}
 
 	// physical memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.physical_memory.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 1, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	// virtual memory
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.page_file.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 4, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	// system cache
 	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.system_cache.percent);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.free_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 7, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.total_bytes);
-	_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, buffer);
+	_r_listview_setitem (hwnd, IDC_LISTVIEW, 8, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	if (_r_wnd_isvisible (hwnd, FALSE))
 		_r_listview_redraw (hwnd, IDC_LISTVIEW);
@@ -824,13 +824,13 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, L"", 10, LVCFMT_LEFT);
 
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_IMAGENONE, I_GROUPIDNONE, REDUCT_WORKING_SET);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMWORKINGSET, I_IMAGENONE, I_GROUPIDNONE, REDUCT_SYSTEM_WORKING_SET);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 2, TITLE_MODIFIEDLIST, I_IMAGENONE, I_GROUPIDNONE, REDUCT_MODIFIED_LIST);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 3, TITLE_STANDBYLIST, I_IMAGENONE, I_GROUPIDNONE, REDUCT_STANDBY_LIST);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 4, TITLE_STANDBYLISTPRIORITY0, I_IMAGENONE, I_GROUPIDNONE, REDUCT_STANDBY_PRIORITY0_LIST);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 5, TITLE_REGISTRYCACHE, I_IMAGENONE, I_GROUPIDNONE, REDUCT_REGISTRY_CACHE);
-					_r_listview_additem_ex (hwnd, IDC_REGIONS, 6, TITLE_COMBINEMEMORYLISTS, I_IMAGENONE, I_GROUPIDNONE, REDUCT_COMBINE_MEMORY_LISTS);
+					_r_listview_additem (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_WORKING_SET);
+					_r_listview_additem (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMWORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_SYSTEM_WORKING_SET);
+					_r_listview_additem (hwnd, IDC_REGIONS, 2, TITLE_MODIFIEDLIST, I_DEFAULT, I_DEFAULT, REDUCT_MODIFIED_LIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 3, TITLE_STANDBYLIST, I_DEFAULT, I_DEFAULT, REDUCT_STANDBY_LIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 4, TITLE_STANDBYLISTPRIORITY0, I_DEFAULT, I_DEFAULT, REDUCT_STANDBY_PRIORITY0_LIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 5, TITLE_REGISTRYCACHE, I_DEFAULT, I_DEFAULT, REDUCT_REGISTRY_CACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 6, TITLE_COMBINEMEMORYLISTS, I_DEFAULT, I_DEFAULT, REDUCT_COMBINE_MEMORY_LISTS);
 
 					_r_listview_setcolumn (hwnd, IDC_REGIONS, 0, NULL, -100);
 
@@ -900,43 +900,43 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_listview_addcolumn (hwnd, IDC_COLORS, 0, L"", -100, LVCFMT_LEFT);
 
-					_r_listview_additem_ex (
+					_r_listview_additem (
 						hwnd,
 						IDC_COLORS,
 						0,
 						_r_locale_getstring (IDS_COLOR_TEXT_HINT),
-						I_IMAGENONE,
-						I_GROUPIDNONE,
+						I_DEFAULT,
+						I_DEFAULT,
 						_r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT)
 					);
 
-					_r_listview_additem_ex (
+					_r_listview_additem (
 						hwnd,
 						IDC_COLORS,
 						1,
 						_r_locale_getstring (IDS_COLOR_BACKGROUND_HINT),
-						I_IMAGENONE,
-						I_GROUPIDNONE,
+						I_DEFAULT,
+						I_DEFAULT,
 						_r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG)
 					);
 
-					_r_listview_additem_ex (
+					_r_listview_additem (
 						hwnd,
 						IDC_COLORS,
 						2,
 						_r_locale_getstring (IDS_COLOR_WARNING_HINT),
-						I_IMAGENONE,
-						I_GROUPIDNONE,
+						I_DEFAULT,
+						I_DEFAULT,
 						_r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING)
 					);
 
-					_r_listview_additem_ex (
+					_r_listview_additem (
 						hwnd,
 						IDC_COLORS,
 						3,
 						_r_locale_getstring (IDS_COLOR_DANGER_HINT),
-						I_IMAGENONE,
-						I_GROUPIDNONE,
+						I_DEFAULT,
+						I_DEFAULT,
 						_r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER)
 					);
 
@@ -1026,10 +1026,10 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_setstring (hwnd, IDC_FONT_HINT, _r_locale_getstring (IDS_FONT_HINT));
 
-					_r_listview_setitem (hwnd, IDC_COLORS, 0, 0, _r_locale_getstring (IDS_COLOR_TEXT_HINT));
-					_r_listview_setitem (hwnd, IDC_COLORS, 1, 0, _r_locale_getstring (IDS_COLOR_BACKGROUND_HINT));
-					_r_listview_setitem (hwnd, IDC_COLORS, 2, 0, _r_locale_getstring (IDS_COLOR_WARNING_HINT));
-					_r_listview_setitem (hwnd, IDC_COLORS, 3, 0, _r_locale_getstring (IDS_COLOR_DANGER_HINT));
+					_r_listview_setitem (hwnd, IDC_COLORS, 0, 0, _r_locale_getstring (IDS_COLOR_TEXT_HINT), I_DEFAULT, I_DEFAULT, I_DEFAULT);
+					_r_listview_setitem (hwnd, IDC_COLORS, 1, 0, _r_locale_getstring (IDS_COLOR_BACKGROUND_HINT), I_DEFAULT, I_DEFAULT, I_DEFAULT);
+					_r_listview_setitem (hwnd, IDC_COLORS, 2, 0, _r_locale_getstring (IDS_COLOR_WARNING_HINT), I_DEFAULT, I_DEFAULT, I_DEFAULT);
+					_r_listview_setitem (hwnd, IDC_COLORS, 3, 0, _r_locale_getstring (IDS_COLOR_DANGER_HINT), I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 					break;
 				}
@@ -1190,7 +1190,7 @@ INT_PTR CALLBACK SettingsProc (
 							_r_config_setulong (L"TrayColorDanger", cc.rgbResult);
 						}
 
-						_r_listview_setitem_ex (hwnd, IDC_COLORS, lpnmlv->iItem, lpnmlv->iSubItem, NULL, I_IMAGENONE, I_GROUPIDNONE, cc.rgbResult);
+						_r_listview_setitem (hwnd, IDC_COLORS, lpnmlv->iItem, lpnmlv->iSubItem, NULL, I_DEFAULT, I_DEFAULT, cc.rgbResult);
 
 						_r_listview_redraw (hwnd, IDC_COLORS);
 
@@ -1232,7 +1232,7 @@ INT_PTR CALLBACK SettingsProc (
 						{
 							if ((value & REDUCT_MASK_FREEZES) != 0)
 							{
-								if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation"))
+								if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION_WARNING), NULL, L"IsShowWarningConfirmation", FALSE))
 								{
 									_r_listview_setitemcheck (hwnd, listview_id, lpnmlv->iItem, FALSE);
 
@@ -1769,7 +1769,7 @@ VOID _app_initialize (
 
 		for (INT j = 0; j < 3; j++)
 		{
-			_r_listview_additem_ex (hwnd, IDC_LISTVIEW, k++, _r_locale_getstring (IDS_ITEM_1 + j), I_IMAGENONE, i, 0);
+			_r_listview_additem (hwnd, IDC_LISTVIEW, k++, _r_locale_getstring (IDS_ITEM_1 + j), I_DEFAULT, i, 0);
 		}
 	}
 
@@ -1905,7 +1905,7 @@ INT_PTR CALLBACK DlgProc (
 
 				for (INT j = 0; j < 3; j++)
 				{
-					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, _r_locale_getstring (IDS_ITEM_1 + j));
+					_r_listview_setitem (hwnd, IDC_LISTVIEW, k++, 0, _r_locale_getstring (IDS_ITEM_1 + j), I_DEFAULT, I_DEFAULT, I_DEFAULT);
 				}
 			}
 
@@ -2455,7 +2455,7 @@ INT_PTR CALLBACK DlgProc (
 
 					if ((ctrl_id == IDM_STANDBYLIST_CHK && !(mask & REDUCT_STANDBY_LIST)) || (ctrl_id == IDM_MODIFIEDLIST_CHK && !(mask & REDUCT_MODIFIED_LIST)))
 					{
-						if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation"))
+						if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION_WARNING), NULL, L"IsShowWarningConfirmation", FALSE))
 							return FALSE;
 					}
 
