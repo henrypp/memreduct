@@ -628,13 +628,13 @@ VOID CALLBACK _app_timercallback (
 		hwnd,
 		&GUID_TrayIcon,
 		hicon,
-		L"%s: %" TEXT (PR_ULONG) L"%%\r\n%s: %" TEXT (PR_ULONG) L"%%\r\n%s: %" TEXT (PR_ULONG) L"%%",
+		L"%s: %" TEXT (PR_DOUBLE) L"%%\r\n%s: %" TEXT (PR_DOUBLE) L"%%\r\n%s: %" TEXT (PR_DOUBLE) L"%%",
 		_r_locale_getstring (IDS_GROUP_1),
-		mem_info.physical_memory.percent,
+		mem_info.physical_memory.percent_f,
 		_r_locale_getstring (IDS_GROUP_2),
-		mem_info.page_file.percent,
+		mem_info.page_file.percent_f,
 		_r_locale_getstring (IDS_GROUP_3),
-		mem_info.system_cache.percent
+		mem_info.system_cache.percent_f
 	);
 
 	if (!_r_wnd_isvisible (hwnd, FALSE))
@@ -660,7 +660,7 @@ VOID CALLBACK _app_timercallback (
 	}
 
 	// physical memory
-	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.physical_memory.percent);
+	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_DOUBLE) L"%%", mem_info.physical_memory.percent_f);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 0, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.physical_memory.free_bytes);
@@ -670,7 +670,7 @@ VOID CALLBACK _app_timercallback (
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 2, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	// virtual memory
-	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.page_file.percent);
+	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_DOUBLE) L"%%", mem_info.page_file.percent_f);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 3, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.page_file.free_bytes);
@@ -680,7 +680,7 @@ VOID CALLBACK _app_timercallback (
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 5, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	// system cache
-	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_ULONG) L"%%", mem_info.system_cache.percent);
+	_r_str_printf (buffer, RTL_NUMBER_OF (buffer), L"%" TEXT (PR_DOUBLE) L"%%", mem_info.system_cache.percent_f);
 	_r_listview_setitem (hwnd, IDC_LISTVIEW, 6, 1, buffer, I_DEFAULT, I_DEFAULT, I_DEFAULT);
 
 	_r_format_bytesize64 (buffer, RTL_NUMBER_OF (buffer), mem_info.system_cache.free_bytes);
