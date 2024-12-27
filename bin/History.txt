@@ -1,3 +1,8 @@
+v3.5.1 (27 December 2024)
+- now percentage displays as float numbers
+- fixed pagefile obtaining information (issue #243)
+- fixed option for round window corners (issue #252)
+
 v3.5 (17 December 2024)
 - added mitigations (win10+)
 - added dark theme support
