@@ -232,14 +232,22 @@ VOID _app_memoryclean (
 	{
 		error_text = _r_locale_getstring (IDS_STATUS_NOPRIVILEGES);
 
-		if (src == SOURCE_CMDLINE)
+		if (_r_app_runasadmin ())
 		{
-			_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, error_text);
+			if (hwnd)
+				DestroyWindow (hwnd);
 		}
 		else
 		{
-			if (hwnd)
-				_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), error_text);
+			if (src == SOURCE_CMDLINE)
+			{
+				_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, error_text);
+			}
+			else
+			{
+				if (hwnd)
+					_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), error_text);
+			}
 		}
 
 		return;
