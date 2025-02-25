@@ -584,6 +584,225 @@ HICON _app_iconcreate (
 	return hicon;
 }
 
+VOID _app_drawbackground_withalpha (
+	_In_ HDC hdc,
+	_In_ COLORREF pen_clr,
+	_In_ COLORREF brush_clr,
+	_In_ LPCRECT rect,
+	_In_ BOOLEAN is_round
+)
+{
+	HGDIOBJ prev_brush;
+	HGDIOBJ prev_pen;
+	COLORREF prev_clr;
+
+	prev_brush = SelectObject (hdc, GetStockObject (DC_BRUSH));
+	prev_pen = SelectObject (hdc, GetStockObject (DC_PEN));
+	prev_clr = SetBkColor (hdc, brush_clr);
+
+	SetDCPenColor (hdc, pen_clr);
+	SetDCBrushColor (hdc, brush_clr);
+
+	_r_dc_fillrect (hdc, rect, 0);
+
+	if (is_round)
+	{
+		RoundRect (hdc, rect->left, rect->top, rect->right, rect->bottom, rect->right >> 1, rect->bottom >> 1);
+	}
+	else
+	{
+		Rectangle (hdc, rect->left, rect->top, rect->right, rect->bottom);
+	}
+
+	SelectObject (hdc, prev_brush);
+	SelectObject (hdc, prev_pen);
+	SetBkColor (hdc, prev_clr);
+}
+
+// calculated alpha is additive, so regular blending produce would slightly incorrect result; anyway better than staircases
+VOID _app_setupalpha (
+	_Inout_ PDWORD bits_argb,
+	_In_ PDWORD bits_bw,
+	_In_ LONG bits_length
+)
+{
+	BYTE r;
+	BYTE g;
+	BYTE b;
+	BYTE alpha;
+
+	FLOAT alpha_mlp;
+	DWORD color;
+
+	while (bits_length-- > 0)
+	{
+		// extract components from target "alpha mask"
+		color = bits_bw[bits_length];
+		r = (color & 0xFF);
+		g = ((color >> 8) & 0xFF);
+		b = ((color >> 16) & 0xFF);
+
+		if (r > g && r > b) alpha = r;
+		else if (g > b) alpha = g;
+		else alpha = b;
+
+		// if any of color component is maxed - pixel is opaque
+		if (alpha == 0xFF)
+		{
+			bits_argb[bits_length] |= 0xFF000000;
+			continue;
+		}
+
+		// if all color components are zero - pixel is transparent
+		if (alpha == 0x00)
+		{
+			bits_argb[bits_length] |= 0x01000000; // when alpha is zero - pixel is opaque, GDI
+			continue;
+		}
+
+		// extract components from target, modify and write them back
+		color = bits_argb[bits_length];
+		r = (color & 0xFF);
+		g = ((color >> 8) & 0xFF);
+		b = ((color >> 16) & 0xFF);
+
+		alpha_mlp = 255.0f / alpha;
+		bits_argb[bits_length] =
+			  (alpha << 24)
+			| ((BYTE)(b * alpha_mlp) << 16)
+			| ((BYTE)(g * alpha_mlp) << 8)
+			| (BYTE)(r * alpha_mlp)
+		;
+	}
+}
+
+HICON _app_iconcreate_withalpha (
+	_In_opt_ ULONG percent
+)
+{
+	static HICON hicon = NULL;
+
+	R_MEMORY_INFO mem_info;
+	R_STRINGREF sr;
+	ICONINFO ii = {0};
+	WCHAR icon_text[8];
+	HGDIOBJ prev_font;
+	HGDIOBJ prev_bmp;
+	HICON hicon_new;
+	COLORREF text_color;
+	COLORREF bg_color;
+	LONG prev_mode;
+	BOOLEAN is_transparent;
+	BOOLEAN is_border;
+	BOOLEAN is_round;
+	BOOLEAN has_warning;
+	BOOLEAN has_danger;
+
+	text_color = _r_config_getulong (L"TrayColorText", TRAY_COLOR_TEXT);
+	bg_color = _r_config_getulong (L"TrayColorBg", TRAY_COLOR_BG);
+
+	is_transparent = _r_config_getboolean (L"TrayUseTransparency", FALSE);
+	is_border = _r_config_getboolean (L"TrayShowBorder", FALSE);
+	is_round = _r_config_getboolean (L"TrayRoundCorners", FALSE);
+
+	if (!percent)
+	{
+		_app_getmemoryinfo (&mem_info);
+
+		percent = mem_info.physical_memory.percent;
+	}
+
+	has_danger = percent >= _app_getdangervalue ();
+	has_warning = !has_danger && percent >= _app_getwarningvalue ();
+
+	if (has_danger || has_warning)
+	{
+		if (_r_config_getboolean (L"TrayChangeBg", TRUE))
+		{
+			if (has_danger)
+			{
+				bg_color = _r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER);
+			}
+			else
+			{
+				bg_color = _r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING);
+			}
+
+			is_transparent = FALSE;
+		}
+		else
+		{
+			if (has_danger)
+			{
+				text_color = _r_config_getulong (L"TrayColorDanger", TRAY_COLOR_DANGER);
+			}
+			else
+			{
+				text_color = _r_config_getulong (L"TrayColorWarning", TRAY_COLOR_WARNING);
+			}
+		}
+	}
+
+	// set tray text
+	_r_str_fromulong (icon_text, RTL_NUMBER_OF (icon_text), percent);
+
+	_r_obj_initializestringref (&sr, icon_text);
+
+	// draw main device context
+	prev_bmp = SelectObject (config.hdc, config.hbitmap);
+	prev_font = SelectObject (config.hdc, config.hfont);
+	prev_mode = SetBkMode (config.hdc, TRANSPARENT);
+
+	// prevents blending with original background
+	if (is_transparent) bg_color = TRAY_COLOR_BLACK;
+	_app_drawbackground_withalpha (config.hdc, is_border ? text_color : bg_color, bg_color, &config.icon_size, is_round);
+
+	_r_dc_drawtext (NULL, config.hdc, &sr, &config.icon_size, 0, 0, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, text_color);
+
+	SetBkMode (config.hdc, prev_mode);
+	SelectObject (config.hdc, prev_font);
+	SelectObject (config.hdc, prev_bmp);
+
+	if (is_transparent || is_round) // corners also must be "masked"
+	{
+		// draw custom mask device context (here - black to not show; white to show)
+		// this mask used to calculate proper(almost) alpha for bitmap
+		prev_bmp = SelectObject (config.hdc_mask, config.hbitmap_alpha);
+		prev_font = SelectObject (config.hdc_mask, config.hfont);
+		prev_mode = SetBkMode (config.hdc_mask, TRANSPARENT);
+		
+		if (is_transparent) // hard case
+		{
+			_app_drawbackground_withalpha (config.hdc_mask, is_border ? TRAY_COLOR_WHITE : TRAY_COLOR_BLACK, TRAY_COLOR_BLACK, &config.icon_size, is_round);
+			_r_dc_drawtext (NULL, config.hdc_mask, &sr, &config.icon_size, 0, 0, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, TRAY_COLOR_WHITE);
+		}
+		else // easy one-draw
+		{
+			_app_drawbackground_withalpha (config.hdc_mask, TRAY_COLOR_WHITE, TRAY_COLOR_WHITE, &config.icon_size, is_round);
+		}
+		
+		SetBkMode (config.hdc, prev_mode);
+		SelectObject (config.hdc_mask, prev_bmp);
+		SelectObject (config.hdc_mask, prev_font);
+
+		_app_setupalpha (config.dwbits_icon_argb, config.dwbits_icon_bw, config.dwbits_icon_length);
+	}
+
+	// create icon
+	ii.fIcon = TRUE;
+	ii.hbmColor = config.hbitmap;
+	ii.hbmMask = config.hbitmap_mask;
+
+	hicon_new = CreateIconIndirect (&ii);
+
+	if (hicon)
+		DestroyIcon (hicon);
+
+	hicon = hicon_new;
+
+	return hicon;
+}
+
 VOID CALLBACK _app_timercallback (
 	_In_ HWND hwnd,
 	_In_ UINT msg,
@@ -629,7 +848,7 @@ VOID CALLBACK _app_timercallback (
 	{
 		config.ms_prev = mem_info.physical_memory.percent; // store last percentage value (required!)
 
-		hicon = _app_iconcreate (config.ms_prev);
+		hicon = _app_iconcreate_withalpha (config.ms_prev);
 	}
 
 	_r_tray_setinfoformat (
@@ -716,7 +935,6 @@ VOID _app_iconinit (
 )
 {
 	LOGFONT logfont;
-	PVOID bits;
 	HDC hdc;
 
 	SAFE_DELETE_OBJECT (config.hbitmap_mask);
@@ -744,8 +962,11 @@ VOID _app_iconinit (
 	config.hdc_mask = CreateCompatibleDC (hdc);
 
 	// init bitmap
-	config.hbitmap = _r_dc_createbitmap (hdc, config.icon_size.right, config.icon_size.bottom, &bits);
+	config.hbitmap = _r_dc_createbitmap (hdc, config.icon_size.right, config.icon_size.bottom, &config.dwbits_icon_argb);
+	// must to be at least 24bit to let GDI draw smooth font
+	config.hbitmap_alpha = _r_dc_createbitmap (hdc, config.icon_size.right, config.icon_size.bottom, &config.dwbits_icon_bw);
 	config.hbitmap_mask = CreateBitmap (config.icon_size.right, config.icon_size.bottom, 1, 1, NULL);
+	config.dwbits_icon_length = config.icon_size.right * config.icon_size.bottom;
 
 	ReleaseDC (NULL, hdc);
 }
@@ -1848,7 +2069,7 @@ INT_PTR CALLBACK DlgProc (
 
 			_app_iconinit (dpi_value);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, _app_iconcreate (0), _r_app_getname (), FALSE);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, _app_iconcreate_withalpha (0), _r_app_getname (), FALSE);
 
 			_app_iconredraw (hwnd);
 
@@ -1871,7 +2092,7 @@ INT_PTR CALLBACK DlgProc (
 
 			_app_iconinit (dpi_value);
 
-			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, _app_iconcreate (0), _r_app_getname (), FALSE);
+			_r_tray_create (hwnd, &GUID_TrayIcon, RM_TRAYICON, _app_iconcreate_withalpha (0), _r_app_getname (), FALSE);
 
 			_app_iconredraw (hwnd);
 

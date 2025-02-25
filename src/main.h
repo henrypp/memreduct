@@ -61,7 +61,11 @@ typedef struct _STATIC_DATA
 	HDC hdc;
 	HDC hdc_mask;
 	HBITMAP hbitmap;
+	HBITMAP hbitmap_alpha;
 	HBITMAP hbitmap_mask;
+	PDWORD dwbits_icon_argb;
+	PDWORD dwbits_icon_bw;
+	LONG dwbits_icon_length;
 	HFONT hfont;
 	RECT icon_size;
 	ULONG ms_prev;
