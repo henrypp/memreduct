@@ -962,8 +962,6 @@ INT_PTR CALLBACK SettingsProc (
 					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONDC, _r_config_getlong (L"TrayActionDc", 0, NULL));
 					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONMC, _r_config_getlong (L"TrayActionMc", 1, NULL));
 
-					_r_ctrl_checkbutton (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_config_getboolean (L"IsTrayIconSingleClick", TRUE, NULL));
-
 					_r_ctrl_checkbutton (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_config_getboolean (L"BalloonCleanResults", TRUE, NULL));
 					_r_ctrl_checkbutton (hwnd, IDC_NOTIFICATIONSOUND_CHK, _r_config_getboolean (L"IsNotificationsSound", TRUE, NULL));
 
@@ -1051,8 +1049,6 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_ctrl_setstring (hwnd, IDC_TRAYACTIONDC_HINT, _r_locale_getstring (IDS_TRAYACTIONDC_HINT));
 					_r_ctrl_setstring (hwnd, IDC_TRAYACTIONMC_HINT, _r_locale_getstring (IDS_TRAYACTIONMC_HINT));
-
-					_r_ctrl_setstring (hwnd, IDC_TRAYICONSINGLECLICK_CHK, _r_locale_getstring (IDS_TRAYICONSINGLECLICK_CHK));
 
 					_r_combobox_clear (hwnd, IDC_TRAYACTIONDC);
 					_r_combobox_clear (hwnd, IDC_TRAYACTIONMC);
@@ -1631,17 +1627,6 @@ INT_PTR CALLBACK SettingsProc (
 					break;
 				}
 
-				case IDC_TRAYICONSINGLECLICK_CHK:
-				{
-					BOOLEAN is_enabled;
-
-					is_enabled = _r_ctrl_isbuttonchecked (hwnd, ctrl_id);
-
-					_r_config_setboolean (L"IsTrayIconSingleClick", is_enabled, NULL);
-
-					break;
-				}
-
 				case IDC_SHOW_CLEAN_RESULT_CHK:
 				{
 					BOOLEAN is_enabled;
@@ -2085,27 +2070,15 @@ INT_PTR CALLBACK DlgProc (
 				}
 
 				case WM_LBUTTONUP:
-				case WM_LBUTTONDBLCLK:
 				case WM_MBUTTONUP:
 				{
 					LONG action;
-					BOOLEAN is_singleclick;
 
-					is_singleclick = _r_config_getboolean (L"IsTrayIconSingleClick", TRUE, NULL);
-
-					if (is_singleclick)
+					if (LOWORD (lparam) == WM_LBUTTONUP)
 					{
-						if (LOWORD (lparam) == WM_LBUTTONDBLCLK)
-							break;
-					}
-					else
-					{
-						if (LOWORD (lparam) == WM_LBUTTONUP)
-						{
-							SetForegroundWindow (hwnd);
+						SetForegroundWindow (hwnd);
 
-							break;
-						}
+						break;
 					}
 
 					if (LOWORD (lparam) == WM_MBUTTONUP)
