@@ -959,7 +959,7 @@ INT_PTR CALLBACK SettingsProc (
 					_r_updown_setrange (hwnd, IDC_TRAYLEVELDANGER, 1, 99);
 					_r_updown_setvalue (hwnd, IDC_TRAYLEVELDANGER, _app_getdangervalue ());
 
-					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONDC, _r_config_getlong (L"TrayActionDc", 0, NULL));
+					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONSC, _r_config_getlong (L"TrayActionDc", 0, NULL));
 					_r_combobox_setcurrentitem (hwnd, IDC_TRAYACTIONMC, _r_config_getlong (L"TrayActionMc", 1, NULL));
 
 					_r_ctrl_checkbutton (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_config_getboolean (L"BalloonCleanResults", TRUE, NULL));
@@ -1047,21 +1047,21 @@ INT_PTR CALLBACK SettingsProc (
 					_r_ctrl_setstring (hwnd, IDC_TRAYLEVELWARNING_HINT, _r_locale_getstring (IDS_TRAYLEVELWARNING_HINT));
 					_r_ctrl_setstring (hwnd, IDC_TRAYLEVELDANGER_HINT, _r_locale_getstring (IDS_TRAYLEVELDANGER_HINT));
 
-					_r_ctrl_setstring (hwnd, IDC_TRAYACTIONDC_HINT, _r_locale_getstring (IDS_TRAYACTIONDC_HINT));
+					_r_ctrl_setstring (hwnd, IDC_TRAYACTIONSC_HINT, _r_locale_getstring (IDS_TRAYACTIONSC_HINT));
 					_r_ctrl_setstring (hwnd, IDC_TRAYACTIONMC_HINT, _r_locale_getstring (IDS_TRAYACTIONMC_HINT));
 
-					_r_combobox_clear (hwnd, IDC_TRAYACTIONDC);
+					_r_combobox_clear (hwnd, IDC_TRAYACTIONSC);
 					_r_combobox_clear (hwnd, IDC_TRAYACTIONMC);
 
 					for (INT i = 0; i < 3; i++)
 					{
 						string = _r_locale_getstring (IDS_TRAY_ACTION_1 + i);
 
-						_r_combobox_insertitem (hwnd, IDC_TRAYACTIONDC, i, string, i);
+						_r_combobox_insertitem (hwnd, IDC_TRAYACTIONSC, i, string, i);
 						_r_combobox_insertitem (hwnd, IDC_TRAYACTIONMC, i, string, i);
 					}
 
-					_r_combobox_setcurrentitembylparam (hwnd, IDC_TRAYACTIONDC, _r_config_getlong (L"TrayActionDc", 0, NULL));
+					_r_combobox_setcurrentitembylparam (hwnd, IDC_TRAYACTIONSC, _r_config_getlong (L"TrayActionDc", 0, NULL));
 					_r_combobox_setcurrentitembylparam (hwnd, IDC_TRAYACTIONMC, _r_config_getlong (L"TrayActionMc", 1, NULL));
 
 					_r_ctrl_setstring (hwnd, IDC_SHOW_CLEAN_RESULT_CHK, _r_locale_getstring (IDS_SHOW_CLEAN_RESULT_CHK));
@@ -1611,7 +1611,7 @@ INT_PTR CALLBACK SettingsProc (
 					break;
 				}
 
-				case IDC_TRAYACTIONDC:
+				case IDC_TRAYACTIONSC:
 				{
 					if (notify_code == CBN_SELCHANGE)
 						_r_config_setlong (L"TrayActionDc", _r_combobox_getcurrentitem (hwnd, ctrl_id), NULL);
@@ -2069,19 +2069,12 @@ INT_PTR CALLBACK DlgProc (
 					break;
 				}
 
-				case WM_LBUTTONUP:
-				case WM_MBUTTONUP:
+				case WM_LBUTTONDOWN:
+				case WM_MBUTTONDOWN:
 				{
 					LONG action;
 
-					if (LOWORD (lparam) == WM_LBUTTONUP)
-					{
-						SetForegroundWindow (hwnd);
-
-						break;
-					}
-
-					if (LOWORD (lparam) == WM_MBUTTONUP)
+					if (LOWORD (lparam) == WM_MBUTTONDOWN)
 					{
 						action = _r_config_getlong (L"TrayActionMc", 1, NULL);
 					}
