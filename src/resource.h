@@ -255,6 +255,8 @@
 
 #define IDS_USEDARKTHEME 87
 
+#define IDS_UPDATE_SPEED 88
+
 // Icons
 #define IDI_MAIN 100
 

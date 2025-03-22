@@ -322,6 +322,8 @@ STRINGTABLE
 	IDS_TITLE_ADVANCED "Advanced"
 
 	IDS_USEDARKTHEME "Use dark theme"
+
+	IDS_UPDATE_SPEED "Speed"
 }
 
 //
