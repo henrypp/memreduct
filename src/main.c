@@ -241,7 +241,8 @@ VOID _app_memoryclean (
 		{
 			if (src == SOURCE_CMDLINE)
 			{
-				_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, error_text);
+				if (hwnd)
+					_r_show_message (hwnd, MB_OK | MB_ICONSTOP, NULL, error_text);
 			}
 			else
 			{
@@ -289,6 +290,8 @@ VOID _app_memoryclean (
 		if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION), buffer1, L"IsShowReductConfirmation", FALSE))
 			return;
 	}
+
+	SetCursor (LoadCursorW (NULL, IDC_WAIT));
 
 	// difference (before)
 	reduct_before = _app_getmemoryinfo (&mem_info);
@@ -372,6 +375,8 @@ VOID _app_memoryclean (
 				_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemCombinePhysicalMemoryInformation");
 		}
 	}
+
+	SetCursor (LoadCursorW (NULL, IDC_ARROW));
 
 	// difference (after)
 	reduct_after = _app_getmemoryinfo (&mem_info);
