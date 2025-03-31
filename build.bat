@@ -1,6 +1,6 @@
 @echo off
 
 cd ..\builder
-call build memreduct 3.5.1 "Mem Reduct"
+call build memreduct 3.5.2 "Mem Reduct"
 
 pause
