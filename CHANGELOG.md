@@ -1,12 +1,19 @@
+v3.5.2 (1 April 2025)
+- added modified file cache clean
+- fixed pagefile displays wrong information (issue #262)
+- improved dark theme support
+- updated localization
+- updated project sdk
+
 v3.5.1 (27 December 2024)
 - now percentage displays as float numbers
-- fixed pagefile obtaining information (issue #243)
 - fixed option for round window corners (issue #252)
+- fixed pagefile obtaining information (issue #243)
 
 v3.5 (17 December 2024)
+- added registry cache clean (win 8.1+)
 - added mitigations (win10+)
 - added dark theme support
-- added registry cache clean
 - stability improvements
 - updated translations
 - updated project sdk
