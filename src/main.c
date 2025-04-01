@@ -207,6 +207,87 @@ FORCEINLINE LPCWSTR _app_getcleanupreason (
 	return NULL;
 }
 
+NTSTATUS _app_flushvolumecache ()
+{
+	PMOUNTMGR_MOUNT_POINTS object_mountpoints;
+	PMOUNTMGR_MOUNT_POINT mountpoint;
+	OBJECT_ATTRIBUTES oa = {0};
+	IO_STATUS_BLOCK isb;
+	UNICODE_STRING us;
+	HANDLE hdevice;
+	HANDLE hvolume;
+	NTSTATUS status;
+
+	RtlInitUnicodeString (&us, MOUNTMGR_DEVICE_NAME);
+
+	InitializeObjectAttributes (&oa, &us, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+	status = NtCreateFile (
+		&hdevice,
+		FILE_READ_ATTRIBUTES | SYNCHRONIZE,
+		&oa,
+		&isb,
+		NULL,
+		FILE_ATTRIBUTE_NORMAL,
+		FILE_SHARE_READ | FILE_SHARE_WRITE,
+		FILE_OPEN,
+		FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT,
+		NULL,
+		0
+	);
+
+	if (!NT_SUCCESS (status))
+		return status;
+
+	status = _r_fs_getvolumemountpoints (hdevice, &object_mountpoints);
+
+	if (!NT_SUCCESS (status))
+		goto CleanupExit;
+
+	for (ULONG i = 0; i < object_mountpoints->NumberOfMountPoints; i++)
+	{
+		mountpoint = &object_mountpoints->MountPoints[i];
+
+		us.Length = mountpoint->SymbolicLinkNameLength;
+		us.MaximumLength = mountpoint->SymbolicLinkNameLength + sizeof (UNICODE_NULL);
+		us.Buffer = PTR_ADD_OFFSET (object_mountpoints, mountpoint->SymbolicLinkNameOffset);
+
+		if (MOUNTMGR_IS_VOLUME_NAME (&us)) // \\??\\Volume{1111-2222}
+		{
+			InitializeObjectAttributes (&oa, &us, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+			status = NtCreateFile (
+				&hvolume,
+				FILE_WRITE_DATA | SYNCHRONIZE,
+				&oa,
+				&isb,
+				NULL,
+				FILE_ATTRIBUTE_NORMAL,
+				FILE_SHARE_READ | FILE_SHARE_WRITE,
+				FILE_OPEN,
+				FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_NONALERT,
+				NULL,
+				0
+			);
+
+			if (NT_SUCCESS (status))
+			{
+				status = _r_fs_flushfile (hvolume);
+
+				NtClose (hvolume);
+			}
+		}
+	}
+
+	_r_mem_free (object_mountpoints);
+
+CleanupExit:
+
+	NtClose (hdevice);
+
+	return status;
+}
+
 VOID _app_memoryclean (
 	_In_opt_ HWND hwnd,
 	_In_ CLEANUP_SOURCE_ENUM src,
@@ -267,8 +348,8 @@ VOID _app_memoryclean (
 		if ((mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET)
 			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_WORKINGSET L"\r\n");
 
-		if ((mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_SYSTEMWORKINGSET L"\r\n");
+		if ((mask & REDUCT_SYSTEM_FILE_CACHE) == REDUCT_SYSTEM_FILE_CACHE)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_SYSTEMFILECACHE L"\r\n");
 
 		if ((mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST)
 			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDLIST L"\r\n");
@@ -307,8 +388,8 @@ VOID _app_memoryclean (
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryEmptyWorkingSets");
 	}
 
-	// System working set
-	if ((mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET)
+	// System file cache
+	if ((mask & REDUCT_SYSTEM_FILE_CACHE) == REDUCT_SYSTEM_FILE_CACHE)
 	{
 		sfci.MinimumWorkingSet = MAXSIZE_T;
 		sfci.MaximumWorkingSet = MAXSIZE_T;
@@ -351,6 +432,10 @@ VOID _app_memoryclean (
 		if (!NT_SUCCESS (status))
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeLowPriorityStandbyList");
 	}
+
+	// Flush volume cache
+	if ((mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE)
+		_app_flushvolumecache ();
 
 	// Flush registry cache (win8.1+)
 	if (_r_sys_isosversiongreaterorequal (WINDOWS_8_1))
@@ -838,24 +923,26 @@ INT_PTR CALLBACK SettingsProc (
 					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, L"", 10, LVCFMT_LEFT);
 
 					_r_listview_additem (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_WORKING_SET);
-					_r_listview_additem (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMWORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_SYSTEM_WORKING_SET);
+					_r_listview_additem (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMFILECACHE, I_DEFAULT, I_DEFAULT, REDUCT_SYSTEM_FILE_CACHE);
 					_r_listview_additem (hwnd, IDC_REGIONS, 2, TITLE_MODIFIEDLIST, I_DEFAULT, I_DEFAULT, REDUCT_MODIFIED_LIST);
 					_r_listview_additem (hwnd, IDC_REGIONS, 3, TITLE_STANDBYLIST, I_DEFAULT, I_DEFAULT, REDUCT_STANDBY_LIST);
 					_r_listview_additem (hwnd, IDC_REGIONS, 4, TITLE_STANDBYLISTPRIORITY0, I_DEFAULT, I_DEFAULT, REDUCT_STANDBY_PRIORITY0_LIST);
-					_r_listview_additem (hwnd, IDC_REGIONS, 5, TITLE_REGISTRYCACHE, I_DEFAULT, I_DEFAULT, REDUCT_REGISTRY_CACHE);
-					_r_listview_additem (hwnd, IDC_REGIONS, 6, TITLE_COMBINEMEMORYLISTS, I_DEFAULT, I_DEFAULT, REDUCT_COMBINE_MEMORY_LISTS);
+					_r_listview_additem (hwnd, IDC_REGIONS, 5, TITLE_MODIFIEDFILECACHE, I_DEFAULT, I_DEFAULT, REDUCT_MODIFIED_FILE_CACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 6, TITLE_REGISTRYCACHE, I_DEFAULT, I_DEFAULT, REDUCT_REGISTRY_CACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 7, TITLE_COMBINEMEMORYLISTS, I_DEFAULT, I_DEFAULT, REDUCT_COMBINE_MEMORY_LISTS);
 
 					_r_listview_setcolumn (hwnd, IDC_REGIONS, 0, NULL, -100);
 
 					mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT, NULL);
 
 					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 0, (mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET);
-					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 1, (mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 1, (mask & REDUCT_SYSTEM_FILE_CACHE) == REDUCT_SYSTEM_FILE_CACHE);
 					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 2, (mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST);
 					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 3, (mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST);
 					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 4, (mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST);
-					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 5, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
-					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 6, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 5, (mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 6, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
+					_r_listview_setitemcheck (hwnd, IDC_REGIONS, 7, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
 
 					_r_wnd_removecontext (hwnd, IDC_REGIONS);
 
@@ -1166,7 +1253,7 @@ INT_PTR CALLBACK SettingsProc (
 					lpnmlv = (LPNMITEMACTIVATE)lparam;
 					listview_id = (INT)(INT_PTR)lpnmlv->hdr.idFrom;
 
-					if (lpnmlv->iItem == -1 || listview_id != IDC_COLORS)
+					if (lpnmlv->iItem == INT_ERROR || listview_id != IDC_COLORS)
 						break;
 
 					clr = (COLORREF)_r_listview_getitemlparam (hwnd, listview_id, lpnmlv->iItem);
@@ -1241,7 +1328,7 @@ INT_PTR CALLBACK SettingsProc (
 						{
 							if ((value & REDUCT_MASK_FREEZES) != 0)
 							{
-								if (!_r_show_confirmmessage (hwnd, _r_locale_getstring (IDS_QUESTION_WARNING), NULL, L"IsShowWarningConfirmation", FALSE))
+								if (!_r_show_confirmmessage (hwnd, NULL, _r_locale_getstring (IDS_QUESTION_WARNING), L"IsShowWarningConfirmation", FALSE))
 								{
 									_r_listview_setitemcheck (hwnd, listview_id, lpnmlv->iItem, FALSE);
 
@@ -1983,7 +2070,8 @@ INT_PTR CALLBACK DlgProc (
 						break;
 
 					_r_menu_additem (hsubmenu, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
-					_r_menu_additem (hsubmenu, IDM_CLEAN_SYSTEMWORKINGSET, TITLE_SYSTEMWORKINGSET);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_SYSTEMFILECACHE, TITLE_SYSTEMFILECACHE);
+					_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDFILECACHE, TITLE_MODIFIEDFILECACHE);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
 					_r_menu_additem (hsubmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
@@ -2157,7 +2245,9 @@ INT_PTR CALLBACK DlgProc (
 						mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT, NULL);
 
 						_r_menu_setitemtext (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, TITLE_WORKINGSET);
-						_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, TITLE_SYSTEMWORKINGSET);
+						_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, FALSE, TITLE_SYSTEMFILECACHE);
+						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDFILECACHE_CHK, FALSE, TITLE_MODIFIEDFILECACHE);
+
 						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, TITLE_MODIFIEDLIST);
 						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, TITLE_STANDBYLIST);
 						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, TITLE_STANDBYLISTPRIORITY0);
@@ -2165,17 +2255,19 @@ INT_PTR CALLBACK DlgProc (
 						_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, TITLE_COMBINEMEMORYLISTS);
 
 						_r_menu_checkitem (hsubmenu_region, IDM_WORKINGSET_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_WORKING_SET) == REDUCT_WORKING_SET);
-						_r_menu_checkitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_SYSTEM_WORKING_SET) == REDUCT_SYSTEM_WORKING_SET);
+						_r_menu_checkitem (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_SYSTEM_FILE_CACHE) == REDUCT_SYSTEM_FILE_CACHE);
 						_r_menu_checkitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST);
 						_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLIST_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_STANDBY_LIST) == REDUCT_STANDBY_LIST);
 						_r_menu_checkitem (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_STANDBY_PRIORITY0_LIST) == REDUCT_STANDBY_PRIORITY0_LIST);
+						_r_menu_checkitem (hsubmenu_region, IDM_MODIFIEDFILECACHE_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE);
 						_r_menu_checkitem (hsubmenu_region, IDM_REGISTRYCACHE_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_REGISTRY_CACHE) == REDUCT_REGISTRY_CACHE);
 						_r_menu_checkitem (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_COMBINE_MEMORY_LISTS) == REDUCT_COMBINE_MEMORY_LISTS);
 
 						if (!_r_sys_iselevated ())
 						{
 							_r_menu_enableitem (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, FALSE);
-							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMWORKINGSET_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, FALSE, FALSE);
+							_r_menu_enableitem (hsubmenu_region, IDM_MODIFIEDFILECACHE_CHK, FALSE, FALSE);
 
 							_r_menu_enableitem (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, FALSE);
 							_r_menu_enableitem (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, FALSE);
@@ -2370,12 +2462,13 @@ INT_PTR CALLBACK DlgProc (
 				}
 
 				case IDM_WORKINGSET_CHK:
-				case IDM_SYSTEMWORKINGSET_CHK:
+				case IDM_SYSTEMFILECACHE_CHK:
+				case IDM_MODIFIEDFILECACHE_CHK:
 				case IDM_MODIFIEDLIST_CHK:
 				case IDM_STANDBYLIST_CHK:
 				case IDM_STANDBYLISTPRIORITY0_CHK:
-				case IDM_COMBINEMEMORYLISTS_CHK:
 				case IDM_REGISTRYCACHE_CHK:
+				case IDM_COMBINEMEMORYLISTS_CHK:
 				{
 					ULONG new_mask = 0;
 					ULONG mask;
@@ -2390,9 +2483,15 @@ INT_PTR CALLBACK DlgProc (
 							break;
 						}
 
-						case IDM_SYSTEMWORKINGSET_CHK:
+						case IDM_SYSTEMFILECACHE_CHK:
 						{
-							new_mask = REDUCT_SYSTEM_WORKING_SET;
+							new_mask = REDUCT_SYSTEM_FILE_CACHE;
+							break;
+						}
+
+						case IDM_MODIFIEDFILECACHE_CHK:
+						{
+							new_mask = REDUCT_MODIFIED_FILE_CACHE;
 							break;
 						}
 
@@ -2444,12 +2543,13 @@ INT_PTR CALLBACK DlgProc (
 				}
 
 				case IDM_CLEAN_WORKINGSET:
-				case IDM_CLEAN_SYSTEMWORKINGSET:
+				case IDM_CLEAN_SYSTEMFILECACHE:
+				case IDM_CLEAN_MODIFIEDFILECACHE:
 				case IDM_CLEAN_MODIFIEDLIST:
 				case IDM_CLEAN_STANDBYLIST:
 				case IDM_CLEAN_STANDBYLISTPRIORITY0:
-				case IDM_CLEAN_COMBINEMEMORYLISTS:
 				case IDM_CLEAN_REGISTRYCACHE:
+				case IDM_CLEAN_COMBINEMEMORYLISTS:
 				{
 					ULONG mask;
 
@@ -2461,9 +2561,15 @@ INT_PTR CALLBACK DlgProc (
 							break;
 						}
 
-						case IDM_CLEAN_SYSTEMWORKINGSET:
+						case IDM_CLEAN_SYSTEMFILECACHE:
 						{
-							mask = REDUCT_SYSTEM_WORKING_SET;
+							mask = REDUCT_SYSTEM_FILE_CACHE;
+							break;
+						}
+
+						case IDM_CLEAN_MODIFIEDFILECACHE:
+						{
+							mask = REDUCT_MODIFIED_FILE_CACHE;
 							break;
 						}
 
