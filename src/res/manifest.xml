@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
 	<dependency>
 		<dependentAssembly>
@@ -16,11 +16,11 @@
 
 	<compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
 		<application>
-			<maxversiontested Id="10.0.19045.0" />
-			<supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}" /> <!-- win7 -->
-			<supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}" /> <!-- win8 -->
-			<supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}" /> <!-- win8.1 -->
-			<supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" /> <!-- win10 -->
+			<maxversiontested Id="10.0.26100.0" />
+			<supportedOS Id="{35138B9A-5D96-4FBD-8E2D-A2440225F93A}" /> <!-- win7 -->
+			<supportedOS Id="{4A2F28E3-53B9-4441-BA9C-D69D4A4A6E38}" /> <!-- win8 -->
+			<supportedOS Id="{1F676C76-80E1-4239-95BB-83D0F6D0DA78}" /> <!-- win8.1 -->
+			<supportedOS Id="{8E0F7A12-BFB3-4FE8-B9A5-48FD50A15A9A}" /> <!-- win10 -->
 		</application>
 	</compatibility>
 
