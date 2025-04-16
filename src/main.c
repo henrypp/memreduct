@@ -351,6 +351,9 @@ VOID _app_memoryclean (
 		if ((mask & REDUCT_SYSTEM_FILE_CACHE) == REDUCT_SYSTEM_FILE_CACHE)
 			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_SYSTEMFILECACHE L"\r\n");
 
+		if ((mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE)
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDFILECACHE L"\r\n");
+
 		if ((mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST)
 			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDLIST L"\r\n");
 
