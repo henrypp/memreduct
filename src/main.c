@@ -923,6 +923,8 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_wnd_setcontext (hwnd, IDC_REGIONS, INVALID_HANDLE_VALUE);
 
+					_r_listview_reset (hwnd, IDC_REGIONS);
+
 					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, L"", 10, LVCFMT_LEFT);
 
 					_r_listview_additem (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_WORKING_SET);
@@ -1000,6 +1002,8 @@ INT_PTR CALLBACK SettingsProc (
 					_app_setfontcontrol (hwnd, IDC_FONT, &logfont, dpi_value);
 
 					_r_listview_setstyle (hwnd, IDC_COLORS, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP, FALSE);
+
+					_r_listview_reset(hwnd, IDC_COLORS);
 
 					_r_listview_addcolumn (hwnd, IDC_COLORS, 0, L"", -100, LVCFMT_LEFT);
 
@@ -1261,16 +1265,13 @@ INT_PTR CALLBACK SettingsProc (
 
 					clr = (COLORREF)_r_listview_getitemlparam (hwnd, listview_id, lpnmlv->iItem);
 
-					if (!clr)
-						break;
-
 					cc.lStructSize = sizeof (CHOOSECOLOR);
 					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
 					cc.hwndOwner = hwnd;
 					cc.lpCustColors = cust;
 					cc.rgbResult = clr;
 
-					if (ChooseColorW (&cc))
+					if (ChooseColorW (&cc) && clr != cc.rgbResult)
 					{
 						if (lpnmlv->iItem == 0)
 						{
