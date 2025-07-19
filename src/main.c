@@ -37,13 +37,13 @@ INT WINAPIV compare_numbers (
 VOID _app_generate_array (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ ULONG_PTR count,
-	_In_ ULONG_PTR value
+	_In_ ULONG value
 )
 {
 	PR_HASHTABLE hashtable;
 	ULONG_PTR enum_key = 0;
-	ULONG_PTR hash_code;
-	ULONG_PTR index;
+	ULONG hash_code;
+	ULONG index;
 
 	RtlSecureZeroMemory (integers, sizeof (ULONG) * count);
 
@@ -65,7 +65,7 @@ VOID _app_generate_array (
 	while (_r_obj_enumhashtable (hashtable, NULL, &hash_code, &enum_key))
 	{
 		if (hash_code <= 99)
-			*(PULONG)PTR_ADD_OFFSET (integers, index * sizeof (ULONG)) = (ULONG)hash_code;
+			*(PULONG_PTR)PTR_ADD_OFFSET (integers, index * sizeof (ULONG)) = hash_code;
 
 		if (++index >= count)
 			break;
@@ -78,11 +78,11 @@ VOID _app_generate_array (
 
 VOID _app_generate_menu (
 	_In_ HMENU hsubmenu,
-	_In_ UINT menu_idx,
+	_In_ ULONG menu_idx,
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ ULONG_PTR count,
 	_In_ LPCWSTR format,
-	_In_ LONG_PTR value,
+	_In_ ULONG value,
 	_In_ BOOLEAN is_enabled
 )
 {
@@ -96,7 +96,7 @@ VOID _app_generate_menu (
 
 	_app_generate_array (integers, count, value);
 
-	for (UINT i = 0; i < count; i++)
+	for (ULONG i = 0; i < count; i++)
 	{
 		menu_value = integers[i];
 
@@ -135,19 +135,13 @@ ULONG _app_getlimitvalue ()
 	return _r_calc_clamp (value, 1, 99);
 }
 
-LONG_PTR _app_getintervalvalue ()
+ULONG _app_getintervalvalue ()
 {
-	LONG_PTR value;
+	ULONG value;
 
-#if defined(_WIN64)
-	value = _r_config_getlong64 (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL, NULL);
-
-	return _r_calc_clamp64 (value, 1, 1440);
-#else
-	value = _r_config_getlong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL, NULL);
+	value = _r_config_getulong (L"AutoreductIntervalValue", DEFAULT_AUTOREDUCTINTERVAL_VAL, NULL);
 
 	return _r_calc_clamp (value, 1, 1440);
-#endif // _WIN64
 }
 
 ULONG _app_getdangervalue ()
@@ -923,7 +917,11 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_wnd_setcontext (hwnd, IDC_REGIONS, INVALID_HANDLE_VALUE);
 
-					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, L"", 10, LVCFMT_LEFT);
+					// fix by @XakerTwo
+					_r_listview_deleteallcolumns (hwnd, IDC_REGIONS);
+					_r_listview_deleteallitems (hwnd, IDC_REGIONS);
+
+					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, NULL, 10, LVCFMT_LEFT);
 
 					_r_listview_additem (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_WORKING_SET);
 					_r_listview_additem (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMFILECACHE, I_DEFAULT, I_DEFAULT, REDUCT_SYSTEM_FILE_CACHE);
@@ -951,6 +949,7 @@ INT_PTR CALLBACK SettingsProc (
 
 					if (!_r_sys_iselevated ())
 					{
+						_r_ctrl_enable (hwnd, IDC_REGIONS, FALSE);
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_AUTOREDUCTINTERVALENABLE_CHK, FALSE);
 						_r_ctrl_enable (hwnd, IDC_HOTKEY_CLEAN_CHK, FALSE);
@@ -1001,7 +1000,11 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_listview_setstyle (hwnd, IDC_COLORS, LVS_EX_DOUBLEBUFFER | LVS_EX_FULLROWSELECT | LVS_EX_INFOTIP | LVS_EX_LABELTIP, FALSE);
 
-					_r_listview_addcolumn (hwnd, IDC_COLORS, 0, L"", -100, LVCFMT_LEFT);
+					// fix by @XakerTwo
+					_r_listview_deleteallcolumns (hwnd, IDC_COLORS);
+					_r_listview_deleteallitems (hwnd, IDC_COLORS);
+
+					_r_listview_addcolumn (hwnd, IDC_COLORS, 0, NULL, -100, LVCFMT_LEFT);
 
 					_r_listview_additem (
 						hwnd,
