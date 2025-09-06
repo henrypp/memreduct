@@ -43,7 +43,7 @@ VOID _app_generate_array (
 	PR_HASHTABLE hashtable;
 	ULONG_PTR enum_key = 0;
 	ULONG hash_code;
-	ULONG index;
+	ULONG index = 0;
 
 	RtlSecureZeroMemory (integers, sizeof (ULONG) * count);
 
@@ -59,8 +59,6 @@ VOID _app_generate_array (
 		if (index >= 5)
 			_r_obj_addhashtableitem (hashtable, index, NULL);
 	}
-
-	index = 0;
 
 	while (_r_obj_enumhashtable (hashtable, NULL, &hash_code, &enum_key))
 	{
@@ -196,9 +194,12 @@ FORCEINLINE LPCWSTR _app_getcleanupreason (
 		{
 			return L"Cleanup (Command-line)";
 		}
-	}
 
-	return NULL;
+		default:
+		{
+			return L"Unknown";
+		}
+	}
 }
 
 NTSTATUS _app_flushvolumecache ()
@@ -2056,6 +2057,14 @@ INT_PTR CALLBACK DlgProc (
 			break;
 		}
 
+		case WM_SHOWWINDOW:
+		{
+			if (wparam)
+				_app_iconredraw (hwnd);
+
+			break;
+		}
+
 		case WM_NOTIFY:
 		{
 			LPNMHDR nmlp;
@@ -2095,7 +2104,7 @@ INT_PTR CALLBACK DlgProc (
 						ClientToScreen (nmlp->hwndFrom, (PPOINT)&rect);
 
 						_r_wnd_recttorectangle (&rectangle, &rect);
-						_r_wnd_adjustrectangletoworkingarea (&rectangle, nmlp->hwndFrom);
+						_r_wnd_adjustrectangletoworkingarea (nmlp->hwndFrom, &rectangle);
 						_r_wnd_rectangletorect (&rect, &rectangle);
 
 						_r_menu_popup (hsubmenu, hwnd, (PPOINT)&rect, TRUE);
