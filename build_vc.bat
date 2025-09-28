@@ -2,6 +2,20 @@
 @setlocal enableextensions
 rem @cd /d "%~dp0\..\"
 
+rem VS 2026
+
+if exist "%ProgramFiles%\Microsoft Visual Studio\2026\Community\VC\Auxiliary\Build\vcvarsall.bat" (
+	call "%ProgramFiles%\Microsoft Visual Studio\2026\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64_arm64
+	goto start
+)
+
+if exist "%ProgramFiles%\Microsoft Visual Studio\2026\Professional\VC\Auxiliary\Build\vcvarsall.bat" (
+	call "%ProgramFiles%\Microsoft Visual Studio\2026\Professional\VC\Auxiliary\Build\vcvarsall.bat" amd64_arm64
+	goto start
+)
+
+rem VS 2022
+
 if exist "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" (
 	call "%ProgramFiles%\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64_arm64
 	goto start
@@ -12,7 +26,7 @@ if exist "%ProgramFiles%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\
 	goto start
 )
 
-echo VS 2022 not found...
+echo VS was not found...
 
 goto end
 
