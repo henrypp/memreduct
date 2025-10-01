@@ -101,7 +101,7 @@ VOID _app_generate_menu (
 		if (!menu_value)
 			continue;
 
-		menu_id = menu_idx + i;
+		menu_id = (menu_idx + i);
 
 		_r_str_printf (buffer, RTL_NUMBER_OF (buffer), format, menu_value);
 
@@ -398,6 +398,10 @@ VOID _app_memoryclean (
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"SystemFileCacheInformation");
 	}
 
+	// Flush volume cache
+	if ((mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE)
+		_app_flushvolumecache ();
+
 	// Modified page list (vista+)
 	if ((mask & REDUCT_MODIFIED_LIST) == REDUCT_MODIFIED_LIST)
 	{
@@ -430,10 +434,6 @@ VOID _app_memoryclean (
 		if (!NT_SUCCESS (status))
 			_r_log (LOG_LEVEL_ERROR, NULL, L"NtSetSystemInformation", status, L"MemoryPurgeLowPriorityStandbyList");
 	}
-
-	// Flush volume cache
-	if ((mask & REDUCT_MODIFIED_FILE_CACHE) == REDUCT_MODIFIED_FILE_CACHE)
-		_app_flushvolumecache ();
 
 	// Flush registry cache (win8.1+)
 	if (_r_sys_isosversiongreaterorequal (WINDOWS_8_1))
@@ -482,7 +482,14 @@ VOID _app_memoryclean (
 
 	if (src == SOURCE_CMDLINE)
 	{
-		_r_show_message (hwnd, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
+		if (_r_config_getboolean (L"BalloonCleanResults", TRUE, NULL))
+		{
+			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), buffer2);
+		}
+		else
+		{
+			_r_show_message (hwnd, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
+		}
 	}
 	else
 	{
