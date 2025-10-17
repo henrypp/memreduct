@@ -484,7 +484,8 @@ VOID _app_memoryclean (
 	{
 		if (_r_config_getboolean (L"BalloonCleanResults", TRUE, NULL))
 		{
-			_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), buffer2);
+			if (!_r_tray_popup (hwnd, &GUID_TrayIcon, flags, _r_app_getname (), buffer2))
+				_r_show_message (hwnd, MB_OK | MB_ICONINFORMATION, NULL, buffer2);
 		}
 		else
 		{
