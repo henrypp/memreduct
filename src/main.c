@@ -1273,16 +1273,13 @@ INT_PTR CALLBACK SettingsProc (
 
 					clr = (COLORREF)_r_listview_getitemlparam (hwnd, listview_id, lpnmlv->iItem);
 
-					if (!clr)
-						break;
-
 					cc.lStructSize = sizeof (CHOOSECOLOR);
 					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
 					cc.hwndOwner = hwnd;
 					cc.lpCustColors = cust;
 					cc.rgbResult = clr;
 
-					if (ChooseColorW (&cc))
+					if (ChooseColorW (&cc) && clr != cc.rgbResult)
 					{
 						if (lpnmlv->iItem == 0)
 						{
