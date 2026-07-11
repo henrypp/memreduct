@@ -325,6 +325,9 @@ STRINGTABLE
 	IDS_USEDARKTHEME "Use dark theme"
 
 	IDS_UPDATE_SPEED "Speed"
+
+	IDS_ALLOWSTANDBYLISTCLEANUP_CHK "Allow ""Standby lists"" and ""Modified page list"" cleanup on autoreduct"
+	IDS_LOGRESULTS_CHK "Log cleaning results into a debug log"
 }
 
 //
