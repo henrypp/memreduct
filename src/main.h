@@ -32,6 +32,9 @@ DEFINE_GUID (GUID_TrayIcon, 0xAE9053F0, 0x8D59, 0x4803, 0x9A, 0xBB, 0x74, 0xAF, 
 #define DEFAULT_AUTOREDUCT_VAL 90
 #define DEFAULT_AUTOREDUCTINTERVAL_VAL 30
 
+// minimum pause (in seconds) between usage-based automatic cleanups
+#define AUTOREDUCT_COOLDOWN 30
+
 #define DEFAULT_DANGER_LEVEL 90
 #define DEFAULT_WARNING_LEVEL 70
 

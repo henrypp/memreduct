@@ -36,7 +36,8 @@ INT WINAPIV compare_numbers (
 VOID _app_generate_array (
 	_Out_ _Writable_elements_ (count) PULONG integers,
 	_In_ ULONG_PTR count,
-	_In_ ULONG value
+	_In_ ULONG value,
+	_In_ ULONG max_value
 )
 {
 	PR_HASHTABLE hashtable;
@@ -52,16 +53,18 @@ VOID _app_generate_array (
 		_r_obj_addhashtableitem (hashtable, index * 10, NULL);
 	}
 
-	for (index = value - 2; index <= (value + 2); index++)
+	for (index = (value > 2) ? (value - 2) : 1; index <= (value + 2); index++)
 	{
 		if (index >= 5)
 			_r_obj_addhashtableitem (hashtable, index, NULL);
 	}
 
+	index = 0;
+
 	while (_r_obj_enumhashtable (hashtable, NULL, &hash_code, &enum_key))
 	{
-		if (hash_code <= 99)
-			*(PULONG_PTR)PTR_ADD_OFFSET (integers, index * sizeof (ULONG)) = hash_code;
+		if (hash_code <= max_value)
+			integers[index] = hash_code;
 
 		if (++index >= count)
 			break;
@@ -79,6 +82,7 @@ VOID _app_generate_menu (
 	_In_ ULONG_PTR count,
 	_In_ LPCWSTR format,
 	_In_ ULONG value,
+	_In_ ULONG max_value,
 	_In_ BOOLEAN is_enabled
 )
 {
@@ -89,7 +93,7 @@ VOID _app_generate_menu (
 
 	_r_menu_setitemtext (hsubmenu, 0, TRUE, _r_locale_getstring (IDS_TRAY_DISABLE));
 
-	_app_generate_array (integers, count, value);
+	_app_generate_array (integers, count, value, max_value);
 
 	for (ULONG i = 0; i < count; i++)
 	{
@@ -487,7 +491,7 @@ VOID _app_fontinit (
 	_r_config_getfont (L"TrayFont", logfont, dpi_value, NULL);
 
 	logfont->lfCharSet = DEFAULT_CHARSET;
-	logfont->lfQuality = CLEARTYPE_QUALITY;
+	logfont->lfQuality = _r_config_getboolean (L"TrayUseAntialiasing", FALSE, NULL) ? CLEARTYPE_QUALITY : NONANTIALIASED_QUALITY;
 }
 
 VOID _app_drawbackground (
@@ -601,7 +605,7 @@ HICON _app_iconcreate (
 
 	_r_dc_drawtext (NULL, config.hdc_mask, &sr, &config.icon_size, 0, 0, DT_VCENTER | DT_CENTER | DT_SINGLELINE | DT_NOCLIP | DT_NOPREFIX, TRAY_COLOR_BLACK);
 
-	SetBkMode (config.hdc, prev_mode);
+	SetBkMode (config.hdc_mask, prev_mode);
 
 	SelectObject (config.hdc_mask, prev_bmp);
 	SelectObject (config.hdc_mask, prev_font);
@@ -646,7 +650,13 @@ VOID CALLBACK _app_timercallback (
 		if (_r_config_getboolean (L"AutoreductEnable", FALSE, NULL))
 		{
 			if (mem_info.physical_memory.percent >= _app_getlimitvalue ())
-				is_clean = TRUE;
+			{
+				// cooldown prevents cleaning loop when memory usage stays above the limit (issue #191)
+				timestamp = _r_unixtime_now () - _r_config_getlong64 (L"StatisticLastReduct", 0, NULL);
+
+				if (timestamp >= AUTOREDUCT_COOLDOWN)
+					is_clean = TRUE;
+			}
 		}
 
 		if (!is_clean && _r_config_getboolean (L"AutoreductIntervalEnable", FALSE, NULL))
@@ -1071,8 +1081,8 @@ INT_PTR CALLBACK SettingsProc (
 
 				case IDD_SETTINGS_ADVANCED:
 				{
-					_r_ctrl_setstring (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, L"Allow \"Standby lists\" and \"Modified page list\" cleanup on autoreduct");
-					_r_ctrl_setstring (hwnd, IDC_LOGRESULTS_CHK, L"Log cleaning results into a debug log");
+					_r_ctrl_setstring (hwnd, IDC_ALLOWSTANDBYLISTCLEANUP_CHK, _r_locale_getstring (IDS_ALLOWSTANDBYLISTCLEANUP_CHK));
+					_r_ctrl_setstring (hwnd, IDC_LOGRESULTS_CHK, _r_locale_getstring (IDS_LOGRESULTS_CHK));
 
 					break;
 				}
@@ -1158,9 +1168,6 @@ INT_PTR CALLBACK SettingsProc (
 						break;
 
 					clr = (COLORREF)_r_listview_getitemlparam (hwnd, (INT)(INT_PTR)lpnmlv->hdr.idFrom, lpnmlv->iItem);
-
-					if (!clr)
-						break;
 
 					cc.lStructSize = sizeof (CHOOSECOLOR);
 					cc.Flags = CC_RGBINIT | CC_FULLOPEN;
@@ -2105,6 +2112,7 @@ INT_PTR CALLBACK DlgProc (
 							RTL_NUMBER_OF (limits_arr),
 							L"%" TEXT (PR_ULONG) L"%%",
 							_app_getlimitvalue (),
+							99,
 							_r_config_getboolean (L"AutoreductEnable", FALSE, NULL)
 						);
 					}
@@ -2119,6 +2127,7 @@ INT_PTR CALLBACK DlgProc (
 							RTL_NUMBER_OF (intervals_arr),
 							L"%" TEXT (PR_LONG64) L" min.",
 							_app_getintervalvalue (),
+							1440,
 							_r_config_getboolean (L"AutoreductIntervalEnable", FALSE, NULL)
 						);
 					}
