@@ -135,8 +135,8 @@ VOID _app_mainview_loadsettings (
 	_Inout_ PMAINVIEW_CONTEXT context
 )
 {
-	context->warning_level = _r_calc_clamp (_r_config_getlong (L"TrayLevelWarning", 70), 1, 99);
-	context->danger_level = _r_calc_clamp (_r_config_getlong (L"TrayLevelDanger", 90), 1, 99);
+	context->warning_level = _r_calc_clamp (_r_config_getlong (L"TrayLevelWarning", 70), 0, 100);
+	context->danger_level = _r_calc_clamp (_r_config_getlong (L"TrayLevelDanger", 90), 0, 100);
 	context->warning_clr = _r_config_getulong (L"TrayColorWarning", RGB (0xFF, 0x80, 0x40));
 	context->danger_clr = _r_config_getulong (L"TrayColorDanger", RGB (0xEC, 0x1C, 0x24));
 }
