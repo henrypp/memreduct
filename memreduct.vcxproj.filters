@@ -24,6 +24,9 @@
     <ClCompile Include="..\routine\src\rapp.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\ui_mainview.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\main.h">
@@ -51,6 +54,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\routine\src\rapp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ui_mainview.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

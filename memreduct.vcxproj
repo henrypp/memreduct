@@ -362,6 +362,7 @@
     <ClCompile Include="..\routine\src\rapp.c" />
     <ClCompile Include="..\routine\src\routine.c" />
     <ClCompile Include="src\main.c" />
+    <ClCompile Include="src\ui_mainview.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\routine\src\ntapi.h" />
@@ -373,11 +374,15 @@
     <ClInclude Include="src\app.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\resource.h" />
+    <ClInclude Include="src\ui_mainview.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="src\resource.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyLocaleToOutput" AfterTargets="Build">
+    <Copy SourceFiles="$(ProjectDir)bin\memreduct.lng" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>
