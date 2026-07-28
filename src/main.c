@@ -320,28 +320,44 @@ VOID _app_memoryclean (
 	else if (src == SOURCE_MANUAL)
 	{
 		if ((mask & REDUCT_WORKINGSET) == REDUCT_WORKINGSET)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_WORKINGSET L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_WORKINGSET));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_SYSTEMFILECACHE) == REDUCT_SYSTEMFILECACHE)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_SYSTEMFILECACHE L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_SYSTEMFILECACHE));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_MODIFIEDFILECACHE) == REDUCT_MODIFIEDFILECACHE)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDFILECACHE L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_MODIFIEDFILECACHE));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_MODIFIEDLIST) == REDUCT_MODIFIEDLIST)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_MODIFIEDLIST L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_MODIFIEDLIST));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_STANDBYLIST) == REDUCT_STANDBYLIST)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_STANDBYLIST L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_STANDBYLIST));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_STANDBYPRIORITY0LIST) == REDUCT_STANDBYPRIORITY0LIST)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_STANDBYLISTPRIORITY0 L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_STANDBYLISTPRIORITY0));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_REGISTRYCACHE) == REDUCT_REGISTRYCACHE)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_REGISTRYCACHE L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_REGISTRYCACHE));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		if ((mask & REDUCT_COMBINEMEMORYLISTS) == REDUCT_COMBINEMEMORYLISTS)
-			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- " TITLE_COMBINEMEMORYLISTS L"\r\n");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"- ");
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), _r_locale_getstring (IDS_MEMREGION_COMBINEMEMORYLISTS));
+			_r_str_append (buffer1, RTL_NUMBER_OF (buffer1), L"\r\n");
 
 		StrTrimW (buffer1, L"\r\n");
 
@@ -873,14 +889,14 @@ INT_PTR CALLBACK SettingsProc (
 
 					_r_listview_addcolumn (hwnd, IDC_REGIONS, 0, NULL, 10, LVCFMT_LEFT);
 
-					_r_listview_additem (hwnd, IDC_REGIONS, 0, TITLE_WORKINGSET, I_DEFAULT, I_DEFAULT, REDUCT_WORKINGSET);
-					_r_listview_additem (hwnd, IDC_REGIONS, 1, TITLE_SYSTEMFILECACHE, I_DEFAULT, I_DEFAULT, REDUCT_SYSTEMFILECACHE);
-					_r_listview_additem (hwnd, IDC_REGIONS, 2, TITLE_MODIFIEDLIST, I_DEFAULT, I_DEFAULT, REDUCT_MODIFIEDLIST);
-					_r_listview_additem (hwnd, IDC_REGIONS, 3, TITLE_STANDBYLIST, I_DEFAULT, I_DEFAULT, REDUCT_STANDBYLIST);
-					_r_listview_additem (hwnd, IDC_REGIONS, 4, TITLE_STANDBYLISTPRIORITY0, I_DEFAULT, I_DEFAULT, REDUCT_STANDBYPRIORITY0LIST);
-					_r_listview_additem (hwnd, IDC_REGIONS, 5, TITLE_MODIFIEDFILECACHE, I_DEFAULT, I_DEFAULT, REDUCT_MODIFIEDFILECACHE);
-					_r_listview_additem (hwnd, IDC_REGIONS, 6, TITLE_REGISTRYCACHE, I_DEFAULT, I_DEFAULT, REDUCT_REGISTRYCACHE);
-					_r_listview_additem (hwnd, IDC_REGIONS, 7, TITLE_COMBINEMEMORYLISTS, I_DEFAULT, I_DEFAULT, REDUCT_COMBINEMEMORYLISTS);
+					_r_listview_additem (hwnd, IDC_REGIONS, 0, _r_locale_getstring (IDS_MEMREGION_WORKINGSET), I_DEFAULT, I_DEFAULT, REDUCT_WORKINGSET);
+					_r_listview_additem (hwnd, IDC_REGIONS, 1, _r_locale_getstring (IDS_MEMREGION_SYSTEMFILECACHE), I_DEFAULT, I_DEFAULT, REDUCT_SYSTEMFILECACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 2, _r_locale_getstring (IDS_MEMREGION_MODIFIEDLIST), I_DEFAULT, I_DEFAULT, REDUCT_MODIFIEDLIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 3, _r_locale_getstring (IDS_MEMREGION_STANDBYLIST), I_DEFAULT, I_DEFAULT, REDUCT_STANDBYLIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 4, _r_locale_getstring (IDS_MEMREGION_STANDBYLISTPRIORITY0), I_DEFAULT, I_DEFAULT, REDUCT_STANDBYPRIORITY0LIST);
+					_r_listview_additem (hwnd, IDC_REGIONS, 5, _r_locale_getstring (IDS_MEMREGION_MODIFIEDFILECACHE), I_DEFAULT, I_DEFAULT, REDUCT_MODIFIEDFILECACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 6, _r_locale_getstring (IDS_MEMREGION_REGISTRYCACHE), I_DEFAULT, I_DEFAULT, REDUCT_REGISTRYCACHE);
+					_r_listview_additem (hwnd, IDC_REGIONS, 7, _r_locale_getstring (IDS_MEMREGION_COMBINEMEMORYLISTS), I_DEFAULT, I_DEFAULT, REDUCT_COMBINEMEMORYLISTS);
 
 					_r_listview_setcolumn (hwnd, IDC_REGIONS, 0, NULL, -100);
 
@@ -1895,14 +1911,14 @@ INT_PTR CALLBACK DlgProc (
 					if (!hmenu)
 						break;
 
-					_r_menu_additem (hmenu, IDM_CLEAN_WORKINGSET, TITLE_WORKINGSET);
-					_r_menu_additem (hmenu, IDM_CLEAN_SYSTEMFILECACHE, TITLE_SYSTEMFILECACHE);
-					_r_menu_additem (hmenu, IDM_CLEAN_MODIFIEDFILECACHE, TITLE_MODIFIEDFILECACHE);
-					_r_menu_additem (hmenu, IDM_CLEAN_MODIFIEDLIST, TITLE_MODIFIEDLIST);
-					_r_menu_additem (hmenu, IDM_CLEAN_STANDBYLIST, TITLE_STANDBYLIST);
-					_r_menu_additem (hmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, TITLE_STANDBYLISTPRIORITY0);
-					_r_menu_additem (hmenu, IDM_CLEAN_REGISTRYCACHE, TITLE_REGISTRYCACHE);
-					_r_menu_additem (hmenu, IDM_CLEAN_COMBINEMEMORYLISTS, TITLE_COMBINEMEMORYLISTS);
+					_r_menu_additem (hmenu, IDM_CLEAN_WORKINGSET, _r_locale_getstring (IDS_MEMREGION_WORKINGSET));
+					_r_menu_additem (hmenu, IDM_CLEAN_SYSTEMFILECACHE, _r_locale_getstring (IDS_MEMREGION_SYSTEMFILECACHE));
+					_r_menu_additem (hmenu, IDM_CLEAN_MODIFIEDFILECACHE, _r_locale_getstring (IDS_MEMREGION_MODIFIEDFILECACHE));
+					_r_menu_additem (hmenu, IDM_CLEAN_MODIFIEDLIST, _r_locale_getstring (IDS_MEMREGION_MODIFIEDLIST));
+					_r_menu_additem (hmenu, IDM_CLEAN_STANDBYLIST, _r_locale_getstring (IDS_MEMREGION_STANDBYLIST));
+					_r_menu_additem (hmenu, IDM_CLEAN_STANDBYLISTPRIORITY0, _r_locale_getstring (IDS_MEMREGION_STANDBYLISTPRIORITY0));
+					_r_menu_additem (hmenu, IDM_CLEAN_REGISTRYCACHE, _r_locale_getstring (IDS_MEMREGION_REGISTRYCACHE));
+					_r_menu_additem (hmenu, IDM_CLEAN_COMBINEMEMORYLISTS, _r_locale_getstring (IDS_MEMREGION_COMBINEMEMORYLISTS));
 
 					if (_r_sys_isosversionlower (WINDOWS_8_1))
 						_r_menu_enableitem (hmenu, IDM_CLEAN_REGISTRYCACHE, FALSE, FALSE);
@@ -2063,14 +2079,14 @@ INT_PTR CALLBACK DlgProc (
 					{
 						mask = _r_config_getulong (L"ReductMask2", REDUCT_MASK_DEFAULT, NULL);
 
-						_r_menu_setitemtext (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, TITLE_WORKINGSET);
-						_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, FALSE, TITLE_SYSTEMFILECACHE);
-						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDFILECACHE_CHK, FALSE, TITLE_MODIFIEDFILECACHE);
-						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, TITLE_MODIFIEDLIST);
-						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, TITLE_STANDBYLIST);
-						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, TITLE_STANDBYLISTPRIORITY0);
-						_r_menu_setitemtext (hsubmenu_region, IDM_REGISTRYCACHE_CHK, FALSE, TITLE_REGISTRYCACHE);
-						_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, TITLE_COMBINEMEMORYLISTS);
+						_r_menu_setitemtext (hsubmenu_region, IDM_WORKINGSET_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_WORKINGSET));
+						_r_menu_setitemtext (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_SYSTEMFILECACHE));
+						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDFILECACHE_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_MODIFIEDFILECACHE));
+						_r_menu_setitemtext (hsubmenu_region, IDM_MODIFIEDLIST_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_MODIFIEDLIST));
+						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLIST_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_STANDBYLIST));
+						_r_menu_setitemtext (hsubmenu_region, IDM_STANDBYLISTPRIORITY0_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_STANDBYLISTPRIORITY0));
+						_r_menu_setitemtext (hsubmenu_region, IDM_REGISTRYCACHE_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_REGISTRYCACHE));
+						_r_menu_setitemtext (hsubmenu_region, IDM_COMBINEMEMORYLISTS_CHK, FALSE, _r_locale_getstring (IDS_MEMREGION_COMBINEMEMORYLISTS));
 
 						_r_menu_checkitem (hsubmenu_region, IDM_WORKINGSET_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_WORKINGSET) == REDUCT_WORKINGSET);
 						_r_menu_checkitem (hsubmenu_region, IDM_SYSTEMFILECACHE_CHK, 0, MF_BYCOMMAND, (mask & REDUCT_SYSTEMFILECACHE) == REDUCT_SYSTEMFILECACHE);

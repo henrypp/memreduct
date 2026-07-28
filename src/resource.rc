@@ -330,6 +330,15 @@ STRINGTABLE
 	IDS_LOGRESULTS_CHK "Log cleaning results into a debug log"
 }
 
+	IDS_MEMREGION_WORKINGSET "Working set"
+	IDS_MEMREGION_SYSTEMFILECACHE "System file cache"
+	IDS_MEMREGION_STANDBYLISTPRIORITY0 "Standby list (without priority)"
+	IDS_MEMREGION_STANDBYLIST "Standby list*"
+	IDS_MEMREGION_MODIFIEDLIST "Modified page list*"
+	IDS_MEMREGION_MODIFIEDFILECACHE "Modified file cache"
+	IDS_MEMREGION_REGISTRYCACHE "Registry cache (win8.1+)"
+	IDS_MEMREGION_COMBINEMEMORYLISTS "Combine memory lists (win10+)"
+
 //
 // Icon resources
 //

@@ -10,14 +10,6 @@
 
 DEFINE_GUID (GUID_TrayIcon, 0xAE9053F0, 0x8D59, 0x4803, 0x9A, 0xBB, 0x74, 0xAF, 0xE6, 0x6B, 0x5F, 0xD2);
 
-#define TITLE_WORKINGSET L"Working set"
-#define TITLE_SYSTEMFILECACHE L"System file cache"
-#define TITLE_STANDBYLISTPRIORITY0 L"Standby list (without priority)"
-#define TITLE_STANDBYLIST L"Standby list*"
-#define TITLE_MODIFIEDLIST L"Modified page list*"
-#define TITLE_MODIFIEDFILECACHE L"Modified file cache"
-#define TITLE_REGISTRYCACHE L"Registry cache (win8.1+)"
-#define TITLE_COMBINEMEMORYLISTS L"Combine memory lists (win10+)"
 
 #define TIMER 1000
 #define UID 1337
@@ -87,3 +79,5 @@ typedef enum _CLEANUP_SOURCE_ENUM
 	SOURCE_HOTKEY,
 	SOURCE_CMDLINE
 } CLEANUP_SOURCE_ENUM, *PCLEANUP_SOURCE_ENUM;
+
+
